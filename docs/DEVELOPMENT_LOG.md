@@ -41,14 +41,24 @@
    - Configured root `.gitignore` covering Python cache/virtualenvs, Node packages/build artifacts, and local SQLite databases.
    - Initialized git repository on branch `main`.
 
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+
 ### Tests Run & Verification
 - **Frontend Test Suite**:
-  - Command: `npm test` (Vitest v3.2.7)
+  - Command: `npm test` (Vitest v3.2.7, jsdom environment)
   - Result: **3 passed (3 total)**
   - Tests verified: Application branding, non-clinical advisory banner visibility, role switcher navigation rendering.
+  - Production build: `npm run build` executed and succeeded (`tsc -b && vite build` emitted cleanly to `dist/`).
 - **Backend Test Suite**:
-  - Command: `python -m pytest`
-  - Result: In progress / verified (Root endpoint, health check endpoint, bcrypt hashing, JWT issuance and decoding).
+  - Command: `python -m pytest` (Pytest 9.1.1 on Python 3.14.5)
+  - Result: **4 passed (4 total)** in 3.79s
+  - Tests verified:
+    - Root `/` info and disclaimer endpoint (`test_root_endpoint`)
+    - API v1 health check endpoint (`test_health_check_endpoint`)
+    - Bcrypt password hashing and salt verification (`test_password_hashing_and_verification`)
+    - PyJWT access token issuance, signature, and decoding (`test_jwt_token_creation_and_decoding`)
+  - Server boot: `uvicorn app.main:app` booted and verified via live HTTP GET request (`200 OK`).
 
 ### Known Limitations at Milestone 1
 - Database models and persistent tables not yet initialized (scheduled for Milestone 2).
