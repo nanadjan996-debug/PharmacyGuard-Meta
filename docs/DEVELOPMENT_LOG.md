@@ -135,6 +135,10 @@ Running `init_database()` multiple times performs existence checks on unique key
   - Command: `npm test`
   - Result: **3 passed (3 total)** with zero regressions.
 
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+- Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+
 ### Known Limitations at Milestone 2
 - Authentication and token-issuance API routes not yet exposed (scheduled for Milestone 3).
 - Role-based authorization middleware not yet wired to endpoint guards (scheduled for Milestone 3).
