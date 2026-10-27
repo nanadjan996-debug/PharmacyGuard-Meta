@@ -64,3 +64,78 @@
 - Database models and persistent tables not yet initialized (scheduled for Milestone 2).
 - Authentication endpoints and RBAC route guards not yet wired to database (scheduled for Milestone 3).
 - Clinical rules and verification algorithms are modularized but pending implementation in Milestone 4.
+
+---
+
+## Milestone 2: Database Layer, ORM Models & Synthetic Benchmark Seed Data
+
+**Date**: 2026-10-27  
+**Objective**: Implement the relational database architecture, SQLAlchemy 2.x ORM models, foreign-key enforcement with SQLite, repeatable seed data generator, and verify with comprehensive automated tests.
+
+### Dependency Verification
+- **Python**: 3.14.5
+- **FastAPI**: 0.141.1
+- **Pydantic**: 2.13.4
+- **SQLAlchemy**: 2.1.6
+- **Bcrypt**: 5.0.0
+- **PyJWT**: 2.13.0
+- **Pytest**: 9.1.1
+All dependency versions verified compatible with `requirements.txt`.
+
+### Architecture & Database Design
+- **Single Database Strategy**: Adopted unified SQLite database (`pharmacyguard.db`) with `PRAGMA foreign_keys=ON` event listener on engine connection. This guarantees relational foreign-key integrity (rejecting invalid references and enabling cascading deletions) while avoiding the limitations of cross-database transactions in SQLite.
+- **Domain Models Created**:
+  1. `app/models/user.py`: `User`, `Role`, `UserRole` (many-to-many role assignments).
+  2. `app/models/patient.py`: `SyntheticPatient`, `PatientDiagnosis`, `PatientAllergy`.
+  3. `app/models/reference.py`: `MedicationReference`, `IndicationRule`, `AllergyCrossReactivityRule`, `DrugInteractionRule`, `DosageRule`. All annotated with `is_demo_rule=True`.
+  4. `app/models/prescription.py`: `Prescription`, `PrescriptionItem`.
+  5. `app/models/inventory.py`: `InventoryItem`, `InventoryTransaction`. Includes computed `is_low_stock` property.
+  6. `app/models/review.py`: `PharmacistReview`, `ReviewFinding`, `EscalationResolution`.
+  7. `app/models/audit.py`: `AuditEvent` (append-only application event tracking).
+  8. `app/models/education.py`: `EducationalCase`, `StudentSubmission` (beginner, intermediate, advanced tiers).
+
+### Synthetic Benchmark Seed Data
+Implemented idempotent seeder in `app/core/seed_data.py` providing:
+- **3 Demo Users**:
+  - Staff Pharmacist: `pharmacist_demo` (`StaffDemoPassword2026!`)
+  - Chief Pharmacist: `chief_demo` (`ChiefDemoPassword2026!`)
+  - Pharmacy Student: `student_demo` (`StudentDemoPassword2026!`)
+- **8 Reference Medications & 18 Clinical Rules** (all explicitly labeled demo reference data).
+- **8 Simulated Inventory Items** (including Cefdinir with low-stock state: 12 on hand vs 25 reorder threshold).
+- **5 Fictional Benchmark Scenarios**:
+  1. `SCENARIO_1_CLEAN`: Arthur Pendelton (Hypertension, Lisinopril 10mg). Clean finding.
+  2. `SCENARIO_2_INDICATION`: Beatrice Montgomery (Metformin without documented diabetes diagnosis). Moderate indication review finding.
+  3. `SCENARIO_3_ALLERGY`: Charles Vance (Severe Penicillin anaphylaxis, Amoxicillin 500mg order). High-severity allergy conflict finding.
+  4. `SCENARIO_4_DUPLICATE_NSAID`: Diana Rosslyn (Concurrent Ketorolac 10mg + Ibuprofen 600mg). High-severity duplicate systemic NSAID finding.
+  5. `SCENARIO_5_STOCK_SHORTAGE`: Edward Sterling (Cefdinir 300mg Qty 20, on-hand 12). High-severity stock shortage alert.
+- **3 Pharmacy Student Educational Cases** across beginner, intermediate, and advanced tiers.
+- **Initial Baseline Audit Record**: `SYSTEM_DATABASE_INITIALIZED`.
+
+### Seed Idempotency & Repeatability
+Running `init_database()` multiple times performs existence checks on unique keys, resulting in `0` duplicated or corrupted records on subsequent runs.
+
+### Tests Run & Verification
+- **Full Backend Test Suite**:
+  - Command: `python -m pytest`
+  - Result: **12 passed (12 total)** in 7.45s
+  - Tests verified:
+    - `test_seed_idempotency`
+    - `test_roles_and_demo_users`
+    - `test_five_synthetic_benchmark_scenarios`
+    - `test_inventory_tracking_and_low_stock`
+    - `test_educational_cases`
+    - `test_foreign_key_enforcement`
+    - `test_cascade_delete_integrity`
+    - `test_append_only_audit_log`
+    - `test_root_endpoint`
+    - `test_health_check_endpoint`
+    - `test_password_hashing_and_verification`
+    - `test_jwt_token_creation_and_decoding`
+- **Frontend Test Suite**:
+  - Command: `npm test`
+  - Result: **3 passed (3 total)** with zero regressions.
+
+### Known Limitations at Milestone 2
+- Authentication and token-issuance API routes not yet exposed (scheduled for Milestone 3).
+- Role-based authorization middleware not yet wired to endpoint guards (scheduled for Milestone 3).
+- Deterministic verification engine services operate on static findings rather than dynamic re-evaluation (scheduled for Milestone 4).

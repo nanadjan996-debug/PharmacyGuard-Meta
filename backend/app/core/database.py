@@ -1,8 +1,10 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from contextlib import contextmanager
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from app.config import settings
 
-# SQLite connection args for multi-threaded FastAPI access
+# SQLite connection args for multi-threaded access
 connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(
@@ -11,14 +13,38 @@ engine = create_engine(
     echo=False,
 )
 
+# Enforce foreign key constraints in SQLite
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
 
 def get_db():
-    db = SessionLocal()
+    """FastAPI dependency for yielding database sessions."""
+    db: Session = SessionLocal()
     try:
         yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def get_db_context():
+    """Context manager for standalone scripts, migrations, and test setups."""
+    db: Session = SessionLocal()
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
