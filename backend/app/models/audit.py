@@ -1,15 +1,17 @@
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import String, DateTime, ForeignKey, Text
+from sqlalchemy import String, DateTime, ForeignKey, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
 class AuditEvent(Base):
     """
-    Append-only audit event log implemented with application-level controls.
+    Append-only audit event log implemented with application-level and ORM controls.
     Records authentication events, review decisions, overrides, escalations,
     resolutions, and inventory adjustments.
+    
+    Immutability is enforced at the ORM layer by rejecting update and delete operations.
     """
     __tablename__ = "audit_events"
 
@@ -29,3 +31,14 @@ class AuditEvent(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     actor: Mapped["User | None"] = relationship("User")
+
+
+# Enforce append-only immutability at the ORM level
+@event.listens_for(AuditEvent, "before_update")
+def prevent_audit_event_update(mapper, connection, target):
+    raise PermissionError("Audit events are immutable and cannot be updated.")
+
+
+@event.listens_for(AuditEvent, "before_delete")
+def prevent_audit_event_delete(mapper, connection, target):
+    raise PermissionError("Audit events are append-only and cannot be deleted.")

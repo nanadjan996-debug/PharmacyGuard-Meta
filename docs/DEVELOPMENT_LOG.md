@@ -138,8 +138,86 @@ Running `init_database()` multiple times performs existence checks on unique key
 ### Commits & Git Provenance
 - Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
 - Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+- Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
 
-### Known Limitations at Milestone 2
-- Authentication and token-issuance API routes not yet exposed (scheduled for Milestone 3).
-- Role-based authorization middleware not yet wired to endpoint guards (scheduled for Milestone 3).
-- Deterministic verification engine services operate on static findings rather than dynamic re-evaluation (scheduled for Milestone 4).
+---
+
+## Milestone 3: Authentication and Server-Side Role-Based Authorization
+
+**Date**: 2026-10-27  
+**Objective**: Implement server-side JWT authentication, secure bcrypt verification, server-side RBAC dependencies, generic anti-enumeration login error responses, append-only audit enforcement, and high-priority override rationale protection.
+
+### Step 1 Preflight Verification Findings
+1. **Installed Versions**:
+   - Python: 3.14.5 (tags/v3.14.5:5607950, May 10 2026)
+   - FastAPI: 0.141.1
+   - Pydantic: 2.13.4
+   - SQLAlchemy: 2.1.6
+   - Bcrypt: 5.0.0
+   - PyJWT: 2.13.0
+   - Pytest: 9.1.1
+2. **Clean Virtual Environment Verification**:
+   - Executed clean `python -m venv test_venv` and `pip install -r requirements.txt`. All transitive dependencies installed cleanly with exit code 0 and `pip check` confirmed zero broken requirements.
+3. **Benchmark Scenarios Inspection**:
+   - All 5 benchmark scenarios inspected in `app/core/seed_data.py`. Confirmed correct representation of Clean, Indication Review, Severe Penicillin Allergy, Duplicate NSAID, and Simulated Cefdinir Stock Shortage. All findings explicitly annotated as synthetic demo reference data.
+4. **Audit Immutability Inspection & Remediation**:
+   - Identified that `AuditEvent` previously lacked ORM update/delete rejection listeners.
+   - Remediation: Attached SQLAlchemy `before_update` and `before_delete` event listeners to `AuditEvent`, raising `PermissionError` on any modification or deletion attempt. Verified by automated test `test_audit_event_immutability`.
+
+### Features Implemented
+1. **Authentication API (`/api/v1/auth`)**:
+   - `POST /login`: Validates username & bcrypt password hash. Rejects non-existent users and wrong passwords with identical generic 401 error (`"Invalid username or password"`). Rejects inactive users with 403 Forbidden.
+   - `GET /me`: Returns profile with server-verified roles loaded from database.
+   - `POST /logout`: Records audit event. Includes transparent disclaimer that stateless JWTs expire automatically at scheduled TTL.
+   - Audited logins: Records `LOGIN_SUCCESS` and `LOGIN_FAILED` without recording passwords or raw tokens.
+2. **Server-Side RBAC & Route Protection**:
+   - Reusable dependency factory `require_roles(*allowed_roles)` in `app/api/deps.py`.
+   - Never trusts client-supplied roles; loads roles strictly from `User.roles` relation in database.
+   - Configured route guards:
+     - Staff Pharmacist: `/api/v1/prescriptions/queue`, `/api/v1/prescriptions/{id}/review`.
+     - Chief Pharmacist: `/api/v1/oversight/escalations`, `/resolve`, `/override-ledger`, `/inventory/adjust`, `/audit-log`.
+     - Pharmacy Student: `/api/v1/education/cases`, `/submit`, `/my-submissions`. Students are denied access to live clinical queues, reviews, overrides, escalations, or inventory (403 Forbidden).
+3. **Mandatory High-Priority Override Rationale**:
+   - Enforced at API layer in `POST /api/v1/prescriptions/{id}/review`: Overriding a prescription with any `HIGH` severity finding without a non-empty rationale is rejected with HTTP 422 Unprocessable Entity.
+4. **Environment Configuration**:
+   - Added `backend/.env.example` with safe development configuration defaults.
+
+### Permission Matrix
+
+| Workspace / Endpoint | Allowed Role(s) | Forbidden Roles (403 Forbidden) |
+| :--- | :--- | :--- |
+| `GET /api/v1/prescriptions/queue` | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student`, unauthenticated |
+| `POST /api/v1/prescriptions/{id}/review` | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` |
+| `GET /api/v1/oversight/escalations` | `chief_pharmacist` | `staff_pharmacist`, `pharmacy_student` |
+| `POST /api/v1/oversight/escalations/{id}/resolve`| `chief_pharmacist` | `staff_pharmacist`, `pharmacy_student` |
+| `GET /api/v1/oversight/override-ledger` | `chief_pharmacist` | `staff_pharmacist`, `pharmacy_student` |
+| `POST /api/v1/oversight/inventory/adjust` | `chief_pharmacist` | `staff_pharmacist`, `pharmacy_student` |
+| `GET /api/v1/oversight/audit-log` | `chief_pharmacist` | `staff_pharmacist`, `pharmacy_student` |
+| `GET /api/v1/education/cases` | Authenticated users | Unauthenticated |
+| `POST /api/v1/education/cases/{id}/submit` | `pharmacy_student` | Unauthenticated |
+
+### Tests Run & Verification
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **25 passed (25 total)** in 35.86s
+  - 13 new auth/RBAC tests in `tests/test_auth.py`:
+    - `test_valid_login_staff_pharmacist`
+    - `test_valid_login_chief_and_student`
+    - `test_login_invalid_password_returns_generic_error`
+    - `test_login_unknown_user_returns_identical_generic_error`
+    - `test_login_inactive_user_rejected`
+    - `test_missing_and_malformed_tokens`
+    - `test_expired_token_rejected`
+    - `test_auth_me_and_logout`
+    - `test_rbac_permission_matrix`
+    - `test_student_forbidden_from_prescriptions_review`
+    - `test_high_priority_override_requires_written_rationale`
+    - `test_student_educational_case_submission`
+    - `test_audit_event_immutability`
+  - 8 database model and FK tests in `tests/test_database.py` (all passed).
+  - 4 health/security unit tests in `tests/test_health.py` (all passed).
+- **Frontend Test Suite (`npm test`)**:
+  - Result: **3 passed (3 total)** with zero regressions.
+
+### Known Limitations at Milestone 3
+- Deterministic clinical verification engine operates on static seeded findings; dynamic multi-rule calculation pipeline to be implemented in Milestone 4.
+- UI views in frontend currently show workspace preview shell; full workspace views and API client connection scheduled for Milestone 8.
