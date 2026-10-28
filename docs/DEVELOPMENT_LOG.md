@@ -308,8 +308,16 @@ Running `init_database()` multiple times performs existence checks on unique key
 - **Frontend Test Suite (`npm test`)**:
   - Result: **3 passed (3 total)** with zero regressions.
 
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+- Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+- Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
+- Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
+- Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
+
 ### Known Limitations at Milestone 4
 - The engine uses demonstration reference rules and synthetic data; rules are illustrative and not clinically validated.
 - Advanced clinical calculation parameters (e.g., patient renal function Cockcroft-Gault CrCl dosage adjustment, hepatic impairment child-pugh score, pediatric weight-based mg/kg calculations) are not implemented.
 - Multi-ingredient combination products (e.g., Amoxicillin-Clavulanate) are modeled under their primary active ingredient.
+
 
