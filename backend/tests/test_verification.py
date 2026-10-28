@@ -389,3 +389,156 @@ def test_verify_endpoint_nonexistent_prescription(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 404
+
+
+# =====================================================================
+# 5. FOCUSED AUDIT & REGRESSION TESTS
+# =====================================================================
+
+def test_audit_immutability_boundaries(db_session: Session):
+    """
+    Test and document exact immutability boundaries for AuditEvent:
+    1. Ordinary ORM instance update is BLOCKED by before_update listener.
+    2. Ordinary ORM instance delete is BLOCKED by before_delete listener.
+    3. Bulk/Direct SQL queries bypass ORM mapper listeners (application/ORM-level enforcement).
+    """
+    from sqlalchemy import text
+
+    test_event = AuditEvent(
+        actor_username="immutability_auditor",
+        actor_role="staff_pharmacist",
+        action="TEST_AUDIT_ENTRY",
+        entity_type="Prescription",
+        entity_id="test-entity-001",
+        details='{"test": true}',
+    )
+    db_session.add(test_event)
+    db_session.commit()
+    event_id = test_event.id
+
+    # 1. ORM instance update -> MUST RAISE PermissionError
+    test_event.action = "TAMPERED_ACTION"
+    with pytest.raises(PermissionError) as exc_info:
+        db_session.flush()
+    assert "immutable" in str(exc_info.value).lower()
+    db_session.rollback()
+
+    # 2. ORM instance delete -> MUST RAISE PermissionError
+    fetched = db_session.query(AuditEvent).filter_by(id=event_id).first()
+    assert fetched is not None
+    db_session.delete(fetched)
+    with pytest.raises(PermissionError) as exc_info:
+        db_session.flush()
+    assert "append-only" in str(exc_info.value).lower()
+    db_session.rollback()
+
+    # 3. Direct SQL delete: mapper listeners only intercept ORM unit-of-work flushes.
+    # We verify that direct raw SQL bypasses mapper events (confirming ORM-level, not DB-engine-level enforcement)
+    raw_res = db_session.execute(text("DELETE FROM audit_events WHERE id = :id"), {"id": event_id})
+    db_session.commit()
+    assert raw_res.rowcount == 1
+    # Confirm it was deleted by raw SQL
+    deleted_check = db_session.query(AuditEvent).filter_by(id=event_id).first()
+    assert deleted_check is None
+
+
+def test_sync_findings_rollback_on_failure(db_session: Session):
+    """
+    Regression test: If a database error occurs during _sync_findings_to_db,
+    the transaction is rolled back, leaving pre-existing findings intact
+    without duplicate or partially refreshed findings.
+    """
+    from unittest.mock import patch
+
+    rx = db_session.query(Prescription).filter_by(prescription_number="RX-2026-0001").first()
+    engine = VerificationEngine(db_session)
+
+    # Establish baseline findings
+    engine.verify(rx.id, persist=True)
+    baseline_findings = (
+        db_session.query(ReviewFinding)
+        .filter_by(prescription_id=rx.id, review_id=None)
+        .order_by(ReviewFinding.rule_identifier)
+        .all()
+    )
+    baseline_count = len(baseline_findings)
+    baseline_ids = [f.id for f in baseline_findings]
+    assert baseline_count > 0
+
+    # Simulate a database failure during commit inside _sync_findings_to_db
+    with patch.object(db_session, "commit", side_effect=RuntimeError("Simulated DB Connection Drop")):
+        with pytest.raises(RuntimeError) as exc_info:
+            engine.verify(rx.id, persist=True)
+        assert "Simulated DB Connection Drop" in str(exc_info.value)
+
+    # Verify that pre-existing findings were NOT lost or partially deleted
+    refetched_findings = (
+        db_session.query(ReviewFinding)
+        .filter_by(prescription_id=rx.id, review_id=None)
+        .order_by(ReviewFinding.rule_identifier)
+        .all()
+    )
+    assert len(refetched_findings) == baseline_count
+    assert [f.id for f in refetched_findings] == baseline_ids
+
+
+def test_severity_semantics_high_conflict_never_clean(db_session: Session):
+    """
+    Confirm that a prescription with any HIGH conflict finding cannot be summarized or displayed as clean.
+    Summary metrics must accurately reflect the conflict.
+    """
+    rx = db_session.query(Prescription).filter_by(prescription_number="RX-2026-0003").first()
+    engine = VerificationEngine(db_session)
+    res = engine.verify(rx.id, persist=False)
+
+    # Must have at least one HIGH finding
+    high_findings = [f for f in res.findings if f.severity == "HIGH"]
+    assert len(high_findings) >= 1
+
+    # Summary checks
+    assert res.summary.max_severity == "HIGH"
+    assert res.summary.conflicts_count >= 1
+    assert res.summary.requires_human_review is True
+    # clean_count only counts CLEAN status findings, never hides conflicts
+    assert res.summary.clean_count > 0
+    assert res.summary.total_findings == res.summary.conflicts_count + res.summary.review_required_count + res.summary.clean_count
+
+
+def test_scenario_5_polypharmacy_and_inventory_integrity(db_session: Session):
+    """
+    Confirm Scenario 5 benchmark integrity:
+    Cefdinir has a stock shortage (12 units on hand vs. 20 requested) -> HIGH CONFLICT
+    Amlodipine has sufficient stock (260 units on hand vs. 30 requested) -> CLEAN
+    Cefdinir + Amlodipine has no configured drug interaction -> CLEAN
+    """
+    rx = db_session.query(Prescription).filter_by(prescription_number="RX-2026-0005").first()
+    assert rx is not None
+    # Must have exactly 2 line items
+    assert len(rx.items) == 2
+    med_ids = {item.medication_id for item in rx.items}
+    assert "MED-CEF-500" in med_ids
+    assert "MED-AML-5" in med_ids
+
+    engine = VerificationEngine(db_session)
+    res = engine.verify(rx.id, persist=False)
+
+    # Check inventory findings
+    inv_findings = [f for f in res.findings if f.category == "INVENTORY"]
+    assert len(inv_findings) == 2
+    cef_inv = next(f for f in inv_findings if "Cefdinir" in f.message)
+    aml_inv = next(f for f in inv_findings if "Amlodipine" in f.message)
+
+    assert cef_inv.status == "CONFLICT_DETECTED"
+    assert cef_inv.severity == "HIGH"
+    assert "12 available, 20 required" in cef_inv.message
+
+    assert aml_inv.status == "CLEAN"
+    assert aml_inv.severity == "INFO"
+    assert "260 in stock" in aml_inv.message
+
+    # Check interaction findings
+    ddi_findings = [f for f in res.findings if f.category == "DRUG_INTERACTION"]
+    assert len(ddi_findings) == 1
+    assert ddi_findings[0].status == "CLEAN"
+    assert ddi_findings[0].severity == "INFO"
+

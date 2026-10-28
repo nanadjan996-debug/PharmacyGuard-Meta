@@ -188,34 +188,41 @@ class VerificationEngine:
 
     def _sync_findings_to_db(self, prescription_id: str, findings: list[GeneratedFinding]) -> None:
         """
-        Persist generated findings to the database.
+        Persist generated findings to the database with transactional rollback guarantees.
         
         Contract:
         - Only findings where review_id is NULL (unreviewed findings) are replaced.
         - Historical findings tied to a completed PharmacistReview (review_id is NOT NULL)
           are NEVER overwritten or deleted.
+        - Atomic execution: if any database error occurs during deletion or insertion,
+          the transaction is fully rolled back, leaving findings unchanged.
         - The prescription status is NOT altered.
         - No pharmacist decisions or approvals are recorded.
         """
-        # Delete only unreviewed findings for this prescription
-        self.db.query(ReviewFinding).filter(
-            ReviewFinding.prescription_id == prescription_id,
-            ReviewFinding.review_id.is_(None),
-        ).delete(synchronize_session="fetch")
+        try:
+            # Delete only unreviewed findings for this prescription
+            self.db.query(ReviewFinding).filter(
+                ReviewFinding.prescription_id == prescription_id,
+                ReviewFinding.review_id.is_(None),
+            ).delete(synchronize_session="fetch")
 
-        # Insert new unreviewed findings
-        for f in findings:
-            rf = ReviewFinding(
-                prescription_id=prescription_id,
-                review_id=None,
-                rule_identifier=f.rule_identifier,
-                category=f.category,
-                severity=f.severity,
-                status=f.status,
-                evidence=f"{f.message} | {f.evidence}",
-                rule_source=f.rule_source,
-                human_review_required=f.human_review_required,
-            )
-            self.db.add(rf)
+            # Insert new unreviewed findings
+            for f in findings:
+                rf = ReviewFinding(
+                    prescription_id=prescription_id,
+                    review_id=None,
+                    rule_identifier=f.rule_identifier,
+                    category=f.category,
+                    severity=f.severity,
+                    status=f.status,
+                    evidence=f"{f.message} | {f.evidence}",
+                    rule_source=f.rule_source,
+                    human_review_required=f.human_review_required,
+                )
+                self.db.add(rf)
 
-        self.db.commit()
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+

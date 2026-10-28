@@ -298,12 +298,13 @@ Running `init_database()` multiple times performs existence checks on unique key
 ### Tests Run & Verification
 
 - **Backend Test Suite (`python -m pytest`)**:
-  - Result: **47 passed (47 total)** in 28.74s
-  - 22 new tests in `tests/test_verification.py`:
+  - Result: **51 passed (51 total)** in 23.17s
+  - 26 tests in `tests/test_verification.py`:
     - Independent unit tests for all 6 rule checkers (`test_indication_service_direct_match`, `test_indication_service_unmatched`, `test_allergy_service_anaphylaxis_conflict`, `test_duplication_service_single_med`, `test_duplication_service_dual_systemic_nsaid`, `test_interaction_service_detected`, `test_dosage_arithmetic_and_unit_conversion`, `test_dosage_service_limits`, `test_inventory_service_shortage_detected`).
     - 5 full-pipeline benchmark scenario validation tests (`test_engine_scenario_1_routine`, `test_engine_scenario_2_indication_review`, `test_engine_scenario_3_allergy_conflict`, `test_engine_scenario_4_duplicate_nsaid`, `test_engine_scenario_5_stock_shortage`).
     - Determinism, sort ordering, and idempotent findings persistence tests (`test_deterministic_output_and_ordering`, `test_idempotent_findings_persistence`, `test_preserves_historical_reviewed_findings`).
     - API endpoint RBAC, audit logging, and error handling tests (`test_verify_endpoint_staff_pharmacist`, `test_verify_endpoint_chief_pharmacist`, `test_verify_endpoint_student_forbidden`, `test_verify_endpoint_unauthenticated`, `test_verify_endpoint_nonexistent_prescription`).
+    - Focused audit verification tests (`test_audit_immutability_boundaries`, `test_sync_findings_rollback_on_failure`, `test_severity_semantics_high_conflict_never_clean`, `test_scenario_5_polypharmacy_and_inventory_integrity`).
   - All existing 13 auth tests, 8 database tests, and 4 health tests continue to pass with zero regressions.
 - **Frontend Test Suite (`npm test`)**:
   - Result: **3 passed (3 total)** with zero regressions.
@@ -314,10 +315,12 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
 - Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
 - Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
+- Milestone 4 Audit Verification: `[pending commit]`
 
 ### Known Limitations at Milestone 4
 - The engine uses demonstration reference rules and synthetic data; rules are illustrative and not clinically validated.
 - Advanced clinical calculation parameters (e.g., patient renal function Cockcroft-Gault CrCl dosage adjustment, hepatic impairment child-pugh score, pediatric weight-based mg/kg calculations) are not implemented.
 - Multi-ingredient combination products (e.g., Amoxicillin-Clavulanate) are modeled under their primary active ingredient.
+
 
 
