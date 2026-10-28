@@ -3,9 +3,10 @@ import pytest
 from datetime import date
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from app.core.database import SessionLocal, get_db_context
+from app.core.database import SessionLocal, get_db_context, Base, engine
 from app.core.security import verify_password
 from app.core.seed_data import seed_database
+from app import models as _models  # noqa: F401
 from app.models.user import User, Role, UserRole
 from app.models.patient import SyntheticPatient, PatientDiagnosis, PatientAllergy
 from app.models.reference import MedicationReference, IndicationRule, AllergyCrossReactivityRule, DrugInteractionRule
@@ -19,9 +20,12 @@ from app.models.education import EducationalCase, StudentSubmission
 @pytest.fixture(scope="module")
 def db_session():
     """Module-level session with initialized and seeded data."""
+    Base.metadata.create_all(bind=engine)
     with get_db_context() as db:
         seed_database(db)
         yield db
+
+
 
 
 def test_seed_idempotency(db_session):

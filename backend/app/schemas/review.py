@@ -38,6 +38,21 @@ class ReviewFindingResponse(BaseModel):
     human_review_required: bool
 
 
+class PrescriptionItemDetail(BaseModel):
+    id: str
+    medication_id: str
+    generic_name: str
+    brand_name: str
+    drug_class: str
+    dose_amount: float
+    dose_unit: str
+    frequency: str
+    route: str
+    duration_days: int
+    quantity_prescribed: int
+    instructions: str
+
+
 class PrescriptionQueueItemResponse(BaseModel):
     id: str
     prescription_number: str
@@ -51,3 +66,24 @@ class PrescriptionQueueItemResponse(BaseModel):
     created_at: datetime
     findings_count: int
     has_high_severity_finding: bool
+
+
+class PrescriptionDetailResponse(BaseModel):
+    id: str
+    prescription_number: str
+    patient_id: str
+    patient_name: str
+    patient_mrn: str
+    patient_dob: str
+    patient_gender: str
+    patient_weight_kg: float
+    patient_height_cm: float
+    prescriber_name: str
+    prescriber_department: str
+    status: str
+    scenario_key: Optional[str]
+    clinical_notes: Optional[str]
+    created_at: datetime
+    items: list[PrescriptionItemDetail]
+    findings: list[ReviewFindingResponse]
+

@@ -11,9 +11,14 @@ from app.models.audit import AuditEvent
 from app.schemas.review import (
     ReviewActionRequest,
     PrescriptionQueueItemResponse,
+    PrescriptionDetailResponse,
+    PrescriptionItemDetail,
+    ReviewFindingResponse,
 )
+from app.services.verification import VerificationEngine, VerificationResponse
 
 router = APIRouter(prefix="/prescriptions", tags=["Prescriptions & Verification Queue"])
+
 
 
 @router.get("/queue", response_model=list[PrescriptionQueueItemResponse])
@@ -142,3 +147,132 @@ def review_prescription(
         "action": review_data.action,
         "new_status": rx.status,
     }
+
+
+@router.get("/{prescription_id}", response_model=PrescriptionDetailResponse)
+def get_prescription_detail(
+    prescription_id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> PrescriptionDetailResponse:
+    """
+    Retrieve complete prescription record including patient demographics,
+    ordered medication items, and currently attached clinical findings.
+    """
+    rx = db.query(Prescription).filter_by(id=prescription_id).first()
+    if not rx:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prescription with ID {prescription_id} not found",
+        )
+
+    patient = rx.patient
+    items_detail = [
+        PrescriptionItemDetail(
+            id=item.id,
+            medication_id=item.medication_id,
+            generic_name=item.medication.generic_name,
+            brand_name=item.medication.brand_name,
+            drug_class=item.medication.drug_class,
+            dose_amount=item.dose_amount,
+            dose_unit=item.dose_unit,
+            frequency=item.frequency,
+            route=item.route,
+            duration_days=item.duration_days,
+            quantity_prescribed=item.quantity_prescribed,
+            instructions=item.instructions,
+        )
+        for item in rx.items
+    ]
+
+    findings_detail = [
+        ReviewFindingResponse(
+            id=f.id,
+            rule_identifier=f.rule_identifier,
+            category=f.category,
+            severity=f.severity,
+            status=f.status,
+            evidence=f.evidence,
+            rule_source=f.rule_source,
+            human_review_required=f.human_review_required,
+        )
+        for f in rx.findings
+    ]
+
+    return PrescriptionDetailResponse(
+        id=rx.id,
+        prescription_number=rx.prescription_number,
+        patient_id=rx.patient_id,
+        patient_name=f"{patient.first_name} {patient.last_name}",
+        patient_mrn=patient.mrn,
+        patient_dob=patient.date_of_birth.isoformat(),
+        patient_gender=patient.gender,
+        patient_weight_kg=patient.weight_kg,
+        patient_height_cm=patient.height_cm,
+        prescriber_name=rx.prescriber_name,
+        prescriber_department=rx.prescriber_department,
+        status=rx.status,
+        scenario_key=rx.scenario_key,
+        clinical_notes=rx.clinical_notes,
+        created_at=rx.created_at,
+        items=items_detail,
+        findings=findings_detail,
+    )
+
+
+@router.post("/{prescription_id}/verify", response_model=VerificationResponse)
+def verify_prescription(
+    prescription_id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> VerificationResponse:
+    """
+    Trigger deterministic rule-based verification on a stored prescription.
+    
+    Security & Operational Constraints:
+    - Strictly protected: accessible ONLY to Staff Pharmacists and Chief Pharmacists.
+    - Evaluates stored prescription against local synthetic reference rules.
+    - Deterministic output: running multiple times produces identical, stably sorted findings.
+    - Persists unreviewed findings (review_id=None), never overwriting historical pharmacist review findings.
+    - Does NOT alter prescription workflow status or create review records.
+    - Appends an audit event recording the verification execution.
+    """
+    rx = db.query(Prescription).filter_by(id=prescription_id).first()
+    if not rx:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prescription with ID {prescription_id} not found",
+        )
+
+    engine = VerificationEngine(db)
+    try:
+        response = engine.verify(prescription_id=prescription_id, persist=True)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Verification engine failure: {str(exc)}",
+        )
+
+    # Record append-only audit event
+    user_roles = [ur.role_id for ur in current_user.roles]
+    audit_event = AuditEvent(
+        actor_id=current_user.id,
+        actor_username=current_user.username,
+        actor_role=",".join(user_roles),
+        action="PRESCRIPTION_VERIFIED",
+        entity_type="Prescription",
+        entity_id=rx.id,
+        details=json.dumps({
+            "prescription_number": rx.prescription_number,
+            "total_findings": response.summary.total_findings,
+            "conflicts_count": response.summary.conflicts_count,
+            "review_required_count": response.summary.review_required_count,
+            "max_severity": response.summary.max_severity,
+            "requires_human_review": response.summary.requires_human_review,
+        }),
+    )
+    db.add(audit_event)
+    db.commit()
+
+    return response
+
