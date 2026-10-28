@@ -315,7 +315,8 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
 - Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
 - Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
-- Milestone 4 Audit Verification: `[pending commit]`
+- Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
+
 
 ### Known Limitations at Milestone 4
 - The engine uses demonstration reference rules and synthetic data; rules are illustrative and not clinically validated.
