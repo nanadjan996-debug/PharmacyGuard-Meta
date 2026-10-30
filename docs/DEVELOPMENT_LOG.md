@@ -387,6 +387,15 @@ Running `init_database()` multiple times performs existence checks on unique key
 - **Frontend Test Suite (`npm test --prefix frontend`)**:
   - Result: **3 passed (3 total)** in 12.64s with zero regressions.
 
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+- Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+- Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
+- Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
+- Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
+- Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
+- Milestone 5 Commit: `efd76c7` — *"Milestone 5: Review workflow, escalation resolution services, and audit integration"*
+
 ### Known Limitations at Milestone 5
 - The review and escalation system is strictly an advisory decision-support prototype operating on synthetic benchmark data; it does not authorize real-world clinical medication dispensing.
 - Multi-signoff or peer-review workflows (e.g. two-pharmacist verification for high-risk antineoplastic or pediatric infusions) are not modeled in this single-step review prototype.
