@@ -396,6 +396,7 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
 - Milestone 5 Commit: `efd76c7` — *"Milestone 5: Review workflow, escalation resolution services, and audit integration"*
 - Milestone 5 Audit Remediation Commit: `718ae23` — *"Milestone 5 audit: prevent high-severity approval bypass, enforce consistent status transitions, and add atomic concurrency safeguards"*
+- Milestone 5 Final Check Commit: `83e0687` — *"Milestone 5 final check: rename to APPROVED_AFTER_CLARIFICATION and verify high findings after escalation with regression test"*
 
 ---
 
