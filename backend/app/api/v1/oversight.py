@@ -14,7 +14,12 @@ from app.schemas.review import (
     EscalationResolutionResponse,
     EscalationQueueItemResponse,
 )
-from app.schemas.inventory import InventoryAdjustmentRequest
+from app.schemas.inventory import (
+    InventoryAdjustmentRequest,
+    InventorySummaryResponse,
+    InventoryExceptionItem,
+    ChiefOversightDashboardResponse,
+)
 
 router = APIRouter(prefix="/oversight", tags=["Chief Pharmacist Oversight"])
 
@@ -378,3 +383,159 @@ def get_audit_log(
         }
         for e in events
     ]
+
+
+@router.get("/inventory-exceptions", response_model=list[InventoryExceptionItem])
+def get_inventory_exceptions(
+    current_user: User = Depends(require_chief_pharmacist),
+    db: Session = Depends(get_db),
+) -> list[InventoryExceptionItem]:
+    """
+    Retrieve detailed inventory exception alerts (out-of-stock and low-stock items).
+    Chief Pharmacist ONLY. Staff Pharmacists and Students receive 403 Forbidden.
+    """
+    items = (
+        db.query(InventoryItem)
+        .filter(InventoryItem.quantity_on_hand <= InventoryItem.reorder_threshold)
+        .all()
+    )
+    # Sort: out-of-stock first, then largest deficit
+    sorted_items = sorted(
+        items,
+        key=lambda i: (
+            0 if i.quantity_on_hand == 0 else 1,
+            -(i.reorder_threshold - i.quantity_on_hand),
+        ),
+    )
+    results = []
+    for item in sorted_items:
+        deficit = max(0, item.reorder_threshold - item.quantity_on_hand)
+        is_out = item.quantity_on_hand == 0
+        results.append(
+            InventoryExceptionItem(
+                inventory_item_id=item.id,
+                medication_id=item.medication_id,
+                generic_name=item.medication.generic_name,
+                brand_name=item.medication.brand_name,
+                location=item.location,
+                quantity_on_hand=item.quantity_on_hand,
+                reorder_threshold=item.reorder_threshold,
+                deficit=deficit,
+                stock_status="OUT_OF_STOCK" if is_out else "LOW_STOCK",
+                severity="HIGH" if is_out else "MODERATE",
+            )
+        )
+    return results
+
+
+@router.get("/workflow-summary")
+def get_workflow_summary(
+    current_user: User = Depends(require_chief_pharmacist),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve high-level prescription workflow counts and department distribution.
+    Chief Pharmacist ONLY.
+    """
+    prescriptions = db.query(Prescription).all()
+    status_counts = {"pending": 0, "reviewed": 0, "overridden": 0, "escalated": 0, "resolved": 0}
+    dept_counts = {}
+    for rx in prescriptions:
+        status_counts[rx.status] = status_counts.get(rx.status, 0) + 1
+        dept_counts[rx.prescriber_department] = dept_counts.get(rx.prescriber_department, 0) + 1
+
+    return {
+        "status": "success",
+        "total_prescriptions": len(prescriptions),
+        "status_distribution": status_counts,
+        "department_distribution": dept_counts,
+        "unresolved_escalations_count": db.query(EscalationResolution).filter_by(resolved_at=None).count(),
+        "total_overrides_count": db.query(PharmacistReview).filter_by(action="OVERRIDE").count(),
+    }
+
+
+@router.get("/dashboard", response_model=ChiefOversightDashboardResponse)
+def get_chief_dashboard(
+    current_user: User = Depends(require_chief_pharmacist),
+    db: Session = Depends(get_db),
+) -> ChiefOversightDashboardResponse:
+    """
+    Executive dashboard aggregating inventory health, exceptions, clinical workflow metrics,
+    and recent audit events into a single oversight view for Chief Pharmacists.
+    Chief Pharmacist ONLY.
+    """
+    # 1. Inventory aggregates
+    items = db.query(InventoryItem).all()
+    total_items = len(items)
+    total_units = sum(i.quantity_on_hand for i in items)
+    out_of_stock = sum(1 for i in items if i.quantity_on_hand == 0)
+    low_stock = sum(1 for i in items if 0 < i.quantity_on_hand <= i.reorder_threshold)
+    adequate_stock = sum(1 for i in items if i.quantity_on_hand > i.reorder_threshold)
+    total_value_cents = sum(i.quantity_on_hand * i.unit_cost_cents for i in items)
+
+    inv_summary = InventorySummaryResponse(
+        total_items=total_items,
+        total_units_on_hand=total_units,
+        low_stock_count=low_stock,
+        out_of_stock_count=out_of_stock,
+        adequate_stock_count=adequate_stock,
+        total_inventory_value_cents=total_value_cents,
+    )
+
+    # 2. Exceptions
+    exceptions_list = []
+    for i in items:
+        if i.quantity_on_hand <= i.reorder_threshold:
+            is_out = i.quantity_on_hand == 0
+            exceptions_list.append(
+                InventoryExceptionItem(
+                    inventory_item_id=i.id,
+                    medication_id=i.medication_id,
+                    generic_name=i.medication.generic_name,
+                    brand_name=i.medication.brand_name,
+                    location=i.location,
+                    quantity_on_hand=i.quantity_on_hand,
+                    reorder_threshold=i.reorder_threshold,
+                    deficit=max(0, i.reorder_threshold - i.quantity_on_hand),
+                    stock_status="OUT_OF_STOCK" if is_out else "LOW_STOCK",
+                    severity="HIGH" if is_out else "MODERATE",
+                )
+            )
+
+    # 3. Workflow metrics
+    prescriptions = db.query(Prescription).all()
+    workflow_counts = {"pending": 0, "reviewed": 0, "overridden": 0, "escalated": 0, "resolved": 0}
+    for rx in prescriptions:
+        workflow_counts[rx.status] = workflow_counts.get(rx.status, 0) + 1
+
+    pending_escalations = db.query(EscalationResolution).filter_by(resolved_at=None).count()
+    total_overrides = db.query(PharmacistReview).filter_by(action="OVERRIDE").count()
+
+    # 4. Recent audit events (latest 10)
+    recent_events = (
+        db.query(AuditEvent)
+        .order_by(AuditEvent.timestamp.desc())
+        .limit(10)
+        .all()
+    )
+    recent_audit_dicts = [
+        {
+            "id": e.id,
+            "timestamp": e.timestamp.isoformat(),
+            "actor_username": e.actor_username,
+            "actor_role": e.actor_role,
+            "action": e.action,
+            "entity_type": e.entity_type,
+            "entity_id": e.entity_id,
+        }
+        for e in recent_events
+    ]
+
+    return ChiefOversightDashboardResponse(
+        inventory_summary=inv_summary,
+        inventory_exceptions=exceptions_list,
+        workflow_counts=workflow_counts,
+        pending_escalations_count=pending_escalations,
+        total_overrides_count=total_overrides,
+        recent_audit_events=recent_audit_dicts,
+    )

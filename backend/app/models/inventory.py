@@ -1,6 +1,6 @@
 from datetime import datetime, date, timezone
 import uuid
-from sqlalchemy import String, Integer, DateTime, Date, ForeignKey
+from sqlalchemy import String, Integer, DateTime, Date, ForeignKey, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -55,3 +55,14 @@ class InventoryTransaction(Base):
 
     inventory_item: Mapped["InventoryItem"] = relationship("InventoryItem", back_populates="transactions")
     actor: Mapped["User"] = relationship("User", back_populates="inventory_transactions")
+
+
+# Enforce append-only immutability of inventory transactions at the ORM level
+@event.listens_for(InventoryTransaction, "before_update")
+def prevent_inventory_transaction_update(mapper, connection, target):
+    raise PermissionError("Inventory transactions are immutable historical audit records and cannot be updated.")
+
+
+@event.listens_for(InventoryTransaction, "before_delete")
+def prevent_inventory_transaction_delete(mapper, connection, target):
+    raise PermissionError("Inventory transactions are immutable historical audit records and cannot be deleted.")
