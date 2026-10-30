@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey, Text, event
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -51,3 +51,15 @@ class StudentSubmission(Base):
 
     case: Mapped["EducationalCase"] = relationship("EducationalCase", back_populates="submissions")
     student: Mapped["User"] = relationship("User", back_populates="student_submissions")
+
+
+@event.listens_for(StudentSubmission, "before_update")
+def prevent_student_submission_update(mapper, connection, target):
+    """Enforce append-only immutability for student educational submission history."""
+    raise PermissionError("StudentSubmission records are permanent academic history and strictly immutable.")
+
+
+@event.listens_for(StudentSubmission, "before_delete")
+def prevent_student_submission_delete(mapper, connection, target):
+    """Prevent deletion of student submissions through standard ORM sessions."""
+    raise PermissionError("StudentSubmission records are permanent academic history and cannot be deleted.")
