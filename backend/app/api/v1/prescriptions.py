@@ -120,17 +120,21 @@ def review_prescription(
 
         has_high_severity_finding = any(f.severity == "HIGH" for f in unreviewed_findings)
 
-        # 3. Enforce mandatory written rationale for high-priority overrides (after trimming whitespace)
+        # 3. Enforce mandatory written rationale for high-priority approvals and overrides
+        # Any action that effectively approves or accepts a prescription with an active HIGH-severity
+        # finding requires a non-empty, trimmed clinical rationale in override_rationale.
         trimmed_rationale = (
             review_data.override_rationale.strip()
             if review_data.override_rationale
             else None
         )
-        if review_data.action == "OVERRIDE" and has_high_severity_finding:
+        trimmed_notes = review_data.notes.strip() if review_data.notes else None
+
+        if has_high_severity_finding and review_data.action in ("ACCEPT", "OVERRIDE"):
             if not trimmed_rationale:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Override rationale is mandatory when overriding high-priority clinical findings.",
+                    detail="Override rationale is mandatory when accepting or overriding a prescription with high-priority clinical findings.",
                 )
 
         # 4. Create pharmacist review record
@@ -138,8 +142,8 @@ def review_prescription(
             prescription_id=rx.id,
             reviewer_id=current_user.id,
             action=review_data.action,
-            override_rationale=trimmed_rationale,
-            notes=review_data.notes.strip() if review_data.notes else None,
+            override_rationale=trimmed_rationale if (review_data.action == "OVERRIDE" or has_high_severity_finding) else None,
+            notes=trimmed_notes,
         )
         db.add(review)
         db.flush()  # populate review.id
@@ -148,25 +152,56 @@ def review_prescription(
         for f in unreviewed_findings:
             f.review_id = review.id
 
-        # 6. Transition prescription status and create escalation if applicable
+        # 6. Determine target prescription status and create escalation if applicable
         if review_data.action == "ACCEPT":
-            rx.status = "reviewed"
+            target_status = "reviewed"
         elif review_data.action == "OVERRIDE":
-            rx.status = "overridden"
+            target_status = "overridden"
         elif review_data.action == "ESCALATE":
-            rx.status = "escalated"
+            target_status = "escalated"
             escalation = EscalationResolution(
                 prescription_id=rx.id,
                 escalated_by_id=current_user.id,
                 escalation_reason=(
-                    review_data.notes.strip()
-                    if review_data.notes
+                    trimmed_notes
+                    if trimmed_notes
                     else "Pharmacist escalated complex prescription for Chief Pharmacist review"
                 ),
             )
             db.add(escalation)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unknown review action: {review_data.action}",
+            )
 
-        rx.updated_at = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        # Atomic conditional update of prescription status:
+        # Guarantees that only a prescription currently in 'pending' status can be transitioned.
+        # Concurrent attempts on an already transitioned prescription are rejected with 409 Conflict.
+        rx_updated = (
+            db.query(Prescription)
+            .filter(
+                Prescription.id == rx.id,
+                Prescription.status == "pending",
+            )
+            .update(
+                {
+                    "status": target_status,
+                    "updated_at": now,
+                },
+                synchronize_session="fetch",
+            )
+        )
+        if rx_updated == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Conflict: Prescription {rx.prescription_number} is no longer in 'pending' status "
+                    f"and was already reviewed or transitioned concurrently."
+                ),
+            )
 
         # 7. Record append-only audit log entry
         user_roles = [ur.role_id for ur in current_user.roles]
@@ -184,7 +219,7 @@ def review_prescription(
                 "has_high_priority_finding": has_high_severity_finding,
                 "override_rationale_provided": bool(trimmed_rationale),
                 "findings_snapshotted": len(unreviewed_findings),
-                "new_status": rx.status,
+                "new_status": target_status,
             }),
         )
         db.add(audit_event)
@@ -204,7 +239,7 @@ def review_prescription(
         prescription_id=rx.id,
         prescription_number=rx.prescription_number,
         action=review_data.action,
-        new_status=rx.status,
+        new_status=target_status,
         review_id=review.id,
         findings_snapshotted=len(unreviewed_findings),
         created_at=review.created_at,

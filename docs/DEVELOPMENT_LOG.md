@@ -396,10 +396,71 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
 - Milestone 5 Commit: `efd76c7` — *"Milestone 5: Review workflow, escalation resolution services, and audit integration"*
 
-### Known Limitations at Milestone 5
+---
+
+## Milestone 5: Final Security and Workflow Audit Remediation
+
+**Date**: 2026-10-30  
+**Objective**: Resolve security, workflow consistency, and concurrency vulnerabilities identified during final inspection of Milestone 5 review and escalation services.
+
+### Audit Discoveries & Remediations
+
+1. **HIGH-Severity Approval Bypass Vulnerability Fixed**:
+   - *Discovery*: A staff pharmacist could submit `action: "ACCEPT"` on a prescription with an active `HIGH`-severity finding (e.g. fatal penicillin anaphylaxis) without providing a clinical rationale, because rationale enforcement previously evaluated only `action == "OVERRIDE"`.
+   - *Fix*: Hardened `POST /api/v1/prescriptions/{id}/review` to require a non-empty, trimmed `override_rationale` whenever any active finding is `HIGH` severity for both `ACCEPT` and `OVERRIDE` actions (HTTP 422 if blank/missing/whitespace). Derived strictly from database records (`f.review_id is None`), rendering client-side severity spoofing ineffective.
+   - *Chief Approval Hardening*: Hardened `POST /api/v1/oversight/escalations/{id}/resolve` to require non-empty documented clinical rationale in `resolution_notes` (HTTP 422 if blank or whitespace-only) when Chief Pharmacist approves an escalated case involving `HIGH`-severity findings. Added Pydantic `@field_validator` on `EscalationResolutionRequest.resolution_notes` enforcing >= 5 non-whitespace characters.
+
+2. **Workflow Status Consistency Model Established**:
+   - *Discovery*: In previous draft logic, `MODIFIED_AND_APPROVED` resulted in status `resolved` (the same status as `REJECTED_RETURNED_TO_PRESCRIBER`), while `APPROVED_BY_CHIEF` resulted in `reviewed`. This conflated clinical dispensing approval with order rejection.
+   - *Model Implemented*:
+     - `pending`: Active in staff review queue; no decision rendered.
+     - `reviewed`: Clinically approved for dispensing (standard clean acceptance, Chief `APPROVED_BY_CHIEF`, or Chief `MODIFIED_AND_APPROVED`).
+     - `overridden`: Clinically approved for dispensing under documented pharmacist override rationale for detected conflicts.
+     - `escalated`: Active in Chief Pharmacist oversight queue; held from dispensing.
+     - `resolved`: Terminal closed state for orders rejected by Chief Pharmacist (`REJECTED_RETURNED_TO_PRESCRIBER`) and returned to prescriber without dispensing.
+
+3. **Concurrency Safeguards & Atomic Conditional Updates**:
+   - *Discovery*: Two simultaneous requests to resolve the same escalation could both read `resolved_at is None` before either committed, overwriting decisions and logging duplicate audit events (TOCTOU race condition).
+   - *Fix*: Implemented database-level atomic conditional updates:
+     - `EscalationResolution`: `UPDATE ... WHERE id = :id AND resolved_at IS NULL`.
+     - `Prescription`: `UPDATE ... WHERE id = :id AND status = 'escalated'`.
+     - If either update affects 0 rows, the transaction immediately rolls back and returns HTTP `409 Conflict`.
+   - Applied identical conditional update pattern to `POST /api/v1/prescriptions/{id}/review` (`WHERE status = 'pending'`).
+
+4. **Historical Record Preservation Verified**:
+   - Finding snapshots remain permanently bound to `PharmacistReview` (`f.review_id == review.id`) and are never overwritten by subsequent re-verifications.
+   - Escalation records and resolution notes remain retrievable via `GET /api/v1/prescriptions/{id}`.
+   - Sequential repeated requests return HTTP `409 Conflict`.
+   - Append-only `AuditEvent` records are emitted for all reviews and resolutions with full user attribution.
+
+### Tests Run & Verification
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **66 passed (66 total)** in 46.84s (100% pass rate)
+  - 15 comprehensive review workflow tests in `tests/test_review_workflow.py`:
+    - `test_pharmacist_accept_review` (passed)
+    - `test_override_rationales_blank_missing_valid` (passed)
+    - `test_high_severity_approval_bypass_prevented` (passed - verifies ACCEPT bypass prevention, whitespace rejection, and spoofed payload rejection)
+    - `test_escalate_prescription_creates_traceable_escalation` (passed)
+    - `test_student_and_unauthorized_review_denial` (passed)
+    - `test_staff_pharmacist_forbidden_from_escalation_resolution` (passed)
+    - `test_chief_pharmacist_escalation_resolution_actions` (passed - verifies `APPROVED_BY_CHIEF` -> `reviewed`, `MODIFIED_AND_APPROVED` -> `reviewed`, `REJECTED_RETURNED_TO_PRESCRIBER` -> `resolved`)
+    - `test_chief_approval_high_severity_requires_rationale` (passed)
+    - `test_cannot_resolve_escalation_twice_sequential` (passed - sequential duplicate test)
+    - `test_concurrent_escalation_resolution_race_condition` (passed - multi-threaded concurrent race condition test)
+    - `test_invalid_transitions_rejected` (passed)
+    - `test_preserves_finding_snapshot_across_reverification` (passed)
+    - `test_review_transaction_rollback_on_failure` (passed)
+    - `test_escalation_resolution_rollback_on_failure` (passed)
+    - `test_historical_record_preservation_and_decision_retrieval` (passed)
+  - All existing 26 verification tests, 13 auth tests, 8 database tests, and 4 health tests continue to pass with zero regressions.
+- **Frontend Test Suite (`npm test --prefix frontend`)**:
+  - Result: **3 passed (3 total)** in 13.11s with zero regressions.
+
+### Known Limitations at Milestone 5 Audit
 - The review and escalation system is strictly an advisory decision-support prototype operating on synthetic benchmark data; it does not authorize real-world clinical medication dispensing.
 - Multi-signoff or peer-review workflows (e.g. two-pharmacist verification for high-risk antineoplastic or pediatric infusions) are not modeled in this single-step review prototype.
 - Real-time websocket or push notifications for escalation queues are not implemented; the Chief Pharmacist queue operates via standard HTTP GET polling.
+- Database-level audit immutability is enforced via SQLAlchemy ORM event listeners (`before_update`, `before_delete`); direct raw SQL queries bypassing the ORM are not intercepted by SQLite triggers.
 
 
 

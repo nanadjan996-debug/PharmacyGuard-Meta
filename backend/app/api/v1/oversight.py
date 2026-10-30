@@ -73,13 +73,16 @@ def resolve_escalated_case(
     Workflow & Operational Invariants:
     1. Chief Pharmacist ONLY: Staff Pharmacists and Pharmacy Students receive 403 Forbidden.
     2. Concurrency & Double-Resolution Guard: An escalation cannot be resolved twice through repeated
-       or concurrent requests. Already resolved escalations return HTTP 409 Conflict.
+       or concurrent requests. Enforced via atomic database-level conditional update; concurrent
+       attempts return HTTP 409 Conflict.
     3. Workflow State Transition: Only prescriptions in 'escalated' status can be resolved.
-       - APPROVED_BY_CHIEF -> prescription status becomes 'reviewed'.
-       - REJECTED_RETURNED_TO_PRESCRIBER -> prescription status becomes 'resolved'.
-       - MODIFIED_AND_APPROVED -> prescription status becomes 'resolved'.
-    4. Audited Action: Appends ESCALATION_RESOLVED audit event recording actor, action, and timestamps.
-    5. Transactional Integrity: All changes commit atomically or roll back cleanly on error.
+       - APPROVED_BY_CHIEF -> prescription status becomes 'reviewed' (approved for dispensing).
+       - MODIFIED_AND_APPROVED -> prescription status becomes 'reviewed' (modified and approved).
+       - REJECTED_RETURNED_TO_PRESCRIBER -> prescription status becomes 'resolved' (closed/rejected).
+    4. Mandatory Clinical Rationale: Documented rationale in resolution_notes is strictly required,
+       especially when approving cases involving HIGH-severity clinical findings.
+    5. Audited Action: Appends ESCALATION_RESOLVED audit event recording actor, action, and timestamps.
+    6. Transactional Integrity: All changes commit atomically or roll back cleanly on error.
     """
     # 1. Lookup the escalation record for this prescription
     escalation = (
@@ -94,7 +97,7 @@ def resolve_escalated_case(
             detail=f"No escalation record found for prescription {prescription_id}",
         )
 
-    # 2. Reject duplicate or repeated resolution attempts
+    # 2. Sequential duplicate rejection check
     if escalation.resolved_at is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -112,24 +115,93 @@ def resolve_escalated_case(
             detail=f"Prescription {rx.prescription_number} is in status '{rx.status}', not 'escalated'.",
         )
 
+    # 3. Server-side validation of mandatory clinical rationale
+    trimmed_notes = resolution_data.resolution_notes.strip() if resolution_data.resolution_notes else ""
+    if not trimmed_notes:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Resolution notes cannot be blank or whitespace-only.",
+        )
+
+    has_high_severity = any(f.severity == "HIGH" for f in rx.findings)
+    if has_high_severity and resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "MODIFIED_AND_APPROVED"):
+        if not trimmed_notes:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Documented clinical rationale is mandatory when Chief Pharmacist approves an escalated case with high-severity clinical findings.",
+            )
+
+    # 4. Coherent prescription status transition
+    if resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "MODIFIED_AND_APPROVED"):
+        target_rx_status = "reviewed"
+    elif resolution_data.resolution_action == "REJECTED_RETURNED_TO_PRESCRIBER":
+        target_rx_status = "resolved"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unknown escalation resolution action: {resolution_data.resolution_action}",
+        )
+
+    now = datetime.now(timezone.utc)
     try:
-        # 3. Update escalation record with chief decision
-        escalation.resolved_by_id = current_user.id
-        escalation.resolution_action = resolution_data.resolution_action
-        escalation.resolution_notes = resolution_data.resolution_notes.strip()
-        escalation.resolved_at = datetime.now(timezone.utc)
+        # 5. Atomic conditional update of escalation record:
+        # Guarantees concurrency safety across simultaneous requests.
+        # Exactly one transaction can update the row where resolved_at is NULL.
+        rows_updated = (
+            db.query(EscalationResolution)
+            .filter(
+                EscalationResolution.id == escalation.id,
+                EscalationResolution.resolved_at.is_(None),
+            )
+            .update(
+                {
+                    "resolved_by_id": current_user.id,
+                    "resolution_action": resolution_data.resolution_action,
+                    "resolution_notes": trimmed_notes,
+                    "resolved_at": now,
+                },
+                synchronize_session="fetch",
+            )
+        )
 
-        # 4. Transition prescription workflow status
-        if resolution_data.resolution_action == "APPROVED_BY_CHIEF":
-            rx.status = "reviewed"
-        elif resolution_data.resolution_action == "REJECTED_RETURNED_TO_PRESCRIBER":
-            rx.status = "resolved"
-        else:
-            rx.status = "resolved"
+        if rows_updated == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Conflict: Escalation for prescription {prescription_id} has already been resolved "
+                    f"or was resolved concurrently by another request."
+                ),
+            )
 
-        rx.updated_at = datetime.now(timezone.utc)
+        # 6. Atomic conditional update of prescription status:
+        # Only updates if prescription is currently in 'escalated' status.
+        rx_rows_updated = (
+            db.query(Prescription)
+            .filter(
+                Prescription.id == rx.id,
+                Prescription.status == "escalated",
+            )
+            .update(
+                {
+                    "status": target_rx_status,
+                    "updated_at": now,
+                },
+                synchronize_session="fetch",
+            )
+        )
 
-        # 5. Record append-only audit event
+        if rx_rows_updated == 0:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Conflict: Prescription {rx.prescription_number} is no longer in 'escalated' status "
+                    f"and cannot be resolved."
+                ),
+            )
+
+        # 7. Record append-only audit event
         audit_event = AuditEvent(
             actor_id=current_user.id,
             actor_username=current_user.username,
@@ -141,8 +213,9 @@ def resolve_escalated_case(
                 "prescription_number": rx.prescription_number,
                 "escalation_id": escalation.id,
                 "resolution_action": resolution_data.resolution_action,
+                "resolution_notes": trimmed_notes,
                 "resolved_by": current_user.username,
-                "new_status": rx.status,
+                "new_status": target_rx_status,
             }),
         )
         db.add(audit_event)
@@ -163,8 +236,8 @@ def resolve_escalated_case(
         prescription_number=rx.prescription_number,
         escalation_id=escalation.id,
         resolution_action=resolution_data.resolution_action,
-        prescription_status=rx.status,
-        resolved_at=escalation.resolved_at,
+        prescription_status=target_rx_status,
+        resolved_at=now,
         resolved_by=current_user.username,
     )
 

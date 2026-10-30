@@ -1,7 +1,7 @@
 """Pydantic schemas for prescription reviews, overrides, and escalations."""
 from datetime import datetime
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ReviewActionRequest(BaseModel):
@@ -10,7 +10,7 @@ class ReviewActionRequest(BaseModel):
     )
     override_rationale: Optional[str] = Field(
         default=None,
-        description="Mandatory clinical rationale when overriding high-priority findings.",
+        description="Mandatory clinical rationale when accepting or overriding high-priority findings.",
     )
     notes: Optional[str] = Field(
         default=None,
@@ -24,7 +24,15 @@ class EscalationResolutionRequest(BaseModel):
         "REJECTED_RETURNED_TO_PRESCRIBER",
         "MODIFIED_AND_APPROVED",
     ] = Field(..., description="Chief pharmacist resolution action")
-    resolution_notes: str = Field(..., min_length=5, description="Mandatory resolution explanation notes")
+    resolution_notes: str = Field(..., description="Mandatory resolution explanation notes")
+
+    @field_validator("resolution_notes")
+    @classmethod
+    def validate_resolution_notes(cls, v: str) -> str:
+        trimmed = v.strip() if v else ""
+        if len(trimmed) < 5:
+            raise ValueError("Resolution notes must contain at least 5 non-whitespace characters.")
+        return trimmed
 
 
 class ReviewFindingResponse(BaseModel):

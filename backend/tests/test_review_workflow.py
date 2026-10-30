@@ -1,4 +1,5 @@
 """Automated test suite for Milestone 5: Review Workflow and Escalation Services."""
+import concurrent.futures
 import json
 import uuid
 from datetime import datetime, timezone
@@ -191,6 +192,70 @@ def test_override_rationales_blank_missing_valid(client, db_session: Session, hi
     assert "override_rationale_provided" in audit.details
 
 
+def test_high_severity_approval_bypass_prevented(client, db_session: Session, high_conflict_prescription):
+    """
+    Staff pharmacist CANNOT bypass clinical rationale requirements by submitting 'ACCEPT'
+    instead of 'OVERRIDE' on a prescription with an active HIGH-severity finding.
+    
+    Security & Safety Invariants:
+    1. 'ACCEPT' with missing rationale -> 422 Unprocessable Entity
+    2. 'ACCEPT' with whitespace-only rationale -> 422 Unprocessable Entity
+    3. Client-supplied false severity in payload cannot bypass the server check
+    4. Valid rationale allows ACCEPT -> 200 OK with rationale stored in PharmacistReview
+    """
+    token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Attempt ACCEPT on HIGH-conflict prescription without rationale -> 422
+    res_bypass_no_rat = client.post(
+        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
+        json={"action": "ACCEPT"},
+        headers=headers,
+    )
+    assert res_bypass_no_rat.status_code == 422
+    assert "rationale is mandatory" in res_bypass_no_rat.json()["detail"].lower()
+
+    # 2. Attempt ACCEPT with whitespace-only rationale -> 422
+    res_bypass_ws = client.post(
+        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
+        json={"action": "ACCEPT", "override_rationale": "    \t \n  "},
+        headers=headers,
+    )
+    assert res_bypass_ws.status_code == 422
+    assert "rationale is mandatory" in res_bypass_ws.json()["detail"].lower()
+
+    # 3. Attempt ACCEPT with client-supplied false severity override ("CLEAN") in request body
+    res_bypass_spoof = client.post(
+        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
+        json={"action": "ACCEPT", "severity": "CLEAN", "status": "CLEAN"},
+        headers=headers,
+    )
+    assert res_bypass_spoof.status_code == 422
+    assert "rationale is mandatory" in res_bypass_spoof.json()["detail"].lower()
+
+    # 4. Legitimate ACCEPT with documented clinical rationale -> 200 OK
+    valid_accept_payload = {
+        "action": "ACCEPT",
+        "override_rationale": "Direct penicillin challenge test performed in ICU with negative reaction; attending cleared amoxicillin.",
+        "notes": "Verified by Dr. Vance, Chief of Allergy.",
+    }
+    res_valid = client.post(
+        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
+        json=valid_accept_payload,
+        headers=headers,
+    )
+    assert res_valid.status_code == 200
+    data = res_valid.json()
+    assert data["new_status"] == "reviewed"
+    assert data["action"] == "ACCEPT"
+
+    # Verify database record stored the rationale
+    review = db_session.query(PharmacistReview).filter_by(id=data["review_id"]).first()
+    assert review is not None
+    assert review.action == "ACCEPT"
+    assert review.override_rationale == valid_accept_payload["override_rationale"]
+
+
 def test_escalate_prescription_creates_traceable_escalation(client, db_session: Session, high_conflict_prescription):
     """
     Staff pharmacist escalates complex high-risk prescription:
@@ -322,16 +387,16 @@ def test_staff_pharmacist_forbidden_from_escalation_resolution(client, db_sessio
 def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Session):
     """
     Chief Pharmacist resolves escalations using authorized actions:
-    1. APPROVED_BY_CHIEF -> new prescription status is 'reviewed'
-    2. REJECTED_RETURNED_TO_PRESCRIBER -> new prescription status is 'resolved'
-    3. MODIFIED_AND_APPROVED -> new prescription status is 'resolved'
+    1. APPROVED_BY_CHIEF -> new prescription status is 'reviewed' (approved for dispensing)
+    2. MODIFIED_AND_APPROVED -> new prescription status is 'reviewed' (modified and approved for dispensing)
+    3. REJECTED_RETURNED_TO_PRESCRIBER -> new prescription status is 'resolved' (closed/rejected without dispensing)
     """
     chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
     chief_headers = {"Authorization": f"Bearer {chief_token}"}
     staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
     staff_headers = {"Authorization": f"Bearer {staff_token}"}
 
-    # Test APPROVED_BY_CHIEF
+    # 1. Test APPROVED_BY_CHIEF -> status 'reviewed'
     rx_approve = Prescription(
         id=str(uuid.uuid4()),
         prescription_number=f"RX-CHIEF-APP-{uuid.uuid4().hex[:6].upper()}",
@@ -343,44 +408,151 @@ def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Sess
     db_session.add(rx_approve)
     db_session.commit()
 
-    # Escalate it
     client.post(
         f"/api/v1/prescriptions/{rx_approve.id}/review",
         json={"action": "ESCALATE", "notes": "Escalating for chief approval"},
         headers=staff_headers,
     )
 
-    resolve_payload = {
+    resolve_payload1 = {
         "resolution_action": "APPROVED_BY_CHIEF",
         "resolution_notes": "Reviewed clinical documentation and risk/benefit ratio. Approved for single inpatient dose under telemetry monitoring.",
     }
-    res_resolve = client.post(
+    res_resolve1 = client.post(
         f"/api/v1/oversight/escalations/{rx_approve.id}/resolve",
-        json=resolve_payload,
+        json=resolve_payload1,
         headers=chief_headers,
     )
-    assert res_resolve.status_code == 200
-    data = res_resolve.json()
-    assert data["resolution_action"] == "APPROVED_BY_CHIEF"
-    assert data["prescription_status"] == "reviewed"
-    assert data["resolved_by"] == "chief_demo"
+    assert res_resolve1.status_code == 200
+    data1 = res_resolve1.json()
+    assert data1["resolution_action"] == "APPROVED_BY_CHIEF"
+    assert data1["prescription_status"] == "reviewed"
+    assert data1["resolved_by"] == "chief_demo"
 
     db_session.refresh(rx_approve)
     assert rx_approve.status == "reviewed"
 
     # Verify audit event
-    audit = (
+    audit1 = (
         db_session.query(AuditEvent)
         .filter_by(action="ESCALATION_RESOLVED", entity_id=rx_approve.id)
         .order_by(AuditEvent.timestamp.desc())
         .first()
     )
-    assert audit is not None
-    assert audit.actor_username == "chief_demo"
+    assert audit1 is not None
+    assert audit1.actor_username == "chief_demo"
+
+    # 2. Test MODIFIED_AND_APPROVED -> status 'reviewed'
+    rx_mod = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-CHIEF-MOD-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-001",
+        prescriber_name="Dr. Resident, MD",
+        prescriber_department="Surgery",
+        status="pending",
+    )
+    db_session.add(rx_mod)
+    db_session.commit()
+
+    client.post(
+        f"/api/v1/prescriptions/{rx_mod.id}/review",
+        json={"action": "ESCALATE", "notes": "Dosing frequency clarification requested"},
+        headers=staff_headers,
+    )
+
+    resolve_payload2 = {
+        "resolution_action": "MODIFIED_AND_APPROVED",
+        "resolution_notes": "Contacted prescriber; dose adjusted from Q6H to Q8H with renal monitoring. Modified and approved for dispensing.",
+    }
+    res_resolve2 = client.post(
+        f"/api/v1/oversight/escalations/{rx_mod.id}/resolve",
+        json=resolve_payload2,
+        headers=chief_headers,
+    )
+    assert res_resolve2.status_code == 200
+    data2 = res_resolve2.json()
+    assert data2["resolution_action"] == "MODIFIED_AND_APPROVED"
+    assert data2["prescription_status"] == "reviewed"
+
+    db_session.refresh(rx_mod)
+    assert rx_mod.status == "reviewed"
+
+    # 3. Test REJECTED_RETURNED_TO_PRESCRIBER -> status 'resolved'
+    rx_rej = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-CHIEF-REJ-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-001",
+        prescriber_name="Dr. External, MD",
+        prescriber_department="Urgent Care",
+        status="pending",
+    )
+    db_session.add(rx_rej)
+    db_session.commit()
+
+    client.post(
+        f"/api/v1/prescriptions/{rx_rej.id}/review",
+        json={"action": "ESCALATE", "notes": "Unacceptable contraindication identified"},
+        headers=staff_headers,
+    )
+
+    resolve_payload3 = {
+        "resolution_action": "REJECTED_RETURNED_TO_PRESCRIBER",
+        "resolution_notes": "Order rejected due to severe contraindication. Prescriber contacted to cancel and issue safe alternative.",
+    }
+    res_resolve3 = client.post(
+        f"/api/v1/oversight/escalations/{rx_rej.id}/resolve",
+        json=resolve_payload3,
+        headers=chief_headers,
+    )
+    assert res_resolve3.status_code == 200
+    data3 = res_resolve3.json()
+    assert data3["resolution_action"] == "REJECTED_RETURNED_TO_PRESCRIBER"
+    assert data3["prescription_status"] == "resolved"
+
+    db_session.refresh(rx_rej)
+    assert rx_rej.status == "resolved"
 
 
-def test_cannot_resolve_escalation_twice(client, db_session: Session):
-    """An escalation cannot be resolved twice through repeated or concurrent requests (409 Conflict)."""
+def test_chief_approval_high_severity_requires_rationale(client, db_session: Session, high_conflict_prescription):
+    """
+    Chief Pharmacist approval of an escalated case involving HIGH-severity clinical findings
+    requires an appropriate, non-empty, documented clinical rationale.
+    """
+    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
+    chief_headers = {"Authorization": f"Bearer {chief_token}"}
+    staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+
+    # Escalate the high-conflict prescription
+    client.post(
+        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
+        json={"action": "ESCALATE", "notes": "High conflict escalation for chief evaluation"},
+        headers=staff_headers,
+    )
+
+    # 1. Attempt APPROVED_BY_CHIEF with whitespace-only notes -> 422
+    res_ws = client.post(
+        f"/api/v1/oversight/escalations/{high_conflict_prescription.id}/resolve",
+        json={"resolution_action": "APPROVED_BY_CHIEF", "resolution_notes": "       "},
+        headers=chief_headers,
+    )
+    assert res_ws.status_code == 422
+
+    # 2. Legitimate APPROVED_BY_CHIEF with documented rationale -> 200 OK
+    res_valid = client.post(
+        f"/api/v1/oversight/escalations/{high_conflict_prescription.id}/resolve",
+        json={
+            "resolution_action": "APPROVED_BY_CHIEF",
+            "resolution_notes": "Chief reviewed patient allergy chart; confirmed previous allergy was mild rash 20 years ago. Attending physician concurred; approved under telemetry monitoring.",
+        },
+        headers=chief_headers,
+    )
+    assert res_valid.status_code == 200
+    assert res_valid.json()["prescription_status"] == "reviewed"
+
+
+def test_cannot_resolve_escalation_twice_sequential(client, db_session: Session):
+    """Sequential duplicate resolution test: An escalation cannot be resolved twice through repeated sequential requests (409 Conflict)."""
     chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
     chief_headers = {"Authorization": f"Bearer {chief_token}"}
     staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
@@ -425,6 +597,106 @@ def test_cannot_resolve_escalation_twice(client, db_session: Session):
     )
     assert second_res.status_code == 409
     assert "already been resolved" in second_res.json()["detail"].lower()
+
+
+def test_concurrent_escalation_resolution_race_condition(client, db_session: Session):
+    """
+    Concurrency Race Condition Test:
+    Simulates two genuinely simultaneous resolution requests sent to /oversight/escalations/{id}/resolve
+    using ThreadPoolExecutor to verify atomic conditional state transitions at the database level.
+    
+    Guarantees:
+    - Exactly one concurrent request succeeds (HTTP 200 OK)
+    - The other concurrent request is rejected with HTTP 409 Conflict
+    - Exactly one escalation record is resolved and exactly one ESCALATION_RESOLVED audit event is persisted
+    """
+    from app.main import app as fastapi_app
+    from app.core.database import get_db
+    from tests.conftest import TestingSessionLocal
+
+    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
+    chief_headers = {"Authorization": f"Bearer {chief_token}"}
+    staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+
+    rx = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-CONCUR-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-001",
+        prescriber_name="Dr. Concurrent, MD",
+        prescriber_department="Neurology",
+        status="pending",
+    )
+    db_session.add(rx)
+    db_session.commit()
+
+    # Escalate first
+    client.post(
+        f"/api/v1/prescriptions/{rx.id}/review",
+        json={"action": "ESCALATE", "notes": "Concurrent resolution test escalation"},
+        headers=staff_headers,
+    )
+
+    payload_a = {
+        "resolution_action": "APPROVED_BY_CHIEF",
+        "resolution_notes": "Concurrent Resolution Request A - Approved by Chief",
+    }
+    payload_b = {
+        "resolution_action": "REJECTED_RETURNED_TO_PRESCRIBER",
+        "resolution_notes": "Concurrent Resolution Request B - Rejected by Chief",
+    }
+
+    # For multi-threaded concurrency testing, provide each concurrent request thread
+    # its own database session from TestingSessionLocal (mirroring multi-worker production).
+    def thread_safe_get_db():
+        session = TestingSessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    original_override = fastapi_app.dependency_overrides.get(get_db)
+    fastapi_app.dependency_overrides[get_db] = thread_safe_get_db
+
+    try:
+        def send_resolution(payload):
+            return client.post(
+                f"/api/v1/oversight/escalations/{rx.id}/resolve",
+                json=payload,
+                headers=chief_headers,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_a = executor.submit(send_resolution, payload_a)
+            future_b = executor.submit(send_resolution, payload_b)
+            res_a = future_a.result()
+            res_b = future_b.result()
+    finally:
+        if original_override:
+            fastapi_app.dependency_overrides[get_db] = original_override
+        else:
+            fastapi_app.dependency_overrides.pop(get_db, None)
+
+    status_codes = sorted([res_a.status_code, res_b.status_code])
+    assert status_codes == [200, 409], f"Expected exactly one 200 and one 409, got: {status_codes}"
+
+    # Verify database state has exactly 1 resolved escalation
+    db_session.expire_all()
+    escalations = (
+        db_session.query(EscalationResolution)
+        .filter_by(prescription_id=rx.id)
+        .all()
+    )
+    assert len(escalations) == 1
+    assert escalations[0].resolved_at is not None
+
+    # Verify exactly 1 ESCALATION_RESOLVED audit event exists
+    audit_events = (
+        db_session.query(AuditEvent)
+        .filter_by(action="ESCALATION_RESOLVED", entity_id=rx.id)
+        .all()
+    )
+    assert len(audit_events) == 1
 
 
 # =====================================================================
@@ -641,3 +913,139 @@ def test_escalation_resolution_rollback_on_failure(client, db_session: Session, 
     assert high_conflict_prescription.status == "escalated"
     db_session.refresh(esc)
     assert esc.resolved_at is None
+
+
+def test_historical_record_preservation_and_decision_retrieval(client, db_session: Session):
+    """
+    Verify complete historical record preservation across review and escalation lifecycles:
+    1. Original findings remain attached to their original review record.
+    2. Escalation records remain available after resolution.
+    3. Resolution decisions and explanations remain fully retrievable via GET /prescriptions/{id}.
+    4. Repeated review requests cannot overwrite finalized decisions (409 Conflict).
+    5. Append-only audit events are generated with full actor attribution and metadata.
+    """
+    staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
+    staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
+    chief_headers = {"Authorization": f"Bearer {chief_token}"}
+
+    rx = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-HIST-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-003",  # Charles Vance with penicillin allergy
+        prescriber_name="Dr. Attending, MD",
+        prescriber_department="Infectious Disease",
+        status="pending",
+    )
+    db_session.add(rx)
+    db_session.flush()
+
+    item = PrescriptionItem(
+        id=str(uuid.uuid4()),
+        prescription_id=rx.id,
+        medication_id="MED-AMOX-500",
+        dose_amount=500.0,
+        dose_unit="mg",
+        frequency="TID",
+        route="Oral",
+        duration_days=7,
+        quantity_prescribed=21,
+        instructions="Take 1 capsule TID",
+    )
+    db_session.add(item)
+    db_session.commit()
+
+    # Step 1: Verify to populate initial findings
+    engine = VerificationEngine(db_session)
+    engine.verify(rx.id, persist=True)
+
+    initial_findings = (
+        db_session.query(ReviewFinding)
+        .filter_by(prescription_id=rx.id)
+        .all()
+    )
+    assert len(initial_findings) > 0
+    initial_finding_ids = {f.id for f in initial_findings}
+
+    # Step 2: Escalate prescription
+    esc_res = client.post(
+        f"/api/v1/prescriptions/{rx.id}/review",
+        json={"action": "ESCALATE", "notes": "Escalating allergy conflict for historical test"},
+        headers=staff_headers,
+    )
+    assert esc_res.status_code == 200
+    review_id = esc_res.json()["review_id"]
+
+    # Verify findings are snapshotted to review_id
+    db_session.expire_all()
+    snapshotted_findings = (
+        db_session.query(ReviewFinding)
+        .filter_by(review_id=review_id)
+        .all()
+    )
+    assert len(snapshotted_findings) == len(initial_findings)
+    assert {f.id for f in snapshotted_findings} == initial_finding_ids
+
+    # Step 3: Chief resolves escalation
+    resolve_notes = "Chief evaluated ICU allergy skin testing results. Approved for single monitored dose."
+    res_resolve = client.post(
+        f"/api/v1/oversight/escalations/{rx.id}/resolve",
+        json={
+            "resolution_action": "APPROVED_BY_CHIEF",
+            "resolution_notes": resolve_notes,
+        },
+        headers=chief_headers,
+    )
+    assert res_resolve.status_code == 200
+    assert res_resolve.json()["prescription_status"] == "reviewed"
+
+    # Step 4: Verify escalation record remains queryable in DB
+    db_session.expire_all()
+    esc = (
+        db_session.query(EscalationResolution)
+        .filter_by(prescription_id=rx.id)
+        .first()
+    )
+    assert esc is not None
+    assert esc.resolved_at is not None
+    assert esc.resolution_action == "APPROVED_BY_CHIEF"
+    assert esc.resolution_notes == resolve_notes
+    assert esc.resolved_by_id == "usr-chief-001"
+
+    # Step 5: Verify resolution and review details retrievable via GET /prescriptions/{id}
+    detail_res = client.get(f"/api/v1/prescriptions/{rx.id}", headers=staff_headers)
+    assert detail_res.status_code == 200
+    detail_data = detail_res.json()
+    assert detail_data["status"] == "reviewed"
+    assert len(detail_data["reviews"]) >= 1
+    assert detail_data["reviews"][0]["id"] == review_id
+    assert len(detail_data["escalations"]) >= 1
+    assert detail_data["escalations"][0]["resolution_action"] == "APPROVED_BY_CHIEF"
+    assert detail_data["escalations"][0]["resolution_notes"] == resolve_notes
+    assert detail_data["escalations"][0]["resolved_by_name"] == "Marcus Vance, PharmD, BCPS"
+
+    # Step 6: Verify repeated review cannot overwrite decision -> 409
+    dup_res = client.post(
+        f"/api/v1/prescriptions/{rx.id}/review",
+        json={"action": "ACCEPT"},
+        headers=staff_headers,
+    )
+    assert dup_res.status_code == 409
+
+    # Step 7: Verify audit events exist for both REVIEW_ESCALATE and ESCALATION_RESOLVED
+    esc_audit = (
+        db_session.query(AuditEvent)
+        .filter_by(action="REVIEW_ESCALATE", entity_id=rx.id)
+        .first()
+    )
+    assert esc_audit is not None
+    assert esc_audit.actor_username == "pharmacist_demo"
+
+    res_audit = (
+        db_session.query(AuditEvent)
+        .filter_by(action="ESCALATION_RESOLVED", entity_id=rx.id)
+        .first()
+    )
+    assert res_audit is not None
+    assert res_audit.actor_username == "chief_demo"
+    assert "APPROVED_BY_CHIEF" in res_audit.details
