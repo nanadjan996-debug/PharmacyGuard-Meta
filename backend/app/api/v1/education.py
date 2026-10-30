@@ -3,7 +3,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_db, get_current_user, require_pharmacy_student
 from app.models.user import User
 from app.models.education import EducationalCase, StudentSubmission
 from app.models.audit import AuditEvent
@@ -134,7 +134,7 @@ def submit_case_assessment(
     case_id: str,
     submission_req: StudentSubmissionRequest,
     request: Request,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_pharmacy_student),
     db: Session = Depends(get_db),
 ) -> StudentSubmissionResponse:
     """
@@ -324,11 +324,16 @@ def get_submission_detail(
     except Exception:
         # Fallback if feedback is plain text
         feedback_obj = DetailedFeedback(
+            determination_status="PREFERRED" if submission.is_correct else "UNSUPPORTED",
+            preferred_determination=submission.case.predefined_answer,
+            acceptable_alternatives=[],
             determination_correct=submission.is_correct,
             determination_feedback=submission.feedback,
             expected_determination=submission.case.predefined_answer,
             determination_score=50 if submission.is_correct else 0,
             issue_identification_score=0,
+            correctly_identified_reasoning_elements=[],
+            missed_reasoning_elements=[],
             reasoning_feedback="",
             reasoning_score=0,
             total_score=submission.score_awarded,

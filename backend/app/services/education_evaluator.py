@@ -13,6 +13,17 @@ from app.schemas.education import (
 # Configured benchmark criteria catalog linking educational cases to demo reference rules
 CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
     "CASE-BEG-01": {
+        "preferred_determination": "REJECT",
+        "acceptable_alternatives": {
+            "ESCALATE": {
+                "score": 25,
+                "feedback": (
+                    "Acceptable alternative determination: Escalating to a Chief Pharmacist safely "
+                    "halts dispensing and prevents patient harm, but according to clinical guideline criteria, "
+                    "this case contains an absolute contraindication requiring immediate REJECT and prescriber notification."
+                ),
+            }
+        },
         "learning_objectives": [
             "Identify beta-lactam class cross-reactivity in patients with severe penicillin allergy",
             "Recognize absolute contraindications requiring immediate prescription rejection",
@@ -20,11 +31,75 @@ CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
         ],
         "expected_issues": ["ALLERGY_CROSS_REACTIVITY"],
         "issue_synonyms": {
-            "ALLERGY_CROSS_REACTIVITY": ["ALLERGY", "ALLERGY_CROSS_REACTIVITY", "PENICILLIN_ALLERGY", "BETA_LACTAM_ALLERGY"],
+            "ALLERGY_CROSS_REACTIVITY": [
+                "ALLERGY",
+                "ALLERGY_CROSS_REACTIVITY",
+                "PENICILLIN_ALLERGY",
+                "BETA_LACTAM_ALLERGY",
+                "BETA_LACTAM_CROSS_REACTIVITY",
+            ],
         },
-        "reasoning_keywords": {
-            "ALLERGY_CROSS_REACTIVITY": ["penicillin", "amoxicillin", "allergy", "anaphylaxis", "beta-lactam", "contraindicated", "cross-reactivity", "severe", "icu"],
+        "issue_keywords": {
+            "ALLERGY_CROSS_REACTIVITY": [
+                "penicillin",
+                "amoxicillin",
+                "allergy",
+                "anaphylaxis",
+                "beta-lactam",
+                "cross-allergenicity",
+                "cross-reactivity",
+            ],
         },
+        "required_reasoning_elements": [
+            {
+                "id": "BETA_LACTAM_STRUCTURE",
+                "title": "Structural Beta-Lactam Cross-Reactivity",
+                "points": 7,
+                "keywords": [
+                    "beta-lactam",
+                    "beta lactam",
+                    "cross-react",
+                    "cross react",
+                    "aminopenicillin",
+                    "amino-penicillin",
+                    "penicillin class",
+                    "same class",
+                    "chemical structure",
+                    "ring",
+                ],
+            },
+            {
+                "id": "SEVERE_ANAPHYLAXIS_HISTORY",
+                "title": "Severe Anaphylaxis / ICU History",
+                "points": 7,
+                "keywords": [
+                    "anaphylaxis",
+                    "anaphylactic",
+                    "icu",
+                    "severe",
+                    "life-threatening",
+                    "bronchospasm",
+                    "intubat",
+                    "shock",
+                ],
+            },
+            {
+                "id": "CONTRAINDICATION_AND_ACTION",
+                "title": "Absolute Contraindication & Order Rejection",
+                "points": 6,
+                "keywords": [
+                    "contraindicated",
+                    "contraindication",
+                    "reject",
+                    "alternative",
+                    "non-penicillin",
+                    "non-beta-lactam",
+                    "substitute",
+                    "not safe",
+                    "halt",
+                ],
+            },
+        ],
         "expected_rules": [
             ReferenceRuleFeedback(
                 rule_identifier="RULE-ALG-PEN-01",
@@ -37,6 +112,16 @@ CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
         ],
     },
     "CASE-INT-01": {
+        "preferred_determination": "REJECT",
+        "acceptable_alternatives": {
+            "ESCALATE": {
+                "score": 25,
+                "feedback": (
+                    "Acceptable alternative determination: Escalating to a Chief Pharmacist safely "
+                    "halts dispensing, but direct REJECT to recommend multimodal non-NSAID alternatives is the preferred guideline action."
+                ),
+            }
+        },
         "learning_objectives": [
             "Detect therapeutic duplication across non-identical chemical entities in the same drug class",
             "Understand the ceiling effect and compounded toxicity of systemic NSAIDs",
@@ -44,11 +129,77 @@ CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
         ],
         "expected_issues": ["DUPLICATE_THERAPY"],
         "issue_synonyms": {
-            "DUPLICATE_THERAPY": ["DUPLICATE_THERAPY", "THERAPEUTIC_DUPLICATION", "NSAID_DUPLICATION", "DRUG_INTERACTION"],
+            "DUPLICATE_THERAPY": [
+                "DUPLICATE_THERAPY",
+                "THERAPEUTIC_DUPLICATION",
+                "NSAID_DUPLICATION",
+                "DRUG_INTERACTION",
+                "DUPLICATE_NSAID",
+            ],
         },
-        "reasoning_keywords": {
-            "DUPLICATE_THERAPY": ["nsaid", "ketorolac", "ibuprofen", "duplication", "concurrent", "bleeding", "gi", "gastrointestinal", "renal", "nephrotoxicity", "ceiling"],
+        "issue_keywords": {
+            "DUPLICATE_THERAPY": [
+                "nsaid",
+                "ketorolac",
+                "ibuprofen",
+                "duplication",
+                "duplicate",
+                "concurrent",
+            ],
         },
+        "required_reasoning_elements": [
+            {
+                "id": "DUAL_NSAID_CLASS",
+                "title": "Dual Systemic NSAID Class Duplication",
+                "points": 7,
+                "keywords": [
+                    "nsaid",
+                    "dual nsaid",
+                    "two nsaid",
+                    "duplicate",
+                    "duplication",
+                    "concurrent",
+                    "same class",
+                    "both are nsaid",
+                    "ketorolac and ibuprofen",
+                    "ketorolac with ibuprofen",
+                ],
+            },
+            {
+                "id": "ANALGESIC_CEILING_EFFECT",
+                "title": "Analgesic Ceiling Effect & Lack of Additive Benefit",
+                "points": 7,
+                "keywords": [
+                    "ceiling",
+                    "no additive",
+                    "no additional analgesia",
+                    "no extra pain relief",
+                    "saturation",
+                    "not superior",
+                    "no added benefit",
+                    "cox saturation",
+                ],
+            },
+            {
+                "id": "COMPOUNDED_TOXICITY",
+                "title": "Compounded GI Bleeding or Nephrotoxicity Risks",
+                "points": 6,
+                "keywords": [
+                    "bleeding",
+                    "hemorrhage",
+                    "gastrointestinal",
+                    "gi ulcer",
+                    "ulcer",
+                    "nephrotox",
+                    "renal failure",
+                    "acute kidney injury",
+                    "aki",
+                    "black-box",
+                    "black box",
+                    "renal toxicity",
+                ],
+            },
+        ],
         "expected_rules": [
             ReferenceRuleFeedback(
                 rule_identifier="RULE-INT-NSAID-NSAID-01",
@@ -61,6 +212,16 @@ CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
         ],
     },
     "CASE-ADV-01": {
+        "preferred_determination": "REJECT",
+        "acceptable_alternatives": {
+            "ESCALATE": {
+                "score": 25,
+                "feedback": (
+                    "Acceptable alternative determination: Escalating to a Chief Pharmacist for prescriber communication "
+                    "is an acceptable clinical decision given the dual indication and renal dosing complexity, though direct REJECT for dose reduction is preferred."
+                ),
+            }
+        },
         "learning_objectives": [
             "Reconcile prescribed medications against documented active diagnostic problem lists",
             "Evaluate renal clearance parameters (eGFR) against drug monograph dosage limits",
@@ -68,13 +229,92 @@ CASE_CRITERIA_CATALOG: dict[str, dict[str, Any]] = {
         ],
         "expected_issues": ["INDICATION", "DOSAGE"],
         "issue_synonyms": {
-            "INDICATION": ["INDICATION", "MISSING_INDICATION", "DIABETES_INDICATION", "RENAL_DOSING_INDICATION"],
-            "DOSAGE": ["DOSAGE", "RENAL_DOSING", "RENAL_IMPAIRMENT", "EGFR_CONTRAINDICATION", "MAX_DOSE"],
+            "INDICATION": [
+                "INDICATION",
+                "MISSING_INDICATION",
+                "DIABETES_INDICATION",
+                "UNCONFIRMED_INDICATION",
+            ],
+            "DOSAGE": [
+                "DOSAGE",
+                "RENAL_DOSING",
+                "RENAL_IMPAIRMENT",
+                "MAX_DOSE",
+                "DOSE_EXCEEDED",
+            ],
         },
-        "reasoning_keywords": {
-            "INDICATION": ["indication", "diabetes", "diagnos", "e11", "problem list", "history"],
-            "DOSAGE": ["renal", "kidney", "egfr", "dose", "dosage", "lactic acidosis", "ckd", "stage 3", "contraindicated", "1000", "2000"],
+        "issue_keywords": {
+            "INDICATION": [
+                "indication",
+                "diabetes",
+                "type 2",
+                "t2d",
+                "e11",
+                "problem list",
+            ],
+            "DOSAGE": [
+                "dose",
+                "dosage",
+                "renal",
+                "kidney",
+                "egfr",
+                "ckd",
+                "stage 3",
+                "lactic acidosis",
+                "1000",
+                "2000",
+            ],
         },
+        "required_reasoning_elements": [
+            {
+                "id": "MISSING_INDICATION_DIABETES",
+                "title": "Unconfirmed Indication / Missing Diabetes Diagnosis",
+                "points": 7,
+                "keywords": [
+                    "indication",
+                    "diabetes",
+                    "type 2",
+                    "t2d",
+                    "e11",
+                    "problem list",
+                    "no diagnosis",
+                    "unconfirmed",
+                    "not documented",
+                ],
+            },
+            {
+                "id": "REDUCED_RENAL_CLEARANCE",
+                "title": "Impaired Renal Function / Stage 3b CKD (eGFR 38)",
+                "points": 7,
+                "keywords": [
+                    "egfr",
+                    "38",
+                    "renal impairment",
+                    "chronic kidney disease",
+                    "ckd",
+                    "stage 3",
+                    "reduced clearance",
+                    "kidney function",
+                    "renal insufficiency",
+                ],
+            },
+            {
+                "id": "DOSAGE_LIMIT_LACTIC_ACIDOSIS",
+                "title": "Max 1000 mg/day Limit & Fatal Lactic Acidosis Risk",
+                "points": 6,
+                "keywords": [
+                    "1000",
+                    "2000",
+                    "exceeds",
+                    "max dose",
+                    "maximum daily",
+                    "dosage threshold",
+                    "lactic acidosis",
+                    "contraindicated",
+                    "dose reduction",
+                ],
+            },
+        ],
         "expected_rules": [
             ReferenceRuleFeedback(
                 rule_identifier="RULE-IND-MET-01",
@@ -135,19 +375,19 @@ class EducationalEvaluator:
     ) -> DetailedFeedback:
         """
         Evaluate student submission transparently against configured benchmark criteria:
-        1. Determination accuracy (0-50 pts)
-        2. Issue identification (0-30 pts)
-        3. Clinical reasoning documentation (0-20 pts)
+        1. Determination accuracy: preferred vs acceptable alternative vs unsupported (0-50 pts)
+        2. Issue identification: expected categories vs missed (0-30 pts)
+        3. Clinical reasoning element evaluation: content-based rubric without length bias (0-20 pts)
         Total Score: 0-100 pts.
         """
         submitted_det = submission_req.determination.strip().upper()
-        expected_det = case.predefined_answer.strip().upper()
         reasoning_text = submission_req.reasoning.strip().lower()
 
         config = CASE_CRITERIA_CATALOG.get(case.case_code, {})
+        pref_det = config.get("preferred_determination", case.predefined_answer).strip().upper()
+        acceptable_alts = config.get("acceptable_alternatives", {})
         expected_issues = config.get("expected_issues", [case.category])
         issue_synonyms = config.get("issue_synonyms", {})
-        reasoning_keywords = config.get("reasoning_keywords", {})
         expected_rules = config.get("expected_rules", [])
 
         # -------------------------------------------------------------
@@ -155,33 +395,27 @@ class EducationalEvaluator:
         # -------------------------------------------------------------
         det_score = 0
         det_correct = False
+        det_status = "UNSUPPORTED"
         det_feedback = ""
 
-        if submitted_det == expected_det:
+        if submitted_det == pref_det:
             det_score = 50
             det_correct = True
-            det_feedback = f"Correct determination: Appropriately identified '{expected_det}' as the required clinical action."
-        elif submitted_det == "ESCALATE" and expected_det == "REJECT":
-            # Partial credit: escalation safely stops dispensing, but misses direct rejection rule
-            det_score = 25
+            det_status = "PREFERRED"
+            det_feedback = f"Preferred determination: Appropriately selected '{pref_det}' as the primary clinical action."
+        elif submitted_det in acceptable_alts:
+            alt_info = acceptable_alts[submitted_det]
+            det_score = alt_info["score"]
             det_correct = False
-            det_feedback = (
-                "Partially correct determination: Escalating to a Chief Pharmacist safely holds dispensing, "
-                f"but this case contains an absolute contraindication requiring immediate '{expected_det}'."
-            )
-        elif submitted_det == "ESCALATE" and expected_det == "OVERRIDE_WITH_RATIONALE":
-            det_score = 25
-            det_correct = False
-            det_feedback = (
-                "Partially correct determination: Escalation is safe, but this finding can be resolved "
-                f"via '{expected_det}' with documented clinical rationale."
-            )
+            det_status = "ACCEPTABLE_ALTERNATIVE"
+            det_feedback = alt_info["feedback"]
         else:
             det_score = 0
             det_correct = False
+            det_status = "UNSUPPORTED"
             det_feedback = (
-                f"Incorrect determination: Selected '{submitted_det}', but the safe action under "
-                f"demonstration practice criteria is '{expected_det}'."
+                f"Unsafe or unsupported determination: Selected '{submitted_det}'. The preferred clinical action "
+                f"under demonstration practice criteria is '{pref_det}'. This selection is neither preferred nor an acceptable alternative."
             )
 
         # -------------------------------------------------------------
@@ -195,14 +429,18 @@ class EducationalEvaluator:
         correctly_identified = []
         missed = []
 
+        issue_keywords = config.get("issue_keywords", {})
         for exp_issue in expected_issues:
             # Check 1: direct in identified_issues or synonym match
             synonyms = set(issue_synonyms.get(exp_issue, [exp_issue]))
             matched_in_list = any(s_issue in synonyms for s_issue in normalized_student_issues)
 
-            # Check 2: keywords mentioned in reasoning
-            kw_list = reasoning_keywords.get(exp_issue, [exp_issue.lower()])
-            matched_in_reasoning = any(kw in reasoning_text for kw in kw_list)
+            # Check 2: identified within student reasoning text
+            kw_list = issue_keywords.get(exp_issue, [exp_issue.lower()])
+            matched_in_reasoning = any(
+                re.search(r"\b" + re.escape(kw) + r"\b", reasoning_text)
+                for kw in kw_list
+            )
 
             if matched_in_list or matched_in_reasoning:
                 correctly_identified.append(exp_issue)
@@ -221,27 +459,54 @@ class EducationalEvaluator:
             issue_score = 30
 
         # -------------------------------------------------------------
-        # 3. Clinical Reasoning Documentation Evaluation (20 points maximum)
+        # 3. Clinical Reasoning Element Evaluation (20 points maximum)
+        # Content-based rubric: awards points for identifying specific clinical reasoning
+        # elements rather than measuring word count or character length.
         # -------------------------------------------------------------
-        reasoning_len = len(submission_req.reasoning.strip())
+        required_elements = config.get("required_reasoning_elements", [])
+        identified_elements = []
+        missed_elements = []
         reasoning_score = 0
-        reasoning_feedback = ""
 
-        if reasoning_len < 20:
-            reasoning_score = 5
-            reasoning_feedback = "Minimal documentation: Rationale is overly brief and lacks pharmacological detail."
-        elif reasoning_len < 60:
-            reasoning_score = 12
-            reasoning_feedback = "Adequate documentation: Rationale states basic reasoning but could provide deeper context."
+        for elem in required_elements:
+            elem_id = elem["id"]
+            elem_title = elem["title"]
+            keywords = elem["keywords"]
+            elem_points = elem["points"]
+
+            matched = any(
+                re.search(r"\b" + re.escape(kw) + r"\b", reasoning_text)
+                for kw in keywords
+            )
+            if matched:
+                identified_elements.append(elem_title)
+                reasoning_score += elem_points
+            else:
+                missed_elements.append(elem_title)
+
+        reasoning_score = min(20, reasoning_score)
+
+        if len(identified_elements) == len(required_elements) and len(required_elements) > 0:
+            reasoning_feedback = (
+                f"Full credit ({reasoning_score}/20 pts): Explanation identified all {len(required_elements)} "
+                f"required clinical reasoning elements: {'; '.join(identified_elements)}."
+            )
+        elif len(identified_elements) > 0:
+            reasoning_feedback = (
+                f"Partial credit ({reasoning_score}/20 pts): Identified {len(identified_elements)} "
+                f"reasoning element(s) ({'; '.join(identified_elements)}), but missed: {'; '.join(missed_elements)}."
+            )
         else:
-            reasoning_score = 20
-            reasoning_feedback = "Thorough documentation: Substantive clinical justification with clear patient safety rationale."
+            reasoning_feedback = (
+                f"No credit (0/20 pts): Explanation did not identify any required clinical reasoning elements: "
+                f"{'; '.join(missed_elements)}."
+            )
 
         # -------------------------------------------------------------
         # 4. Total Score & Evaluation Summary
         # -------------------------------------------------------------
         total_score = min(100, max(0, det_score + issue_score + reasoning_score))
-        overall_correct = det_correct and (total_score >= 70)
+        overall_correct = (det_status == "PREFERRED") and (total_score >= 70)
 
         learning_points_list = parse_key_learning_points(case.key_learning_points)
 
@@ -254,15 +519,20 @@ class EducationalEvaluator:
         )
 
         return DetailedFeedback(
+            determination_status=det_status,
+            preferred_determination=pref_det,
+            acceptable_alternatives=list(acceptable_alts.keys()),
             determination_correct=det_correct,
             determination_feedback=det_feedback,
-            expected_determination=expected_det,
+            expected_determination=pref_det,
             determination_score=det_score,
             expected_rules=expected_rules,
             correctly_identified_issues=correctly_identified,
             missed_issues=missed,
             unconfirmed_issues=unconfirmed,
             issue_identification_score=issue_score,
+            correctly_identified_reasoning_elements=identified_elements,
+            missed_reasoning_elements=missed_elements,
             reasoning_feedback=reasoning_feedback,
             reasoning_score=reasoning_score,
             total_score=total_score,
@@ -272,4 +542,3 @@ class EducationalEvaluator:
             educational_limitations=limitations_statement,
             disclaimer=EDUCATIONAL_DISCLAIMER,
         )
-

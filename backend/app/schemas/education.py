@@ -113,6 +113,12 @@ class ReferenceRuleFeedback(BaseModel):
 
 class DetailedFeedback(BaseModel):
     """Comprehensive evaluation breakdown and pedagogical feedback."""
+    determination_status: str = Field(
+        default="PREFERRED",
+        description="'PREFERRED', 'ACCEPTABLE_ALTERNATIVE', or 'UNSUPPORTED'",
+    )
+    preferred_determination: str
+    acceptable_alternatives: list[str] = Field(default_factory=list)
     determination_correct: bool
     determination_feedback: str
     expected_determination: str
@@ -122,6 +128,8 @@ class DetailedFeedback(BaseModel):
     missed_issues: list[str] = Field(default_factory=list)
     unconfirmed_issues: list[str] = Field(default_factory=list)
     issue_identification_score: int
+    correctly_identified_reasoning_elements: list[str] = Field(default_factory=list)
+    missed_reasoning_elements: list[str] = Field(default_factory=list)
     reasoning_feedback: str
     reasoning_score: int
     total_score: int

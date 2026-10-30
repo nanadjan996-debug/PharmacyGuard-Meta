@@ -1,4 +1,4 @@
-"""Automated test suite for Milestone 7: Educational Simulation Backend."""
+"""Automated test suite for Milestone 7: Educational Simulation Backend (Audit & Scoring Remediation)."""
 import json
 from unittest.mock import patch
 import pytest
@@ -101,63 +101,266 @@ def test_case_detail_access_and_hidden_criteria_protection(client):
 
 
 # =====================================================================
-# 2. VALID SUBMISSION, FULL SCORING & PEDAGOGICAL FEEDBACK
+# 2. CONTENT-BASED REASONING RUBRIC (NO LENGTH BIAS)
 # =====================================================================
 
-def test_valid_student_submission_full_score(client):
+def test_short_complete_reasoning_gets_full_credit(client):
     """
-    POST /api/v1/education/cases/{case_id}/submit:
-    - Student submits accurate assessment for CASE-BEG-01
-    - Correct determination (50 pts) + accurate issue identification (30 pts) + substantive rationale (20 pts) = 100 pts
-    - Evaluates against configured demonstration rules (RULE-ALG-PEN-01)
-    - Returns transparent feedback, clinical rationale, learning points, and limitations statement
+    Content-based rubric: A short explanation mentioning all required clinical elements
+    must receive full credit (20/20) with zero character-count penalty.
     """
     token = get_token(client, "student_demo", "StudentDemoPassword2026!")
     headers = {"Authorization": f"Bearer {token}"}
 
+    # Short (98 chars) but complete explanation hitting:
+    # 1. Structural beta-lactam cross-reactivity
+    # 2. Severe anaphylaxis / ICU history
+    # 3. Absolute contraindication / order rejection
+    short_reasoning = "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated."
     payload = {
         "determination": "REJECT",
-        "reasoning": (
-            "Amoxicillin is an amino-penicillin that shares the beta-lactam core. "
-            "In a patient with documented severe anaphylaxis to penicillin requiring ICU care, "
-            "direct penicillins are strictly contraindicated. The order must be rejected immediately."
-        ),
+        "reasoning": short_reasoning,
         "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
     }
 
     res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
     assert res.status_code == 200
-    sub = res.json()
+    feedback = res.json()["feedback"]
 
-    assert sub["case_code"] == "CASE-BEG-01"
-    assert sub["submitted_determination"] == "REJECT"
-    assert sub["is_correct"] is True
-    assert sub["score_awarded"] == 100
-    assert sub["attempt_number"] >= 1
-
-    feedback = sub["feedback"]
-    assert feedback["determination_correct"] is True
-    assert feedback["determination_score"] == 50
-    assert feedback["issue_identification_score"] == 30
     assert feedback["reasoning_score"] == 20
-    assert feedback["total_score"] == 100
-    assert "ALLERGY_CROSS_REACTIVITY" in feedback["correctly_identified_issues"]
-    assert len(feedback["missed_issues"]) == 0
+    assert len(feedback["correctly_identified_reasoning_elements"]) == 3
+    assert len(feedback["missed_reasoning_elements"]) == 0
+    assert "Full credit" in feedback["reasoning_feedback"]
+    assert res.json()["score_awarded"] == 100
 
-    # Demo rule linkage
-    assert len(feedback["expected_rules"]) >= 1
-    rule = feedback["expected_rules"][0]
-    assert rule["rule_identifier"] == "RULE-ALG-PEN-01"
-    assert rule["severity"] == "HIGH"
 
-    # Educational limitations and learning points
-    assert len(feedback["key_learning_points"]) >= 1
-    assert "Educational Simulation Boundary Notice" in feedback["educational_limitations"]
-    assert "Advisory educational simulation prototype" in sub["disclaimer"]
+def test_long_irrelevant_reasoning_receives_no_bonus(client):
+    """
+    Content-based rubric: A long, rambling explanation (>300 chars) that does not identify
+    any required clinical reasoning elements must receive 0 reasoning points.
+    """
+    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    rambling_reasoning = (
+        "The patient presented to the ambulatory care facility on a Tuesday afternoon reporting fatigue "
+        "and seasonal nasal congestion. The weather in October has been particularly damp and cold, leading "
+        "to higher clinic volumes across all departments. The attending physician completed routine vital signs "
+        "and noted normal oxygen saturation. The electronic health record was updated following standard documentation "
+        "protocols and hospital pharmacy intake policies."
+    )
+    assert len(rambling_reasoning) > 300
+
+    payload = {
+        "determination": "REJECT",
+        "reasoning": rambling_reasoning,
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+
+    res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
+    assert res.status_code == 200
+    feedback = res.json()["feedback"]
+
+    assert feedback["reasoning_score"] == 0
+    assert len(feedback["correctly_identified_reasoning_elements"]) == 0
+    assert len(feedback["missed_reasoning_elements"]) == 3
+    assert "No credit" in feedback["reasoning_feedback"]
+    # Total score = 50 (det) + 30 (issues) + 0 (reasoning) = 80
+    assert res.json()["score_awarded"] == 80
+
+
+def test_partial_reasoning_receives_partial_credit(client):
+    """
+    Content-based rubric: Identifying some but not all reasoning elements awards partial credit
+    and itemizes which elements were identified versus missed.
+    """
+    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Mentions beta-lactam cross-reactivity (+7 pts) but omits anaphylaxis history and contraindication
+    partial_reasoning = "Amoxicillin has known beta-lactam cross-reactivity with the penicillin drug class."
+    payload = {
+        "determination": "REJECT",
+        "reasoning": partial_reasoning,
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+
+    res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
+    assert res.status_code == 200
+    feedback = res.json()["feedback"]
+
+    assert feedback["reasoning_score"] == 7
+    assert "Structural Beta-Lactam Cross-Reactivity" in feedback["correctly_identified_reasoning_elements"]
+    assert "Severe Anaphylaxis / ICU History" in feedback["missed_reasoning_elements"]
+    assert "Absolute Contraindication & Order Rejection" in feedback["missed_reasoning_elements"]
+    assert "Partial credit" in feedback["reasoning_feedback"]
 
 
 # =====================================================================
-# 3. INPUT VALIDATION & ERROR HANDLING
+# 3. CASE-SPECIFIC DETERMINATIONS & ACCEPTABLE ALTERNATIVES
+# =====================================================================
+
+def test_case_specific_preferred_determinations(client):
+    """
+    Each case explicitly defines a preferred determination:
+    - CASE-BEG-01: Preferred is REJECT (50 pts, status PREFERRED)
+    - CASE-INT-01: Preferred is REJECT (50 pts, status PREFERRED)
+    - CASE-ADV-01: Preferred is REJECT (50 pts, status PREFERRED)
+    """
+    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Case 1
+    p1 = {
+        "determination": "REJECT",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated.",
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+    r1 = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=p1, headers=headers)
+    assert r1.status_code == 200
+    assert r1.json()["feedback"]["determination_status"] == "PREFERRED"
+    assert r1.json()["feedback"]["determination_score"] == 50
+    assert r1.json()["feedback"]["determination_correct"] is True
+
+    # Case 2
+    p2 = {
+        "determination": "REJECT",
+        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) have analgesic ceiling effect and compounded GI bleeding risks.",
+        "identified_issues": ["DUPLICATE_THERAPY"],
+    }
+    r2 = client.post("/api/v1/education/cases/CASE-INT-01/submit", json=p2, headers=headers)
+    assert r2.status_code == 200
+    assert r2.json()["feedback"]["determination_status"] == "PREFERRED"
+    assert r2.json()["feedback"]["determination_score"] == 50
+
+    # Case 3
+    p3 = {
+        "determination": "REJECT",
+        "reasoning": "No documented Type 2 Diabetes indication. Prescribing 2000 mg/day exceeds max threshold for eGFR 38 mL/min (CKD Stage 3b) risking lactic acidosis.",
+        "identified_issues": ["INDICATION", "DOSAGE"],
+    }
+    r3 = client.post("/api/v1/education/cases/CASE-ADV-01/submit", json=p3, headers=headers)
+    assert r3.status_code == 200
+    assert r3.json()["feedback"]["determination_status"] == "PREFERRED"
+    assert r3.json()["feedback"]["determination_score"] == 50
+
+
+def test_case_specific_acceptable_alternatives(client):
+    """
+    Acceptable alternatives are evaluated per-case:
+    - ESCALATE is an explicitly configured acceptable alternative across the 3 demo cases (25 pts, status ACCEPTABLE_ALTERNATIVE)
+    - Feedback distinguishes preferred from acceptable alternative
+    """
+    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = {
+        "determination": "ESCALATE",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis is contraindicated so escalating to Chief Pharmacist.",
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+
+    res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
+    assert res.status_code == 200
+    fb = res.json()["feedback"]
+
+    assert fb["determination_status"] == "ACCEPTABLE_ALTERNATIVE"
+    assert fb["determination_score"] == 25
+    assert fb["determination_correct"] is False  # Only preferred determination is marked fully correct
+    assert "Acceptable alternative determination" in fb["determination_feedback"]
+    assert "REJECT" in fb["determination_feedback"]
+
+
+def test_unsupported_alternative_receives_zero_credit(client):
+    """
+    Determinations that are neither preferred nor an explicitly configured alternative
+    receive 0 points and are marked UNSUPPORTED.
+    """
+    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. OVERRIDE_WITH_RATIONALE is UNSUPPORTED for severe penicillin anaphylaxis
+    payload_override = {
+        "determination": "OVERRIDE_WITH_RATIONALE",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis is contraindicated.",
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+    res1 = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload_override, headers=headers)
+    assert res1.status_code == 200
+    fb1 = res1.json()["feedback"]
+    assert fb1["determination_status"] == "UNSUPPORTED"
+    assert fb1["determination_score"] == 0
+    assert fb1["determination_correct"] is False
+    assert "Unsafe or unsupported determination" in fb1["determination_feedback"]
+
+    # 2. APPROVE_WITH_MONITORING is UNSUPPORTED for dual NSAIDs
+    payload_mon = {
+        "determination": "APPROVE_WITH_MONITORING",
+        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) have analgesic ceiling effect.",
+        "identified_issues": ["DUPLICATE_THERAPY"],
+    }
+    res2 = client.post("/api/v1/education/cases/CASE-INT-01/submit", json=payload_mon, headers=headers)
+    assert res2.status_code == 200
+    fb2 = res2.json()["feedback"]
+    assert fb2["determination_status"] == "UNSUPPORTED"
+    assert fb2["determination_score"] == 0
+
+
+# =====================================================================
+# 4. SUBMISSION RBAC: STUDENTS ONLY (STAFF & CHIEF DENIED)
+# =====================================================================
+
+def test_submission_authorization_roles(client):
+    """
+    Role restriction on educational submissions:
+    - Pharmacy Student: Authorized (200 OK)
+    - Staff Pharmacist: Forbidden (403)
+    - Chief Pharmacist: Forbidden (403)
+    - Unauthenticated: Unauthorized (401)
+    """
+    student_token = get_token(client, "student_demo", "StudentDemoPassword2026!")
+    staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
+    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
+
+    payload = {
+        "determination": "REJECT",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated.",
+        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
+    }
+
+    # 1. Student succeeds
+    res_student = client.post(
+        "/api/v1/education/cases/CASE-BEG-01/submit",
+        json=payload,
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert res_student.status_code == 200
+
+    # 2. Staff Pharmacist denied (403 Forbidden)
+    res_staff = client.post(
+        "/api/v1/education/cases/CASE-BEG-01/submit",
+        json=payload,
+        headers={"Authorization": f"Bearer {staff_token}"},
+    )
+    assert res_staff.status_code == 403
+    assert "pharmacy_student" in res_staff.json()["detail"].lower()
+
+    # 3. Chief Pharmacist denied (403 Forbidden)
+    res_chief = client.post(
+        "/api/v1/education/cases/CASE-BEG-01/submit",
+        json=payload,
+        headers={"Authorization": f"Bearer {chief_token}"},
+    )
+    assert res_chief.status_code == 403
+    assert "pharmacy_student" in res_chief.json()["detail"].lower()
+
+    # 4. Unauthenticated denied (401 Unauthorized)
+    res_unauth = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload)
+    assert res_unauth.status_code == 401
+
+
+# =====================================================================
+# 5. INPUT VALIDATION & ERROR HANDLING
 # =====================================================================
 
 def test_invalid_submission_validation(client):
@@ -205,74 +408,7 @@ def test_invalid_submission_validation(client):
 
 
 # =====================================================================
-# 4. PARTIAL SCORING & INCORRECT SUBMISSIONS
-# =====================================================================
-
-def test_partial_scoring_escalate_and_partial_issues(client):
-    """
-    Partial scoring logic:
-    - Submitting ESCALATE when expected is REJECT awards 25/50 for determination (halts dispensing, but misses direct rejection)
-    - Identifying 1 of 2 expected issues awards 15/30 for issue identification
-    - Transparent feedback explains what was missed
-    """
-    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # Case 1: ESCALATE instead of REJECT for CASE-BEG-01
-    payload_esc = {
-        "determination": "ESCALATE",
-        "reasoning": "Patient has severe penicillin allergy; escalating order to Chief Pharmacist for review.",
-        "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
-    }
-    res_esc = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload_esc, headers=headers)
-    assert res_esc.status_code == 200
-    esc_data = res_esc.json()
-    assert esc_data["is_correct"] is False  # Must have correct determination to pass
-    assert esc_data["feedback"]["determination_score"] == 25  # Partial credit
-    assert esc_data["feedback"]["issue_identification_score"] == 30
-    assert esc_data["score_awarded"] == 75
-    assert "Partially correct" in esc_data["feedback"]["determination_feedback"]
-
-    # Case 2: CASE-ADV-01 has 2 expected issues (INDICATION and DOSAGE)
-    # Student identifies INDICATION but misses DOSAGE
-    payload_adv = {
-        "determination": "REJECT",
-        "reasoning": "Patient has no documented Type 2 Diabetes diagnosis in active problem list. Indication is missing.",
-        "identified_issues": ["INDICATION"],
-    }
-    res_adv = client.post("/api/v1/education/cases/CASE-ADV-01/submit", json=payload_adv, headers=headers)
-    assert res_adv.status_code == 200
-    adv_data = res_adv.json()
-    assert adv_data["feedback"]["determination_score"] == 50
-    assert adv_data["feedback"]["issue_identification_score"] == 15  # 1 of 2 issues = 15 pts
-    assert "INDICATION" in adv_data["feedback"]["correctly_identified_issues"]
-    assert "DOSAGE" in adv_data["feedback"]["missed_issues"]
-
-
-def test_completely_incorrect_submission(client):
-    """
-    Submitting APPROVE on a contraindicated case:
-    - Determination score is 0
-    - Identifying no issues gives 0
-    - Total score reflects failure to intercept severe clinical hazard
-    """
-    token = get_token(client, "student_demo", "StudentDemoPassword2026!")
-    headers = {"Authorization": f"Bearer {token}"}
-
-    payload = {
-        "determination": "APPROVE",
-        "reasoning": "Looks okay to dispense without changes.",
-    }
-    res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
-    assert res.status_code == 200
-    data = res.json()
-    assert data["is_correct"] is False
-    assert data["feedback"]["determination_score"] == 0
-    assert data["score_awarded"] <= 12
-
-
-# =====================================================================
-# 5. DUPLICATE SUBMISSION BEHAVIOR & SUBMISSION HISTORY
+# 6. DUPLICATE SUBMISSION BEHAVIOR & SUBMISSION HISTORY
 # =====================================================================
 
 def test_duplicate_submission_behavior_and_history_preservation(client, db_session: Session):
@@ -285,14 +421,10 @@ def test_duplicate_submission_behavior_and_history_preservation(client, db_sessi
     token = get_token(client, "student_demo", "StudentDemoPassword2026!")
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Count prior submissions for CASE-INT-01
-    prior_subs = db_session.query(StudentSubmission).filter_by(student_id="usr-student-001").all()
-    prior_count = len(prior_subs)
-
     # Attempt 1: Partial score (ESCALATE)
     payload_1 = {
         "determination": "ESCALATE",
-        "reasoning": "Dual NSAIDs (ketorolac and ibuprofen) ordered concurrently. Escalating to supervisor.",
+        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) have analgesic ceiling effect. GI bleeding risk requires escalation.",
         "identified_issues": ["DUPLICATE_THERAPY"],
     }
     res_1 = client.post("/api/v1/education/cases/CASE-INT-01/submit", json=payload_1, headers=headers)
@@ -304,7 +436,7 @@ def test_duplicate_submission_behavior_and_history_preservation(client, db_sessi
     # Attempt 2: Full score (REJECT)
     payload_2 = {
         "determination": "REJECT",
-        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) are contraindicated due to high risk of gastrointestinal bleeding and renal failure without additive analgesia.",
+        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) have analgesic ceiling effect and compounded GI bleeding risks.",
         "identified_issues": ["DUPLICATE_THERAPY"],
     }
     res_2 = client.post("/api/v1/education/cases/CASE-INT-01/submit", json=payload_2, headers=headers)
@@ -354,7 +486,7 @@ def test_student_submission_history_listing(client):
 
 
 # =====================================================================
-# 6. SUBMISSION OWNERSHIP ENFORCEMENT
+# 7. SUBMISSION OWNERSHIP ENFORCEMENT
 # =====================================================================
 
 def test_submission_ownership_enforcement_between_students(client, db_session: Session):
@@ -364,7 +496,6 @@ def test_submission_ownership_enforcement_between_students(client, db_session: S
     - Student A can view their own submission (200 OK)
     - Unauthenticated access is rejected (401 Unauthorized)
     """
-    # 1. Create a second student in test database
     student2 = db_session.query(User).filter_by(username="student_demo_2").first()
     if not student2:
         student2 = User(
@@ -388,7 +519,7 @@ def test_submission_ownership_enforcement_between_students(client, db_session: S
     # Student 1 submits
     payload = {
         "determination": "REJECT",
-        "reasoning": "Amoxicillin contraindicated in severe penicillin allergy with anaphylaxis history.",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated.",
         "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
     }
     res_sub = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers1)
@@ -411,7 +542,7 @@ def test_submission_ownership_enforcement_between_students(client, db_session: S
 
 
 # =====================================================================
-# 7. STRICT SEPARATION FROM OPERATIONAL WORKFLOWS
+# 8. STRICT SEPARATION FROM OPERATIONAL WORKFLOWS
 # =====================================================================
 
 def test_student_access_to_operational_endpoints_denied(client):
@@ -469,7 +600,6 @@ def test_educational_submission_does_not_mutate_operational_data(client, db_sess
     staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
     staff_headers = {"Authorization": f"Bearer {staff_token}"}
 
-    # Capture initial state of operational prescription 1 and inventory
     rx1 = db_session.query(Prescription).filter_by(id="rx-synth-001").first()
     initial_status = rx1.status
     initial_findings_count = len(rx1.findings)
@@ -477,39 +607,40 @@ def test_educational_submission_does_not_mutate_operational_data(client, db_sess
     inv_amox = db_session.query(InventoryItem).filter_by(medication_id="MED-AMOX-500").first()
     initial_inv_qty = inv_amox.quantity_on_hand
 
-    # Submit educational case for CASE-BEG-01 (Amoxicillin case)
+    # Submit educational case for CASE-BEG-01
     payload = {
         "determination": "REJECT",
-        "reasoning": "Amoxicillin contraindicated due to severe anaphylactic penicillin allergy.",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated.",
         "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
     }
     res = client.post("/api/v1/education/cases/CASE-BEG-01/submit", json=payload, headers=headers)
     assert res.status_code == 200
 
-    # Verify operational prescription 1 is completely unmodified
+    # Operational prescription unmodified
     db_session.refresh(rx1)
     assert rx1.status == initial_status
     assert len(rx1.findings) == initial_findings_count
 
-    # Verify inventory is completely unmodified
+    # Inventory unmodified
     db_session.refresh(inv_amox)
     assert inv_amox.quantity_on_hand == initial_inv_qty
 
-    # Verify educational case ID cannot be used to retrieve an operational prescription
+    # Educational case ID cannot retrieve operational prescription
     assert client.get("/api/v1/prescriptions/CASE-BEG-01", headers=staff_headers).status_code == 404
     assert client.get("/api/v1/prescriptions/edu-case-001", headers=staff_headers).status_code == 404
 
 
 # =====================================================================
-# 8. PHARMACIST ACCESS BEHAVIOR TO EDUCATIONAL ENDPOINTS
+# 9. PHARMACIST OVERSIGHT & IMMUTABILITY
 # =====================================================================
 
-def test_pharmacist_access_behavior_to_education(client, db_session: Session):
+def test_pharmacist_oversight_and_immutability(client, db_session: Session):
     """
-    Pharmacist permissions in educational simulation:
-    - Staff Pharmacist and Chief Pharmacist can browse educational cases (200 OK)
-    - Chief Pharmacist has academic supervisor authority to inspect student submissions (200 OK)
-    - Staff Pharmacist cannot inspect student submissions (403 Forbidden)
+    Supervisory oversight and academic record immutability:
+    - Staff Pharmacists and Chief Pharmacists can browse cases
+    - Chief Pharmacists can inspect student submissions for supervisory academic review
+    - Staff Pharmacists cannot inspect student submissions (403 Forbidden)
+    - Submissions cannot be updated or deleted via ORM (raises PermissionError)
     """
     staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
     staff_headers = {"Authorization": f"Bearer {staff_token}"}
@@ -518,14 +649,14 @@ def test_pharmacist_access_behavior_to_education(client, db_session: Session):
     student_token = get_token(client, "student_demo", "StudentDemoPassword2026!")
     student_headers = {"Authorization": f"Bearer {student_token}"}
 
-    # 1. Staff Pharmacist and Chief Pharmacist can browse cases
+    # 1. Staff and Chief can browse cases
     assert client.get("/api/v1/education/cases", headers=staff_headers).status_code == 200
     assert client.get("/api/v1/education/cases", headers=chief_headers).status_code == 200
 
     # 2. Student submits a case
     payload = {
         "determination": "REJECT",
-        "reasoning": "Dual NSAIDs contraindicated due to ceiling effect and severe gastrointestinal hemorrhage risk.",
+        "reasoning": "Dual systemic NSAIDs (Ketorolac + Ibuprofen) have analgesic ceiling effect and compounded GI bleeding risks.",
         "identified_issues": ["DUPLICATE_THERAPY"],
     }
     sub_res = client.post("/api/v1/education/cases/CASE-INT-01/submit", json=payload, headers=student_headers)
@@ -538,21 +669,12 @@ def test_pharmacist_access_behavior_to_education(client, db_session: Session):
     assert chief_sub_res.json()["id"] == sub_id
     assert chief_sub_res.json()["student_name"] == "Alex Rivera, P3 Pharmacy Candidate"
 
-    # 4. Staff Pharmacist cannot inspect another student's submission (403 Forbidden)
+    # 4. Staff Pharmacist cannot inspect student's submission (403 Forbidden)
     staff_sub_res = client.get(f"/api/v1/education/submissions/{sub_id}", headers=staff_headers)
     assert staff_sub_res.status_code == 403
 
-
-# =====================================================================
-# 9. IMMUTABILITY, AUDIT TRAIL & TRANSACTION ROLLBACK
-# =====================================================================
-
-def test_submission_immutability_blocks_update_and_delete(db_session: Session):
-    """
-    ORM-level immutability for student submissions:
-    Direct update or delete on StudentSubmission raises PermissionError
-    """
-    sub = db_session.query(StudentSubmission).first()
+    # 5. ORM immutability check
+    sub = db_session.query(StudentSubmission).filter_by(id=sub_id).first()
     assert sub is not None
 
     with pytest.raises(PermissionError, match="immutable"):
@@ -579,7 +701,7 @@ def test_audit_event_logged_and_rollback_on_failure(client, db_session: Session)
 
     payload = {
         "determination": "REJECT",
-        "reasoning": "Amoxicillin contraindicated due to severe beta-lactam anaphylaxis history.",
+        "reasoning": "Beta-lactam cross-reactivity with severe penicillin anaphylaxis makes amoxicillin contraindicated.",
         "identified_issues": ["ALLERGY_CROSS_REACTIVITY"],
     }
 
@@ -612,4 +734,3 @@ def test_audit_event_logged_and_rollback_on_failure(client, db_session: Session)
     # Confirm no orphaned submission was persisted
     final_subs_count = db_session.query(StudentSubmission).count()
     assert final_subs_count == initial_subs_count
-
