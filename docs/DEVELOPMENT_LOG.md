@@ -580,6 +580,128 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Unit costs and inventory valuations are synthetic static demonstration values.
 - Real-time inventory push notifications (e.g. WebSocket alerts on critical stock depletion) are not implemented; oversight screens operate via HTTP GET polling.
 
+---
+
+## Milestone 7: Educational Simulation Backend
+
+**Date**: 2026-10-30  
+**Objective**: Build a separate educational simulation API for pharmacy students using synthetic prescription cases and the existing deterministic verification engine, with transparent rubric-based scoring, pedagogical rule feedback, and strict operational workflow isolation.
+
+### Features Implemented
+
+1. **Educational Simulation APIs (`/api/v1/education`)**:
+   - `GET /api/v1/education/cases`:
+     - Lists synthetic educational cases available for pharmacy students (`CASE-BEG-01`, `CASE-INT-01`, `CASE-ADV-01`).
+     - Returns case metadata, difficulty tiers, clinical categories, learning objectives, completion status (`COMPLETED` or `NOT_ATTEMPTED`), student attempts count, best score, and non-clinical simulation disclaimer.
+     - Strictly strips answer keys (`predefined_answer`), expected explanations (`predefined_explanation`), and internal rule criteria.
+     - Accessible to all authenticated users (`pharmacy_student`, `staff_pharmacist`, `chief_pharmacist`).
+   - `GET /api/v1/education/cases/{case_id}`:
+     - Returns full clinical scenario, patient summary, prescription summary, learning objectives, and available clinical determinations (`APPROVE`, `REJECT`, `APPROVE_WITH_MONITORING`, `OVERRIDE_WITH_RATIONALE`, `ESCALATE`).
+     - Resolves by case UUID or `case_code`. Returns 404 if not found.
+     - Strictly excludes hidden evaluation rubrics and answer keys.
+   - `POST /api/v1/education/cases/{case_id}/submit`:
+     - Accepts structured student assessment: `determination` (validated enum), `reasoning` (min 10 chars, trimmed), and optional `identified_issues`.
+     - Evaluates submission against benchmark criteria using deterministic, non-AI rule evaluator.
+     - Persists new immutable `StudentSubmission` attempt (never overwrites historical submissions).
+     - Logs append-only `AuditEvent` (`action="STUDENT_CASE_SUBMITTED"`).
+     - Returns comprehensive `StudentSubmissionResponse` with structured feedback and pedagogical rule breakdown.
+   - `GET /api/v1/education/submissions`:
+     - Returns authenticated student's personal submission history ordered newest first (`submitted_at DESC`).
+     - Strictly enforces student ownership: students can only view their own submissions.
+   - `GET /api/v1/education/submissions/{submission_id}`:
+     - Returns single submission record and detailed feedback breakdown.
+     - Enforces ownership: student attempting to access another student's submission receives `HTTP 403 Forbidden`.
+     - Supports supervisory oversight: Chief Pharmacists are authorized to inspect student submissions for academic evaluation. Staff Pharmacists are forbidden (403).
+
+2. **Deterministic Evaluation & Scoring Rubric (`education_evaluator.py`)**:
+   - **Total Score Range**: 0 to 100 points.
+   - **Determination Accuracy (Max 50 points)**:
+     - Exact match with expected determination: **50 points**.
+     - Partial match (`ESCALATE` when expected is `REJECT`): **25 points** (recognizes safety hazard and stops dispensing, but fails to execute required prescriber rejection).
+     - Inappropriate approval of contraindicated regimen: **0 points**.
+   - **Clinical Issue Identification (Max 30 points)**:
+     - Evaluates `identified_issues` list and keywords in student's clinical reasoning against configured criteria.
+     - Awards proportional points based on expected issues identified: e.g. 100% of issues = **30 points**; 1 of 2 issues = **15 points**; none = **0 points**.
+     - Identifies correctly identified issues, missed issues, and unconfirmed issues.
+   - **Clinical Reasoning Documentation Quality (Max 20 points)**:
+     - < 20 characters: **5 points** (minimal/insufficient rationale).
+     - 20–60 characters: **12 points** (basic rationale).
+     - > 60 characters: **20 points** (thorough, substantive clinical justification).
+   - **Overall Pass Condition**: `is_correct = (determination_correct and total_score >= 70)`.
+
+3. **Pedagogical Rule Feedback**:
+   - Links student findings to configured demonstration rules (`RULE-ALG-PEN-01`, `RULE-INT-NSAID-NSAID-01`, `RULE-IND-MET-01`, `RULE-DOSE-MET-01`).
+   - Returns rule identifier, rule title, clinical evidence, and benchmark pharmacological rationale.
+   - Extracts structured key learning points from the case monograph.
+   - Bounded by explicit non-clinical disclaimer: *"Educational Simulation Boundary Notice: A passing score indicates understanding of simulated scenario concepts and must NEVER be construed as clinical validation, qualification for autonomous medication dispensing, or proof of real-world clinical competence."*
+
+4. **Strict Isolation from Operational Workflows**:
+   - Pharmacy students are forbidden (HTTP 403) from all operational prescription routes (`/prescriptions/queue`, `/prescriptions/{id}/review`, `/prescriptions/{id}/reviews`).
+   - Pharmacy students are forbidden (HTTP 403) from operational inventory routes (`/inventory`, `/inventory/transactions`, `/inventory/summary`).
+   - Pharmacy students are forbidden (HTTP 403) from Chief Pharmacist oversight endpoints (`/oversight/dashboard`, `/oversight/escalations`).
+   - Educational submissions never modify operational prescription records, prescription findings, or inventory balances.
+   - Educational case identifiers cannot be used to retrieve or review operational prescriptions (`GET /api/v1/prescriptions/CASE-BEG-01` returns 404).
+
+5. **Data Integrity & Immutability**:
+   - Attached SQLAlchemy `before_update` and `before_delete` event listeners to `StudentSubmission`, raising `PermissionError` on any modification or deletion attempt.
+   - Atomic database transaction: submission insert, audit event insert, and attempt counter increment commit together or roll back cleanly on exception.
+
+### API Endpoints & Role Permission Matrix
+
+| Endpoint | Method | Allowed Role(s) | Forbidden Roles | Key Validations & Logic |
+| :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/education/cases` | GET | `pharmacy_student`, `staff_pharmacist`, `chief_pharmacist` | Unauth (401) | Lists cases. Excludes answer keys and evaluation criteria. Calculates student-specific completion status, attempts count, and best score. |
+| `/api/v1/education/cases/{case_id}` | GET | `pharmacy_student`, `staff_pharmacist`, `chief_pharmacist` | Unauth (401) | Returns case clinical scenarios and available determinations. Excludes answer keys. 404 if unknown case ID. |
+| `/api/v1/education/cases/{case_id}/submit` | POST | `pharmacy_student`, `staff_pharmacist`, `chief_pharmacist` | Unauth (401) | Validates determination enum and reasoning min_length=10. Evaluates deterministically against rubric. Creates immutable submission and audit event. |
+| `/api/v1/education/submissions` | GET | Authenticated users | Unauth (401) | Returns student's personal submission history ordered by newest first. Ownership strictly enforced. |
+| `/api/v1/education/submissions/{submission_id}` | GET | Submitting Student, `chief_pharmacist` | Other Students (403), `staff_pharmacist` (403), Unauth (401) | Returns detailed submission record and evaluation breakdown. Chief Pharmacist permitted for academic oversight; non-owner students rejected with 403. |
+
+### Tests Run & Verification
+
+- **Educational Simulation Test Suite (`python -m pytest backend/tests/test_education.py`)**:
+  - Result: **14 passed (14 total)** in 16.95s
+  - 14 comprehensive tests in `backend/tests/test_education.py`:
+    - `test_student_case_listing`: Verifies case metadata, completion status, attempts count, and hidden criteria exclusion.
+    - `test_case_detail_access_and_hidden_criteria_protection`: Resolves by case_code and UUID; verifies answer keys are strictly hidden.
+    - `test_valid_student_submission_full_score`: Verifies 100/100 score on CASE-BEG-01, demo rule linkage, and feedback structure.
+    - `test_invalid_submission_validation`: Tests rejection of short reasoning (<10 chars), whitespace reasoning, invalid determinations, and unknown cases.
+    - `test_partial_scoring_escalate_and_partial_issues`: Tests 25/50 determination partial credit for ESCALATE and 15/30 partial issue identification on CASE-ADV-01.
+    - `test_completely_incorrect_submission`: Tests 0 determination score and low score when approving contraindicated regimen.
+    - `test_duplicate_submission_behavior_and_history_preservation`: Confirms multiple submissions create new attempt records without overwriting past attempts; updates best_score.
+    - `test_student_submission_history_listing`: Verifies personal attempt history listing.
+    - `test_submission_ownership_enforcement_between_students`: Confirms Student B receives 403 Forbidden when attempting to view Student A's submission.
+    - `test_student_access_to_operational_endpoints_denied`: Confirms students are rejected (403) from operational prescription queues, reviews, inventory, and oversight.
+    - `test_educational_submission_does_not_mutate_operational_data`: Proves operational prescriptions, findings, and inventory remain completely untouched by educational submissions.
+    - `test_pharmacist_access_behavior_to_education`: Confirms pharmacists can browse cases; Chief Pharmacist can inspect student submissions; Staff Pharmacists cannot.
+    - `test_submission_immutability_blocks_update_and_delete`: Confirms ORM event listeners block UPDATE and DELETE on StudentSubmission.
+    - `test_audit_event_logged_and_rollback_on_failure`: Verifies STUDENT_CASE_SUBMITTED audit logging and clean rollback on simulated DB error.
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **95 passed (95 total)** in 70.19s (100% pass rate)
+  - Auth (13), Database (8), Education (14), Health (4), Inventory (15), Review Workflow (15), Verification Engine (26).
+- **Frontend Test Suite (`npm test --prefix frontend`)**:
+  - Result: **3 passed (3 total)** in 13.57s with zero regressions.
+
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+- Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+- Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
+- Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
+- Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
+- Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
+- Milestone 5 Commit: `efd76c7` — *"Milestone 5: Review workflow, escalation resolution services, and audit integration"*
+- Milestone 5 Audit Remediation Commit: `718ae23` — *"Milestone 5 audit: prevent high-severity approval bypass, enforce consistent status transitions, and add atomic concurrency safeguards"*
+- Milestone 5 Final Check Commit: `83e0687` — *"Milestone 5 final check: rename to APPROVED_AFTER_CLARIFICATION and verify high findings after escalation with regression test"*
+- Milestone 6 Implementation Commit: `524383b` — *"Milestone 6: Inventory management APIs, atomic transaction tracking, and chief oversight dashboard"*
+- Milestone 6 Log Update: `4b7aabf` — *"docs: Record commit hash and completion details for Milestone 6"*
+- Milestone 7 Implementation Commit: `5f90496` — *"Milestone 7: Educational simulation backend, student assessment evaluation, and pedagogical feedback"*
+
+### Known Limitations at Milestone 7
+- Educational cases and scoring rubrics are configured strictly for demonstration benchmark scenarios (`CASE-BEG-01`, `CASE-INT-01`, `CASE-ADV-01`); authoring new dynamic cases via REST API is not implemented in this prototype.
+- Submissions are evaluated via deterministic pattern matching and rule catalogs without natural language processing or LLMs.
+- ORM-level immutability for student submissions is enforced via SQLAlchemy event listeners (`before_update`, `before_delete`); direct raw SQL queries executed outside the ORM are not intercepted by SQLite triggers.
+- The educational simulation is purely an academic exercise; scores reflect adherence to demonstration rubrics and do not constitute clinical licensing or dispensing qualification.
+
+
 
 
 
