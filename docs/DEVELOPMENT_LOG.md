@@ -323,5 +323,75 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Advanced clinical calculation parameters (e.g., patient renal function Cockcroft-Gault CrCl dosage adjustment, hepatic impairment child-pugh score, pediatric weight-based mg/kg calculations) are not implemented.
 - Multi-ingredient combination products (e.g., Amoxicillin-Clavulanate) are modeled under their primary active ingredient.
 
+---
+
+## Milestone 5: Review Workflow and Escalation Services
+
+**Date**: 2026-10-29  
+**Objective**: Implement and verify the backend review and escalation workflow allowing authorized staff pharmacists and chief pharmacists to act on deterministic verification findings, enforce mandatory override rationales for high-severity findings, snapshot historical findings to decisions, provide chief pharmacist escalation queues and resolutions, reject invalid state transitions and double-resolutions with HTTP 409 Conflict, and emit append-only audit events.
+
+### Step 1: Existing Behavior Inspected & Reused
+1. **Existing Models Reused**:
+   - `Prescription`: status tracking (`pending`, `reviewed`, `overridden`, `escalated`, `resolved`).
+   - `PharmacistReview`: review record (`reviewer_id`, `action`, `override_rationale`, `notes`, `findings` relationship).
+   - `ReviewFinding`: individual findings with `review_id` foreign key linking to `PharmacistReview`.
+   - `EscalationResolution`: escalation records (`escalated_by_id`, `resolved_by_id`, `escalation_reason`, `resolution_action`, `resolution_notes`, `resolved_at`).
+   - `AuditEvent`: append-only audit logs with immutability enforcement.
+2. **Existing Endpoints Reused & Hardened**:
+   - `POST /api/v1/prescriptions/{id}/review`: Upgraded from basic draft status updates to full workflow state machine with snapshotting, fallback deterministic verification if no unreviewed findings exist, strict whitespace trimming validation, atomic rollback, and audit logging.
+   - `GET /api/v1/oversight/escalations`: Upgraded to return typed `EscalationQueueItemResponse` with high-severity indicators and patient context.
+   - `POST /api/v1/oversight/escalations/{prescription_id}/resolve`: Upgraded with double-resolution guards (409 Conflict), explicit state transitions, chief pharmacist attribution, atomic rollback, and audit logging.
+   - `GET /api/v1/prescriptions/{id}`: Upgraded to populate review decision history and escalation records.
+   - `GET /api/v1/prescriptions/{id}/reviews`: Added endpoint returning chronological decision audit history.
+
+### Workflow State Transition Table
+
+| Current Status | Trigger Action | Role Permitted | New Status | Side Effects & Invariants |
+| :--- | :--- | :--- | :--- | :--- |
+| `pending` | `ACCEPT` | Staff Pharmacist, Chief Pharmacist | `reviewed` | Unreviewed findings snapshotted to new `PharmacistReview` record. Audits `REVIEW_ACCEPT`. |
+| `pending` | `OVERRIDE` | Staff Pharmacist, Chief Pharmacist | `overridden` | Requires non-empty trimmed rationale if any `HIGH` severity finding exists (HTTP 422 if omitted/blank). Findings snapshotted. Audits `REVIEW_OVERRIDE`. |
+| `pending` | `ESCALATE` | Staff Pharmacist, Chief Pharmacist | `escalated` | Creates `EscalationResolution` record; appears in Chief Pharmacist queue. Findings snapshotted. Audits `REVIEW_ESCALATE`. |
+| `escalated` | `APPROVED_BY_CHIEF` | Chief Pharmacist only | `reviewed` | Escalation record resolved (`resolved_at`, `resolved_by_id`, notes). Audits `ESCALATION_RESOLVED`. |
+| `escalated` | `REJECTED_RETURNED_TO_PRESCRIBER` | Chief Pharmacist only | `resolved` | Escalation record resolved. Audits `ESCALATION_RESOLVED`. |
+| `escalated` | `MODIFIED_AND_APPROVED` | Chief Pharmacist only | `resolved` | Escalation record resolved. Audits `ESCALATION_RESOLVED`. |
+| `escalated` | Any Review Action (`ACCEPT`/`OVERRIDE`/`ESCALATE`) | Any | Rejected (409) | HTTP 409 Conflict: Cannot review an already escalated prescription. Must be resolved by Chief Pharmacist. |
+| `reviewed` / `overridden` / `resolved` | Any Review Action (`ACCEPT`/`OVERRIDE`/`ESCALATE`) | Any | Rejected (409) | HTTP 409 Conflict: Prescription is already in a finalized/completed workflow state. |
+| Non-`escalated` | Escalation Resolve | Chief Pharmacist | Rejected (409) | HTTP 409 Conflict: Prescription is not in 'escalated' status. |
+| `escalated` (already resolved) | Escalation Resolve | Chief Pharmacist | Rejected (409) | HTTP 409 Conflict: Escalation has already been resolved. Double-resolution prevented. |
+
+### API Endpoints & Role Permission Matrix
+
+| Endpoint | Method | Allowed Role(s) | Forbidden Roles | Key Validations & Responses |
+| :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/prescriptions/{id}/review` | POST | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` (403), Unauthenticated (401) | Validates status is `pending` (409 on invalid status). Derives findings from trusted DB (or triggers deterministic verification if needed). Rejects blank/missing override rationale on `HIGH` findings (422). Snapshots findings. Returns `ReviewActionResponse` with non-clinical disclaimer. |
+| `/api/v1/prescriptions/{id}/reviews` | GET | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` (403), Unauthenticated (401) | Returns chronological list of review decisions with reviewer name, role, action, rationale, and snapshotted finding counts (`PharmacistReviewDetail`). |
+| `/api/v1/oversight/escalations` | GET | `chief_pharmacist` only | `staff_pharmacist` (403), `pharmacy_student` (403), Unauth (401) | Returns pending escalated prescriptions (`EscalationQueueItemResponse`) with patient demographics, escalation reasons, and severity badges. |
+| `/api/v1/oversight/escalations/{id}/resolve` | POST | `chief_pharmacist` only | `staff_pharmacist` (403), `pharmacy_student` (403), Unauth (401) | 404 if not found; 409 if already resolved; 409 if prescription status is not `escalated`. Atomically updates escalation record, prescription status, and logs audit event. Returns `EscalationResolutionResponse`. |
+
+### Tests Run & Verification
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **62 passed (62 total)** in 40.27s
+  - 11 comprehensive tests in `tests/test_review_workflow.py`:
+    - `test_review_accept_action`: Verifies `pending` -> `reviewed`, findings snapshotted, audit logged.
+    - `test_review_override_with_valid_rationale`: Verifies `pending` -> `overridden` on `HIGH` severity finding with valid rationale.
+    - `test_review_override_missing_or_blank_rationale_rejected`: Verifies `None`, empty string `""`, and whitespace-only `"   "` are rejected with HTTP 422.
+    - `test_review_escalate_action`: Verifies `pending` -> `escalated`, escalation record created, appears in Chief queue.
+    - `test_review_rbac_student_and_unauth_denied`: Verifies Pharmacy Students receive 403 Forbidden and unauthenticated callers receive 401 Unauthorized.
+    - `test_escalation_queue_and_resolution_by_chief`: Verifies Chief Pharmacist resolves escalation with `APPROVED_BY_CHIEF` -> `reviewed`.
+    - `test_escalation_resolution_rbac_staff_and_student_denied`: Verifies Staff Pharmacists and Students are forbidden (403) from resolving escalations.
+    - `test_escalation_double_resolution_prevented`: Verifies second resolve attempt returns HTTP 409 Conflict.
+    - `test_invalid_status_transitions_rejected`: Verifies reviewing an `escalated`, `reviewed`, or `overridden` prescription returns HTTP 409 Conflict.
+    - `test_snapshot_findings_preserved_across_reverification`: Verifies that historical findings attached to a review decision remain immutable when prescription is re-verified.
+    - `test_review_transaction_rollback_on_failure`: Verifies that if an unexpected database error occurs during review, changes roll back cleanly with zero partial writes.
+  - All existing 26 verification tests, 13 auth tests, 8 database tests, and 4 health tests continue to pass with zero regressions.
+- **Frontend Test Suite (`npm test --prefix frontend`)**:
+  - Result: **3 passed (3 total)** in 12.64s with zero regressions.
+
+### Known Limitations at Milestone 5
+- The review and escalation system is strictly an advisory decision-support prototype operating on synthetic benchmark data; it does not authorize real-world clinical medication dispensing.
+- Multi-signoff or peer-review workflows (e.g. two-pharmacist verification for high-risk antineoplastic or pediatric infusions) are not modeled in this single-step review prototype.
+- Real-time websocket or push notifications for escalation queues are not implemented; the Chief Pharmacist queue operates via standard HTTP GET polling.
+
+
 
 

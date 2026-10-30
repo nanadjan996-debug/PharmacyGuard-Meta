@@ -9,17 +9,21 @@ from app.models.prescription import Prescription
 from app.models.review import PharmacistReview, EscalationResolution
 from app.models.inventory import InventoryItem, InventoryTransaction
 from app.models.audit import AuditEvent
-from app.schemas.review import EscalationResolutionRequest
+from app.schemas.review import (
+    EscalationResolutionRequest,
+    EscalationResolutionResponse,
+    EscalationQueueItemResponse,
+)
 from app.schemas.inventory import InventoryAdjustmentRequest
 
 router = APIRouter(prefix="/oversight", tags=["Chief Pharmacist Oversight"])
 
 
-@router.get("/escalations")
+@router.get("/escalations", response_model=list[EscalationQueueItemResponse])
 def get_escalated_cases(
     current_user: User = Depends(require_chief_pharmacist),
     db: Session = Depends(get_db),
-):
+) -> list[EscalationQueueItemResponse]:
     """
     Retrieve all escalated prescriptions awaiting Chief Pharmacist resolution.
     Strictly protected: Chief Pharmacist ONLY. Staff Pharmacists and Students receive 403 Forbidden.
@@ -33,78 +37,136 @@ def get_escalated_cases(
     results = []
     for esc in escalations:
         rx = esc.prescription
-        results.append({
-            "escalation_id": esc.id,
-            "prescription_id": rx.id,
-            "prescription_number": rx.prescription_number,
-            "patient_name": f"{rx.patient.first_name} {rx.patient.last_name}",
-            "escalated_by": esc.escalated_by.full_name,
-            "escalation_reason": esc.escalation_reason,
-            "created_at": esc.created_at,
-        })
+        has_high_sev = any(f.severity == "HIGH" for f in rx.findings)
+        results.append(
+            EscalationQueueItemResponse(
+                escalation_id=esc.id,
+                prescription_id=rx.id,
+                prescription_number=rx.prescription_number,
+                patient_id=rx.patient_id,
+                patient_name=f"{rx.patient.first_name} {rx.patient.last_name}",
+                patient_mrn=rx.patient.mrn,
+                prescriber_name=rx.prescriber_name,
+                prescriber_department=rx.prescriber_department,
+                escalated_by_id=esc.escalated_by_id,
+                escalated_by_name=esc.escalated_by.full_name,
+                escalation_reason=esc.escalation_reason,
+                scenario_key=rx.scenario_key,
+                created_at=esc.created_at,
+                findings_count=len(rx.findings),
+                has_high_severity_finding=has_high_sev,
+            )
+        )
     return results
 
 
-@router.post("/escalations/{prescription_id}/resolve")
+@router.post("/escalations/{prescription_id}/resolve", response_model=EscalationResolutionResponse)
 def resolve_escalated_case(
     prescription_id: str,
     resolution_data: EscalationResolutionRequest,
     current_user: User = Depends(require_chief_pharmacist),
     db: Session = Depends(get_db),
-):
+) -> EscalationResolutionResponse:
     """
     Resolve an escalated case. Chief Pharmacist ONLY.
-    Updates escalation record with resolution notes, timestamp, and sets prescription status.
+    
+    Workflow & Operational Invariants:
+    1. Chief Pharmacist ONLY: Staff Pharmacists and Pharmacy Students receive 403 Forbidden.
+    2. Concurrency & Double-Resolution Guard: An escalation cannot be resolved twice through repeated
+       or concurrent requests. Already resolved escalations return HTTP 409 Conflict.
+    3. Workflow State Transition: Only prescriptions in 'escalated' status can be resolved.
+       - APPROVED_BY_CHIEF -> prescription status becomes 'reviewed'.
+       - REJECTED_RETURNED_TO_PRESCRIBER -> prescription status becomes 'resolved'.
+       - MODIFIED_AND_APPROVED -> prescription status becomes 'resolved'.
+    4. Audited Action: Appends ESCALATION_RESOLVED audit event recording actor, action, and timestamps.
+    5. Transactional Integrity: All changes commit atomically or roll back cleanly on error.
     """
+    # 1. Lookup the escalation record for this prescription
     escalation = (
         db.query(EscalationResolution)
-        .filter_by(prescription_id=prescription_id, resolved_at=None)
+        .filter_by(prescription_id=prescription_id)
+        .order_by(EscalationResolution.created_at.desc())
         .first()
     )
     if not escalation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No active pending escalation found for prescription {prescription_id}",
+            detail=f"No escalation record found for prescription {prescription_id}",
+        )
+
+    # 2. Reject duplicate or repeated resolution attempts
+    if escalation.resolved_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Escalation for prescription {prescription_id} has already been resolved "
+                f"on {escalation.resolved_at.isoformat()} with action '{escalation.resolution_action}' "
+                f"and cannot be resolved again."
+            ),
         )
 
     rx = escalation.prescription
-    escalation.resolved_by_id = current_user.id
-    escalation.resolution_action = resolution_data.resolution_action
-    escalation.resolution_notes = resolution_data.resolution_notes.strip()
-    escalation.resolved_at = datetime.now(timezone.utc)
+    if rx.status != "escalated":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Prescription {rx.prescription_number} is in status '{rx.status}', not 'escalated'.",
+        )
 
-    if resolution_data.resolution_action == "APPROVED_BY_CHIEF":
-        rx.status = "reviewed"
-    elif resolution_data.resolution_action == "REJECTED_RETURNED_TO_PRESCRIBER":
-        rx.status = "resolved"
-    else:
-        rx.status = "resolved"
+    try:
+        # 3. Update escalation record with chief decision
+        escalation.resolved_by_id = current_user.id
+        escalation.resolution_action = resolution_data.resolution_action
+        escalation.resolution_notes = resolution_data.resolution_notes.strip()
+        escalation.resolved_at = datetime.now(timezone.utc)
 
-    rx.updated_at = datetime.now(timezone.utc)
+        # 4. Transition prescription workflow status
+        if resolution_data.resolution_action == "APPROVED_BY_CHIEF":
+            rx.status = "reviewed"
+        elif resolution_data.resolution_action == "REJECTED_RETURNED_TO_PRESCRIBER":
+            rx.status = "resolved"
+        else:
+            rx.status = "resolved"
 
-    # Record append-only audit event
-    audit_event = AuditEvent(
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        actor_role="chief_pharmacist",
-        action="ESCALATION_RESOLVED",
-        entity_type="Prescription",
-        entity_id=rx.id,
-        details=json.dumps({
-            "prescription_number": rx.prescription_number,
-            "resolution_action": resolution_data.resolution_action,
-            "resolved_by": current_user.username,
-        }),
+        rx.updated_at = datetime.now(timezone.utc)
+
+        # 5. Record append-only audit event
+        audit_event = AuditEvent(
+            actor_id=current_user.id,
+            actor_username=current_user.username,
+            actor_role="chief_pharmacist",
+            action="ESCALATION_RESOLVED",
+            entity_type="Prescription",
+            entity_id=rx.id,
+            details=json.dumps({
+                "prescription_number": rx.prescription_number,
+                "escalation_id": escalation.id,
+                "resolution_action": resolution_data.resolution_action,
+                "resolved_by": current_user.username,
+                "new_status": rx.status,
+            }),
+        )
+        db.add(audit_event)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database transaction failed during escalation resolution: {str(exc)}",
+        )
+
+    return EscalationResolutionResponse(
+        status="success",
+        prescription_id=rx.id,
+        prescription_number=rx.prescription_number,
+        escalation_id=escalation.id,
+        resolution_action=resolution_data.resolution_action,
+        prescription_status=rx.status,
+        resolved_at=escalation.resolved_at,
+        resolved_by=current_user.username,
     )
-    db.add(audit_event)
-    db.commit()
-
-    return {
-        "status": "success",
-        "prescription_id": rx.id,
-        "resolution_action": resolution_data.resolution_action,
-        "prescription_status": rx.status,
-    }
 
 
 @router.get("/override-ledger")

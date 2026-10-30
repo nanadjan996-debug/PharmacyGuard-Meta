@@ -10,10 +10,13 @@ from app.models.review import PharmacistReview, ReviewFinding, EscalationResolut
 from app.models.audit import AuditEvent
 from app.schemas.review import (
     ReviewActionRequest,
+    ReviewActionResponse,
     PrescriptionQueueItemResponse,
     PrescriptionDetailResponse,
     PrescriptionItemDetail,
     ReviewFindingResponse,
+    PharmacistReviewDetail,
+    EscalationDetail,
 )
 from app.services.verification import VerificationEngine, VerificationResponse
 
@@ -54,21 +57,26 @@ def get_verification_queue(
     return response_items
 
 
-@router.post("/{prescription_id}/review")
+@router.post("/{prescription_id}/review", response_model=ReviewActionResponse)
 def review_prescription(
     prescription_id: str,
     review_data: ReviewActionRequest,
     current_user: User = Depends(require_any_pharmacist),
     db: Session = Depends(get_db),
-):
+) -> ReviewActionResponse:
     """
     Submit clinical decision on a prescription: ACCEPT, OVERRIDE, or ESCALATE.
     
     Security & Safety Rules:
     1. Accessible ONLY to qualified pharmacists (Staff or Chief). Pharmacy Students are rejected with 403 Forbidden.
-    2. High-Priority Override Rule: Overriding a prescription with any HIGH severity finding MANDATES
-       a non-empty written clinical rationale. Missing or whitespace-only rationale is rejected with HTTP 422.
-    3. All review actions record an append-only audit event with the actor identity and decision.
+    2. Workflow Status Validation: Can only review prescriptions in 'pending' status. If already 'escalated',
+       'reviewed', 'overridden', or 'resolved', the request is rejected with HTTP 409 Conflict.
+    3. High-Priority Override Rule: Overriding a prescription with any HIGH severity finding MANDATES
+       a non-empty written clinical rationale (after trimming whitespace). Missing/blank rationale is rejected with HTTP 422.
+    4. Findings Derived from Database: Findings are derived strictly from trusted database records, never client input.
+    5. Snapshotting: Current unreviewed findings are permanently linked to this review decision.
+    6. All review actions record an append-only audit event with actor identity, action, and decision metadata.
+    7. Transactional atomicity: Rolled back cleanly if any database error occurs.
     """
     rx = db.query(Prescription).filter_by(id=prescription_id).first()
     if not rx:
@@ -77,76 +85,130 @@ def review_prescription(
             detail=f"Prescription with ID {prescription_id} not found",
         )
 
-    has_high_severity_finding = any(f.severity == "HIGH" for f in rx.findings)
-
-    # Enforce mandatory written rationale for high-priority overrides at the API layer
-    if review_data.action == "OVERRIDE" and has_high_severity_finding:
-        if not review_data.override_rationale or not review_data.override_rationale.strip():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Override rationale is mandatory when overriding high-priority clinical findings.",
-            )
-
-    # Create pharmacist review record
-    review = PharmacistReview(
-        prescription_id=rx.id,
-        reviewer_id=current_user.id,
-        action=review_data.action,
-        override_rationale=review_data.override_rationale.strip() if review_data.override_rationale else None,
-        notes=review_data.notes.strip() if review_data.notes else None,
-    )
-    db.add(review)
-
-    # Link existing findings to this review
-    for f in rx.findings:
-        f.review = review
-
-    # Update prescription status
-    if review_data.action == "ACCEPT":
-        rx.status = "reviewed"
-    elif review_data.action == "OVERRIDE":
-        rx.status = "overridden"
-    elif review_data.action == "ESCALATE":
-        rx.status = "escalated"
-        escalation = EscalationResolution(
-            prescription_id=rx.id,
-            escalated_by_id=current_user.id,
-            escalation_reason=(
-                review_data.notes.strip()
-                if review_data.notes
-                else "Pharmacist escalated complex prescription for Chief Pharmacist review"
+    # 1. Enforce explicit workflow state transitions
+    if rx.status == "escalated":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Prescription {rx.prescription_number} is currently escalated and awaiting "
+                f"Chief Pharmacist resolution. Review actions cannot be performed directly."
             ),
         )
-        db.add(escalation)
+    elif rx.status in ("reviewed", "overridden", "resolved"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Prescription {rx.prescription_number} has already been finalized with "
+                f"status '{rx.status}' and cannot be reviewed again."
+            ),
+        )
+    elif rx.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Invalid prescription status '{rx.status}' for review action.",
+        )
 
-    rx.updated_at = datetime.now(timezone.utc)
+    try:
+        # 2. Derive findings strictly from trusted database records
+        unreviewed_findings = [f for f in rx.findings if f.review_id is None]
+        if not unreviewed_findings:
+            # If no active unreviewed findings exist, execute deterministic verification
+            engine = VerificationEngine(db)
+            engine.verify(rx.id, persist=True)
+            # Reload unreviewed findings from session
+            unreviewed_findings = [f for f in rx.findings if f.review_id is None]
 
-    # Record append-only audit log entry
-    user_roles = [ur.role_id for ur in current_user.roles]
-    audit_event = AuditEvent(
-        actor_id=current_user.id,
-        actor_username=current_user.username,
-        actor_role=",".join(user_roles),
-        action=f"REVIEW_{review_data.action}",
-        entity_type="Prescription",
-        entity_id=rx.id,
-        details=json.dumps({
-            "prescription_number": rx.prescription_number,
-            "action": review_data.action,
-            "has_high_priority_finding": has_high_severity_finding,
-            "override_rationale_provided": bool(review_data.override_rationale),
-        }),
+        has_high_severity_finding = any(f.severity == "HIGH" for f in unreviewed_findings)
+
+        # 3. Enforce mandatory written rationale for high-priority overrides (after trimming whitespace)
+        trimmed_rationale = (
+            review_data.override_rationale.strip()
+            if review_data.override_rationale
+            else None
+        )
+        if review_data.action == "OVERRIDE" and has_high_severity_finding:
+            if not trimmed_rationale:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Override rationale is mandatory when overriding high-priority clinical findings.",
+                )
+
+        # 4. Create pharmacist review record
+        review = PharmacistReview(
+            prescription_id=rx.id,
+            reviewer_id=current_user.id,
+            action=review_data.action,
+            override_rationale=trimmed_rationale,
+            notes=review_data.notes.strip() if review_data.notes else None,
+        )
+        db.add(review)
+        db.flush()  # populate review.id
+
+        # 5. Snapshot unreviewed findings to this review record
+        for f in unreviewed_findings:
+            f.review_id = review.id
+
+        # 6. Transition prescription status and create escalation if applicable
+        if review_data.action == "ACCEPT":
+            rx.status = "reviewed"
+        elif review_data.action == "OVERRIDE":
+            rx.status = "overridden"
+        elif review_data.action == "ESCALATE":
+            rx.status = "escalated"
+            escalation = EscalationResolution(
+                prescription_id=rx.id,
+                escalated_by_id=current_user.id,
+                escalation_reason=(
+                    review_data.notes.strip()
+                    if review_data.notes
+                    else "Pharmacist escalated complex prescription for Chief Pharmacist review"
+                ),
+            )
+            db.add(escalation)
+
+        rx.updated_at = datetime.now(timezone.utc)
+
+        # 7. Record append-only audit log entry
+        user_roles = [ur.role_id for ur in current_user.roles]
+        audit_event = AuditEvent(
+            actor_id=current_user.id,
+            actor_username=current_user.username,
+            actor_role=",".join(user_roles),
+            action=f"REVIEW_{review_data.action}",
+            entity_type="Prescription",
+            entity_id=rx.id,
+            details=json.dumps({
+                "prescription_number": rx.prescription_number,
+                "action": review_data.action,
+                "review_id": review.id,
+                "has_high_priority_finding": has_high_severity_finding,
+                "override_rationale_provided": bool(trimmed_rationale),
+                "findings_snapshotted": len(unreviewed_findings),
+                "new_status": rx.status,
+            }),
+        )
+        db.add(audit_event)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database transaction failed during review submission: {str(exc)}",
+        )
+
+    return ReviewActionResponse(
+        status="success",
+        prescription_id=rx.id,
+        prescription_number=rx.prescription_number,
+        action=review_data.action,
+        new_status=rx.status,
+        review_id=review.id,
+        findings_snapshotted=len(unreviewed_findings),
+        created_at=review.created_at,
     )
-    db.add(audit_event)
-    db.commit()
-
-    return {
-        "status": "success",
-        "prescription_id": rx.id,
-        "prescription_number": rx.prescription_number,
-        "action": review_data.action,
-        "new_status": rx.status,
-    }
 
 
 @router.get("/{prescription_id}", response_model=PrescriptionDetailResponse)
@@ -157,7 +219,7 @@ def get_prescription_detail(
 ) -> PrescriptionDetailResponse:
     """
     Retrieve complete prescription record including patient demographics,
-    ordered medication items, and currently attached clinical findings.
+    ordered medication items, clinical findings, reviews, and escalations.
     """
     rx = db.query(Prescription).filter_by(id=prescription_id).first()
     if not rx:
@@ -199,6 +261,41 @@ def get_prescription_detail(
         for f in rx.findings
     ]
 
+    reviews_detail = []
+    for rev in sorted(rx.reviews, key=lambda r: r.created_at, reverse=True):
+        rev_roles = [ur.role_id for ur in rev.reviewer.roles]
+        reviews_detail.append(
+            PharmacistReviewDetail(
+                id=rev.id,
+                reviewer_id=rev.reviewer_id,
+                reviewer_name=rev.reviewer.full_name,
+                reviewer_role=",".join(rev_roles),
+                action=rev.action,
+                override_rationale=rev.override_rationale,
+                notes=rev.notes,
+                created_at=rev.created_at,
+                findings_count=len(rev.findings),
+            )
+        )
+
+    escalations_detail = []
+    for esc in sorted(rx.escalations, key=lambda e: e.created_at, reverse=True):
+        escalations_detail.append(
+            EscalationDetail(
+                id=esc.id,
+                prescription_id=esc.prescription_id,
+                escalated_by_id=esc.escalated_by_id,
+                escalated_by_name=esc.escalated_by.full_name,
+                escalation_reason=esc.escalation_reason,
+                created_at=esc.created_at,
+                resolved_by_id=esc.resolved_by_id,
+                resolved_by_name=esc.resolved_by.full_name if esc.resolved_by else None,
+                resolution_action=esc.resolution_action,
+                resolution_notes=esc.resolution_notes,
+                resolved_at=esc.resolved_at,
+            )
+        )
+
     return PrescriptionDetailResponse(
         id=rx.id,
         prescription_number=rx.prescription_number,
@@ -217,7 +314,44 @@ def get_prescription_detail(
         created_at=rx.created_at,
         items=items_detail,
         findings=findings_detail,
+        reviews=reviews_detail,
+        escalations=escalations_detail,
     )
+
+
+@router.get("/{prescription_id}/reviews", response_model=list[PharmacistReviewDetail])
+def get_prescription_reviews(
+    prescription_id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> list[PharmacistReviewDetail]:
+    """
+    Retrieve audit history of all pharmacist reviews and decisions for this prescription.
+    """
+    rx = db.query(Prescription).filter_by(id=prescription_id).first()
+    if not rx:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prescription with ID {prescription_id} not found",
+        )
+
+    reviews_detail = []
+    for rev in sorted(rx.reviews, key=lambda r: r.created_at, reverse=True):
+        rev_roles = [ur.role_id for ur in rev.reviewer.roles]
+        reviews_detail.append(
+            PharmacistReviewDetail(
+                id=rev.id,
+                reviewer_id=rev.reviewer_id,
+                reviewer_name=rev.reviewer.full_name,
+                reviewer_role=",".join(rev_roles),
+                action=rev.action,
+                override_rationale=rev.override_rationale,
+                notes=rev.notes,
+                created_at=rev.created_at,
+                findings_count=len(rev.findings),
+            )
+        )
+    return reviews_detail
 
 
 @router.post("/{prescription_id}/verify", response_model=VerificationResponse)
