@@ -475,6 +475,112 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Real-time websocket or push notifications for escalation queues are not implemented; the Chief Pharmacist queue operates via standard HTTP GET polling.
 - Database-level audit immutability is enforced via SQLAlchemy ORM event listeners (`before_update`, `before_delete`); direct raw SQL queries bypassing the ORM are not intercepted by SQLite triggers.
 
+---
+
+## Milestone 6: Inventory Management and Oversight APIs
+
+**Date**: 2026-10-30  
+**Objective**: Implement and verify backend inventory-management and chief-pharmacist oversight APIs using existing database models, authentication, RBAC, audit logging, and workflow conventions, with atomic stock transactions and immutable transaction tracking.
+
+### Features Implemented
+
+1. **Inventory Management APIs (`/api/v1/inventory`)**:
+   - `GET /api/v1/inventory`:
+     - Returns inventory items ordered deterministically by medication generic name and medication ID.
+     - Computes live stock status (`IN_STOCK`, `LOW_STOCK`, `OUT_OF_STOCK`) and boolean `is_low_stock` dynamically.
+     - Supports filtering by `status` query parameter (`all`, `low_stock`, `out_of_stock`, `in_stock`) and boolean query flags `low_stock=true` and `out_of_stock=true`.
+     - Accessible by Staff Pharmacists and Chief Pharmacists (`require_any_pharmacist`). Students forbidden (403), unauthenticated rejected (401).
+   - `GET /api/v1/inventory/summary`:
+     - Computes real-time inventory aggregation metrics: total unique items, total units on hand, out-of-stock item count, low-stock item count, adequate stock item count, and total estimated inventory valuation in cents.
+     - Accessible by Staff Pharmacists and Chief Pharmacists.
+   - `GET /api/v1/inventory/{medication_id}`:
+     - Retrieves detailed medication inventory record by either `medication_id` (e.g., `MED-CEF-500`) or primary key UUID.
+     - Returns medication clinical details, current balance, reorder threshold, lot information, expiration date, and complete chronological transaction history (`InventoryTransactionDetail`) ordered with newest first.
+     - Accessible by Staff Pharmacists and Chief Pharmacists.
+   - `POST /api/v1/inventory/transactions`:
+     - Atomic stock mutation supporting `RESTOCK` (receipt from distributor) and `ADJUSTMENT` (shrinkage, count discrepancy, damage write-off).
+     - Validates positive non-zero quantity (`gt=0`).
+     - Mandates documented explanation string (`min_length=3` non-whitespace) for adjustments.
+     - Enforces negative balance prevention: deductions that exceed `quantity_on_hand` are rejected with HTTP 422 Unprocessable Content, leaving balances intact.
+     - Enforces atomic database commit: updates balance, inserts immutable `InventoryTransaction`, inserts append-only `AuditEvent`, and rolls back completely on any database exception.
+
+2. **Chief Pharmacist Oversight APIs (`/api/v1/oversight`)**:
+   - `GET /api/v1/oversight/dashboard`:
+     - Executive clinical and operations dashboard aggregating:
+       - Real-time inventory metrics (total units, low/out stock counts, valuation).
+       - Inventory exceptions list with calculated unit deficits below threshold.
+       - Prescription clinical workflow distribution by status and prescriber department.
+       - Pending escalation queue count.
+       - Ten most recent system audit log events.
+     - Restricted strictly to Chief Pharmacists (`require_chief_pharmacist`). Staff Pharmacists and Students forbidden (403).
+   - `GET /api/v1/oversight/inventory-exceptions`:
+     - Filtered exception list returning all items in `OUT_OF_STOCK` or `LOW_STOCK` status with calculated deficit units required to reach reorder threshold.
+     - Restricted strictly to Chief Pharmacists.
+   - `GET /api/v1/oversight/workflow-summary`:
+     - Aggregated breakdown of all prescription records by workflow status and prescriber department.
+     - Restricted strictly to Chief Pharmacists.
+
+3. **Data Integrity & ORM Immutability**:
+   - Attached SQLAlchemy `before_update` and `before_delete` event listeners to `InventoryTransaction` in `backend/app/models/inventory.py`, raising `PermissionError` on any ORM modification or deletion attempt.
+   - Every inventory transaction generates an associated append-only `AuditEvent` record with actor username, role, action code (`INVENTORY_RESTOCK` or `INVENTORY_ADJUSTMENT`), entity ID, and structured JSON payload.
+
+### API Endpoints & Role Permission Matrix
+
+| Endpoint | Method | Allowed Role(s) | Forbidden Roles | Key Validations & Logic |
+| :--- | :--- | :--- | :--- | :--- |
+| `/api/v1/inventory` | GET | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` (403), Unauth (401) | Deterministic alphabetical ordering. Filters: `status` (`low_stock`, `out_of_stock`, `in_stock`), `low_stock=true`, `out_of_stock=true`. Computes live stock status and advisory banner. |
+| `/api/v1/inventory/summary` | GET | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` (403), Unauth (401) | Computes total items, total units, out-of-stock count, low-stock count, adequate count, total valuation cents. |
+| `/api/v1/inventory/{medication_id}` | GET | `staff_pharmacist`, `chief_pharmacist` | `pharmacy_student` (403), Unauth (401) | Matches on `medication_id` or `id`. Returns 404 if not found. Includes reverse-chronological transaction history. |
+| `/api/v1/inventory/transactions` | POST | `RESTOCK`: `staff_pharmacist`, `chief_pharmacist`<br>`ADJUSTMENT`: `chief_pharmacist` only | `pharmacy_student` (403), Unauth (401), Staff Pharmacist on `ADJUSTMENT` (403) | Enforces positive quantity (`gt=0`), mandatory adjustment reason (422), negative stock prevention (422), atomic commit/rollback, and append-only audit event logging. |
+| `/api/v1/oversight/dashboard` | GET | `chief_pharmacist` only | `staff_pharmacist` (403), `pharmacy_student` (403), Unauth (401) | Executive oversight aggregation of inventory metrics, deficits, workflow distribution, escalation count, and recent audits. |
+| `/api/v1/oversight/inventory-exceptions` | GET | `chief_pharmacist` only | `staff_pharmacist` (403), `pharmacy_student` (403), Unauth (401) | Returns low-stock and out-of-stock items with calculated reorder deficit. |
+| `/api/v1/oversight/workflow-summary` | GET | `chief_pharmacist` only | `staff_pharmacist` (403), `pharmacy_student` (403), Unauth (401) | Returns prescription counts grouped by status and prescriber department. |
+
+### Tests Run & Verification
+
+- **Inventory Test Suite (`python -m pytest backend/tests/test_inventory.py`)**:
+  - Result: **15 passed (15 total)** in 15.71s
+  - 15 comprehensive tests in `backend/tests/test_inventory.py`:
+    - `test_inventory_listing_and_ordering`: Deterministic ordering, item fields, stock status calculation.
+    - `test_inventory_low_stock_and_out_of_stock_filtering`: Query param and boolean flag filtering.
+    - `test_inventory_detail_and_transaction_history`: Single item detail lookup and chronological transaction history.
+    - `test_successful_stock_receipt_by_staff_pharmacist`: Staff pharmacist records restock, updates balance, creates transaction and audit event.
+    - `test_successful_stock_adjustment_by_chief_pharmacist`: Chief pharmacist records adjustment with documented rationale.
+    - `test_invalid_quantities_rejected`: Zero, negative, and invalid quantities rejected with HTTP 422.
+    - `test_attempted_negative_stock_rejected`: Deductions exceeding balance rejected with HTTP 422; database unmodified.
+    - `test_unknown_medication_or_inventory_record_rejected`: Unknown medication IDs return HTTP 404.
+    - `test_missing_adjustment_explanation_rejected`: Missing, null, empty, or whitespace reasons rejected with HTTP 422.
+    - `test_student_and_unauthorized_access_denial`: Students receive 403 Forbidden; unauthenticated requests receive 401 Unauthorized across all endpoints.
+    - `test_staff_pharmacist_adjustment_denial_narrowest_permission`: Staff pharmacists attempting `ADJUSTMENT` receive 403 Forbidden under the narrowest safe permission principle.
+    - `test_atomic_rollback_on_inventory_transaction_failure`: Simulated commit error triggers full rollback; balances and audit records remain clean.
+    - `test_no_mutation_of_historical_inventory_transactions`: ORM event listener blocks `UPDATE` and `DELETE` on `InventoryTransaction`, raising `PermissionError`.
+    - `test_inventory_summary_accuracy`: Verifies aggregate math across items, units, categories, and total valuation.
+    - `test_chief_pharmacist_oversight_endpoints`: Verifies dashboard, inventory exceptions, and workflow summary access for Chief Pharmacists and 403 denial for Staff Pharmacists.
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **81 passed (81 total)** in 54.53s (100% pass rate)
+  - Auth (13), Database (8), Health (4), Inventory (15), Review Workflow (15), Verification Engine (26).
+- **Frontend Test Suite (`npm test --prefix frontend`)**:
+  - Result: **3 passed (3 total)** in 13.50s with zero regressions.
+
+### Commits & Git Provenance
+- Initial Commit: `8257101` — *"Milestone 1: Project structure, dependencies, initial scaffold, and verification tests"*
+- Milestone 2 Commit: `0dbb8b6` — *"Milestone 2: Database layer, SQLAlchemy 2.x models, idempotent seed data, and relationship tests"*
+- Milestone 2 Log Update: `e102978` — *"docs: Record commit hash for Milestone 2"*
+- Milestone 3 Commit: `a8d7a7f` — *"Milestone 3: Authentication, server-side RBAC, override rationale protection, and audit tests"*
+- Milestone 4 Commit: `5722f72` — *"Milestone 4: Deterministic clinical verification engine, rule services, and verification API"*
+- Milestone 4 Audit Verification: `4dde454` — *"Milestone 4 audit: verify immutability boundaries, transactional rollback, and benchmark integrity"*
+- Milestone 5 Commit: `efd76c7` — *"Milestone 5: Review workflow, escalation resolution services, and audit integration"*
+- Milestone 5 Audit Remediation Commit: `718ae23` — *"Milestone 5 audit: prevent high-severity approval bypass, enforce consistent status transitions, and add atomic concurrency safeguards"*
+- Milestone 5 Final Check Commit: `83e0687` — *"Milestone 5 final check: rename to APPROVED_AFTER_CLARIFICATION and verify high findings after escalation with regression test"*
+- Milestone 6 Implementation Commit: `524383b` — *"Milestone 6: Inventory management APIs, atomic transaction tracking, and chief oversight dashboard"*
+
+### Known Limitations at Milestone 6
+- The inventory subsystem is a simulated local hospital inventory model operating on synthetic benchmark medications; it is not integrated with automated dispensing cabinets (e.g. Pyxis, Omnicell) or wholesale electronic ordering (EDI 850/855).
+- Database-level immutability for inventory transactions is enforced via SQLAlchemy ORM event listeners (`before_update`, `before_delete`); raw SQL operations bypassing the ORM are not blocked by database triggers.
+- Unit costs and inventory valuations are synthetic static demonstration values.
+- Real-time inventory push notifications (e.g. WebSocket alerts on critical stock depletion) are not implemented; oversight screens operate via HTTP GET polling.
+
+
 
 
 
