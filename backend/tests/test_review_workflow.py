@@ -442,10 +442,10 @@ def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Sess
     assert audit1 is not None
     assert audit1.actor_username == "chief_demo"
 
-    # 2. Test MODIFIED_AND_APPROVED -> status 'reviewed'
+    # 2. Test APPROVED_AFTER_CLARIFICATION -> status 'reviewed'
     rx_mod = Prescription(
         id=str(uuid.uuid4()),
-        prescription_number=f"RX-CHIEF-MOD-{uuid.uuid4().hex[:6].upper()}",
+        prescription_number=f"RX-CHIEF-CLARIF-{uuid.uuid4().hex[:6].upper()}",
         patient_id="pat-synth-001",
         prescriber_name="Dr. Resident, MD",
         prescriber_department="Surgery",
@@ -461,8 +461,8 @@ def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Sess
     )
 
     resolve_payload2 = {
-        "resolution_action": "MODIFIED_AND_APPROVED",
-        "resolution_notes": "Contacted prescriber; dose adjusted from Q6H to Q8H with renal monitoring. Modified and approved for dispensing.",
+        "resolution_action": "APPROVED_AFTER_CLARIFICATION",
+        "resolution_notes": "Contacted prescriber; clarified clinical rationale and approved regimen without modifying prescription entity.",
     }
     res_resolve2 = client.post(
         f"/api/v1/oversight/escalations/{rx_mod.id}/resolve",
@@ -471,7 +471,7 @@ def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Sess
     )
     assert res_resolve2.status_code == 200
     data2 = res_resolve2.json()
-    assert data2["resolution_action"] == "MODIFIED_AND_APPROVED"
+    assert data2["resolution_action"] == "APPROVED_AFTER_CLARIFICATION"
     assert data2["prescription_status"] == "reviewed"
 
     db_session.refresh(rx_mod)
@@ -513,42 +513,177 @@ def test_chief_pharmacist_escalation_resolution_actions(client, db_session: Sess
     assert rx_rej.status == "resolved"
 
 
-def test_chief_approval_high_severity_requires_rationale(client, db_session: Session, high_conflict_prescription):
+def test_chief_approval_high_severity_after_escalation_regression(client, db_session: Session):
     """
-    Chief Pharmacist approval of an escalated case involving HIGH-severity clinical findings
-    requires an appropriate, non-empty, documented clinical rationale.
+    Regression Test: HIGH-severity finding after escalation review.
+    Verifies that when a prescription with a HIGH-severity finding is escalated,
+    the finding is attached to the escalation PharmacistReview (review_id is NOT NULL).
+    The Chief Pharmacist cannot approve the escalated case with blank or whitespace-only
+    resolution notes (HTTP 422), but succeeding with valid notes sets status 'reviewed'
+    and preserves the rationale in the escalation record.
+    Does NOT rely on an unreviewed-finding query.
     """
-    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
-    chief_headers = {"Authorization": f"Bearer {chief_token}"}
     staff_token = get_token(client, "pharmacist_demo", "StaffDemoPassword2026!")
     staff_headers = {"Authorization": f"Bearer {staff_token}"}
+    chief_token = get_token(client, "chief_demo", "ChiefDemoPassword2026!")
+    chief_headers = {"Authorization": f"Bearer {chief_token}"}
 
-    # Escalate the high-conflict prescription
-    client.post(
-        f"/api/v1/prescriptions/{high_conflict_prescription.id}/review",
-        json={"action": "ESCALATE", "notes": "High conflict escalation for chief evaluation"},
+    # Step 1: Create a prescription with a HIGH-severity finding (penicillin anaphylaxis + Amoxicillin)
+    rx = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-REGR-HIGH-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-003",  # Charles Vance with penicillin anaphylaxis
+        prescriber_name="Dr. Regress, MD",
+        prescriber_department="Surgery",
+        status="pending",
+    )
+    db_session.add(rx)
+    db_session.flush()
+
+    item = PrescriptionItem(
+        id=str(uuid.uuid4()),
+        prescription_id=rx.id,
+        medication_id="MED-AMOX-500",
+        dose_amount=500.0,
+        dose_unit="mg",
+        frequency="TID",
+        route="Oral",
+        duration_days=7,
+        quantity_prescribed=21,
+        instructions="Take 1 capsule TID",
+    )
+    db_session.add(item)
+    db_session.commit()
+
+    engine = VerificationEngine(db_session)
+    engine.verify(rx.id, persist=True)
+
+    # Confirm initial high finding exists
+    high_findings_pre = (
+        db_session.query(ReviewFinding)
+        .filter_by(prescription_id=rx.id, severity="HIGH")
+        .all()
+    )
+    assert len(high_findings_pre) >= 1
+
+    # Step 2: Escalate it
+    esc_res = client.post(
+        f"/api/v1/prescriptions/{rx.id}/review",
+        json={"action": "ESCALATE", "notes": "Escalating severe allergy case to Chief Pharmacist"},
         headers=staff_headers,
     )
+    assert esc_res.status_code == 200
+    esc_review_id = esc_res.json()["review_id"]
 
-    # 1. Attempt APPROVED_BY_CHIEF with whitespace-only notes -> 422
-    res_ws = client.post(
-        f"/api/v1/oversight/escalations/{high_conflict_prescription.id}/resolve",
+    # Step 3: Confirm the finding is attached to the escalation review (review_id is NOT NULL)
+    db_session.expire_all()
+    attached_high_findings = (
+        db_session.query(ReviewFinding)
+        .filter_by(prescription_id=rx.id, severity="HIGH")
+        .all()
+    )
+    assert len(attached_high_findings) >= 1
+    for hf in attached_high_findings:
+        assert hf.review_id == esc_review_id, "Finding must be attached to the escalation review"
+        assert hf.review_id is not None, "Finding review_id must NOT be NULL"
+
+    # Also confirm no unreviewed high findings exist
+    unreviewed_high = (
+        db_session.query(ReviewFinding)
+        .filter(ReviewFinding.prescription_id == rx.id, ReviewFinding.severity == "HIGH", ReviewFinding.review_id.is_(None))
+        .all()
+    )
+    assert len(unreviewed_high) == 0, "No unreviewed high finding exists; check must inspect attached/snapshotted findings"
+
+    # Step 4: Attempt chief approval with blank or whitespace-only resolution notes
+    res_blank = client.post(
+        f"/api/v1/oversight/escalations/{rx.id}/resolve",
         json={"resolution_action": "APPROVED_BY_CHIEF", "resolution_notes": "       "},
         headers=chief_headers,
     )
-    assert res_ws.status_code == 422
 
-    # 2. Legitimate APPROVED_BY_CHIEF with documented rationale -> 200 OK
+    # Step 5: Confirm HTTP 422
+    assert res_blank.status_code == 422
+
+    # Step 6: Retry with valid notes
+    valid_rationale = (
+        "Chief Pharmacist reviewed the chart with allergy specialist. Patient confirmed tolerant to amoxicillin "
+        "following recent graded dose challenge. Approved for inpatient administration."
+    )
     res_valid = client.post(
-        f"/api/v1/oversight/escalations/{high_conflict_prescription.id}/resolve",
+        f"/api/v1/oversight/escalations/{rx.id}/resolve",
         json={
             "resolution_action": "APPROVED_BY_CHIEF",
-            "resolution_notes": "Chief reviewed patient allergy chart; confirmed previous allergy was mild rash 20 years ago. Attending physician concurred; approved under telemetry monitoring.",
+            "resolution_notes": valid_rationale,
         },
         headers=chief_headers,
     )
+
+    # Step 7: Confirm approval succeeds and the rationale is preserved
     assert res_valid.status_code == 200
-    assert res_valid.json()["prescription_status"] == "reviewed"
+    data = res_valid.json()
+    assert data["prescription_status"] == "reviewed"
+    assert data["resolution_action"] == "APPROVED_BY_CHIEF"
+
+    db_session.expire_all()
+    esc = db_session.query(EscalationResolution).filter_by(prescription_id=rx.id).first()
+    assert esc is not None
+    assert esc.resolved_at is not None
+    assert esc.resolution_notes == valid_rationale
+    assert esc.resolved_by_id == "usr-chief-001"
+
+    # Also verify that APPROVED_AFTER_CLARIFICATION requires rationale on HIGH conflict
+    rx_clarif = Prescription(
+        id=str(uuid.uuid4()),
+        prescription_number=f"RX-REGR-CLARIF-{uuid.uuid4().hex[:6].upper()}",
+        patient_id="pat-synth-003",
+        prescriber_name="Dr. Regress2, MD",
+        prescriber_department="ICU",
+        status="pending",
+    )
+    db_session.add(rx_clarif)
+    db_session.flush()
+    item_clarif = PrescriptionItem(
+        id=str(uuid.uuid4()),
+        prescription_id=rx_clarif.id,
+        medication_id="MED-AMOX-500",
+        dose_amount=500.0,
+        dose_unit="mg",
+        frequency="TID",
+        route="Oral",
+        duration_days=5,
+        quantity_prescribed=15,
+        instructions="Take 1 capsule TID",
+    )
+    db_session.add(item_clarif)
+    db_session.commit()
+    engine.verify(rx_clarif.id, persist=True)
+
+    client.post(
+        f"/api/v1/prescriptions/{rx_clarif.id}/review",
+        json={"action": "ESCALATE", "notes": "Escalate for clarification"},
+        headers=staff_headers,
+    )
+
+    # Whitespace rejected
+    res_clarif_ws = client.post(
+        f"/api/v1/oversight/escalations/{rx_clarif.id}/resolve",
+        json={"resolution_action": "APPROVED_AFTER_CLARIFICATION", "resolution_notes": "    "},
+        headers=chief_headers,
+    )
+    assert res_clarif_ws.status_code == 422
+
+    # Valid clarification notes succeeds
+    res_clarif_valid = client.post(
+        f"/api/v1/oversight/escalations/{rx_clarif.id}/resolve",
+        json={
+            "resolution_action": "APPROVED_AFTER_CLARIFICATION",
+            "resolution_notes": "Contacted ICU attending; confirmed desensitization protocol active. Approved without altering order entity.",
+        },
+        headers=chief_headers,
+    )
+    assert res_clarif_valid.status_code == 200
+    assert res_clarif_valid.json()["prescription_status"] == "reviewed"
 
 
 def test_cannot_resolve_escalation_twice_sequential(client, db_session: Session):

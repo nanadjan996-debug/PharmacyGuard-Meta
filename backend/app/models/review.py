@@ -72,7 +72,7 @@ class EscalationResolution(Base):
     )
     escalation_reason: Mapped[str] = mapped_column(Text, nullable=False)
     resolution_action: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    # Actions: "APPROVED_BY_CHIEF", "REJECTED_RETURNED_TO_PRESCRIBER", "MODIFIED_AND_APPROVED"
+    # Actions: "APPROVED_BY_CHIEF", "REJECTED_RETURNED_TO_PRESCRIBER", "APPROVED_AFTER_CLARIFICATION"
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False

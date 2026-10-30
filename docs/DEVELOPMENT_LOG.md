@@ -412,10 +412,11 @@ Running `init_database()` multiple times performs existence checks on unique key
    - *Chief Approval Hardening*: Hardened `POST /api/v1/oversight/escalations/{id}/resolve` to require non-empty documented clinical rationale in `resolution_notes` (HTTP 422 if blank or whitespace-only) when Chief Pharmacist approves an escalated case involving `HIGH`-severity findings. Added Pydantic `@field_validator` on `EscalationResolutionRequest.resolution_notes` enforcing >= 5 non-whitespace characters.
 
 2. **Workflow Status Consistency Model Established**:
-   - *Discovery*: In previous draft logic, `MODIFIED_AND_APPROVED` resulted in status `resolved` (the same status as `REJECTED_RETURNED_TO_PRESCRIBER`), while `APPROVED_BY_CHIEF` resulted in `reviewed`. This conflated clinical dispensing approval with order rejection.
+   - *Discovery*: In previous draft logic, `MODIFIED_AND_APPROVED` was ambiguous because the electronic prescription entity and line items are not altered in this prototype. Conflating this with an unmodeled amendment capability was inaccurate.
+   - *Clarification & Renaming*: Renamed action to `APPROVED_AFTER_CLARIFICATION`. Explicitly documented that the electronic prescription entity itself is not modified; the Chief Pharmacist reviews the case, clarifies clinical rationale with the prescriber, and approves the regimen with justification recorded in `resolution_notes`.
    - *Model Implemented*:
      - `pending`: Active in staff review queue; no decision rendered.
-     - `reviewed`: Clinically approved for dispensing (standard clean acceptance, Chief `APPROVED_BY_CHIEF`, or Chief `MODIFIED_AND_APPROVED`).
+     - `reviewed`: Clinically approved for dispensing (standard clean acceptance, Chief `APPROVED_BY_CHIEF`, or Chief `APPROVED_AFTER_CLARIFICATION`).
      - `overridden`: Clinically approved for dispensing under documented pharmacist override rationale for detected conflicts.
      - `escalated`: Active in Chief Pharmacist oversight queue; held from dispensing.
      - `resolved`: Terminal closed state for orders rejected by Chief Pharmacist (`REJECTED_RETURNED_TO_PRESCRIBER`) and returned to prescriber without dispensing.
@@ -428,7 +429,17 @@ Running `init_database()` multiple times performs existence checks on unique key
      - If either update affects 0 rows, the transaction immediately rolls back and returns HTTP `409 Conflict`.
    - Applied identical conditional update pattern to `POST /api/v1/prescriptions/{id}/review` (`WHERE status = 'pending'`).
 
-4. **Historical Record Preservation Verified**:
+4. **HIGH-Severity Findings After Escalation Verified**:
+   - In `resolve_escalated_case`, verified the exact database query:
+     `db.query(ReviewFinding).filter(ReviewFinding.prescription_id == rx.id, ReviewFinding.severity == 'HIGH').first()`
+   - Confirmed this query evaluates ALL high-severity findings for the prescription, specifically including findings already attached to the escalation review (where `review_id` is NOT NULL). Does not rely on unreviewed-finding queries.
+   - Added dedicated 7-step regression test `test_chief_approval_high_severity_after_escalation_regression` confirming:
+     1. High finding attached to escalation review (`review_id is not None`).
+     2. Zero unreviewed high findings exist (`review_id is None` is empty).
+     3. Whitespace resolution notes rejected with HTTP 422.
+     4. Valid rationale succeeds with HTTP 200 and preserves rationale in escalation record.
+
+5. **Historical Record Preservation Verified**:
    - Finding snapshots remain permanently bound to `PharmacistReview` (`f.review_id == review.id`) and are never overwritten by subsequent re-verifications.
    - Escalation records and resolution notes remain retrievable via `GET /api/v1/prescriptions/{id}`.
    - Sequential repeated requests return HTTP `409 Conflict`.
@@ -436,7 +447,7 @@ Running `init_database()` multiple times performs existence checks on unique key
 
 ### Tests Run & Verification
 - **Full Backend Test Suite (`python -m pytest`)**:
-  - Result: **66 passed (66 total)** in 46.84s (100% pass rate)
+  - Result: **66 passed (66 total)** in 46.39s (100% pass rate)
   - 15 comprehensive review workflow tests in `tests/test_review_workflow.py`:
     - `test_pharmacist_accept_review` (passed)
     - `test_override_rationales_blank_missing_valid` (passed)
@@ -444,8 +455,8 @@ Running `init_database()` multiple times performs existence checks on unique key
     - `test_escalate_prescription_creates_traceable_escalation` (passed)
     - `test_student_and_unauthorized_review_denial` (passed)
     - `test_staff_pharmacist_forbidden_from_escalation_resolution` (passed)
-    - `test_chief_pharmacist_escalation_resolution_actions` (passed - verifies `APPROVED_BY_CHIEF` -> `reviewed`, `MODIFIED_AND_APPROVED` -> `reviewed`, `REJECTED_RETURNED_TO_PRESCRIBER` -> `resolved`)
-    - `test_chief_approval_high_severity_requires_rationale` (passed)
+    - `test_chief_pharmacist_escalation_resolution_actions` (passed - verifies `APPROVED_BY_CHIEF` -> `reviewed`, `APPROVED_AFTER_CLARIFICATION` -> `reviewed`, `REJECTED_RETURNED_TO_PRESCRIBER` -> `resolved`)
+    - `test_chief_approval_high_severity_after_escalation_regression` (passed - 7-step regression test with snapshotted findings)
     - `test_cannot_resolve_escalation_twice_sequential` (passed - sequential duplicate test)
     - `test_concurrent_escalation_resolution_race_condition` (passed - multi-threaded concurrent race condition test)
     - `test_invalid_transitions_rejected` (passed)
@@ -455,7 +466,7 @@ Running `init_database()` multiple times performs existence checks on unique key
     - `test_historical_record_preservation_and_decision_retrieval` (passed)
   - All existing 26 verification tests, 13 auth tests, 8 database tests, and 4 health tests continue to pass with zero regressions.
 - **Frontend Test Suite (`npm test --prefix frontend`)**:
-  - Result: **3 passed (3 total)** in 13.11s with zero regressions.
+  - Result: **3 passed (3 total)** in 12.50s with zero regressions.
 
 ### Known Limitations at Milestone 5 Audit
 - The review and escalation system is strictly an advisory decision-support prototype operating on synthetic benchmark data; it does not authorize real-world clinical medication dispensing.

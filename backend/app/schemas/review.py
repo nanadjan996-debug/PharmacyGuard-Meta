@@ -22,8 +22,11 @@ class EscalationResolutionRequest(BaseModel):
     resolution_action: Literal[
         "APPROVED_BY_CHIEF",
         "REJECTED_RETURNED_TO_PRESCRIBER",
-        "MODIFIED_AND_APPROVED",
-    ] = Field(..., description="Chief pharmacist resolution action")
+        "APPROVED_AFTER_CLARIFICATION",
+    ] = Field(
+        ...,
+        description="Chief pharmacist resolution action: APPROVED_BY_CHIEF, APPROVED_AFTER_CLARIFICATION, or REJECTED_RETURNED_TO_PRESCRIBER",
+    )
     resolution_notes: str = Field(..., description="Mandatory resolution explanation notes")
 
     @field_validator("resolution_notes")

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_chief_pharmacist
 from app.models.user import User
 from app.models.prescription import Prescription
-from app.models.review import PharmacistReview, EscalationResolution
+from app.models.review import PharmacistReview, ReviewFinding, EscalationResolution
 from app.models.inventory import InventoryItem, InventoryTransaction
 from app.models.audit import AuditEvent
 from app.schemas.review import (
@@ -76,9 +76,10 @@ def resolve_escalated_case(
        or concurrent requests. Enforced via atomic database-level conditional update; concurrent
        attempts return HTTP 409 Conflict.
     3. Workflow State Transition: Only prescriptions in 'escalated' status can be resolved.
-       - APPROVED_BY_CHIEF -> prescription status becomes 'reviewed' (approved for dispensing).
-       - MODIFIED_AND_APPROVED -> prescription status becomes 'reviewed' (modified and approved).
-       - REJECTED_RETURNED_TO_PRESCRIBER -> prescription status becomes 'resolved' (closed/rejected).
+       - APPROVED_BY_CHIEF -> prescription status becomes 'reviewed' (approved for dispensing as written).
+       - APPROVED_AFTER_CLARIFICATION -> prescription status becomes 'reviewed' (approved following prescriber
+         clarification documented in resolution_notes; electronic prescription entity itself is not altered).
+       - REJECTED_RETURNED_TO_PRESCRIBER -> prescription status becomes 'resolved' (closed/rejected without dispensing).
     4. Mandatory Clinical Rationale: Documented rationale in resolution_notes is strictly required,
        especially when approving cases involving HIGH-severity clinical findings.
     5. Audited Action: Appends ESCALATION_RESOLVED audit event recording actor, action, and timestamps.
@@ -123,8 +124,20 @@ def resolve_escalated_case(
             detail="Resolution notes cannot be blank or whitespace-only.",
         )
 
-    has_high_severity = any(f.severity == "HIGH" for f in rx.findings)
-    if has_high_severity and resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "MODIFIED_AND_APPROVED"):
+    # Explicit DB query inspecting HIGH-severity findings attached to this prescription.
+    # This explicitly includes findings snapshotted to prior reviews/escalations (where review_id is NOT NULL),
+    # ensuring rationale is strictly required regardless of whether findings were already attached to an escalation review.
+    has_high_severity = (
+        db.query(ReviewFinding)
+        .filter(
+            ReviewFinding.prescription_id == rx.id,
+            ReviewFinding.severity == "HIGH",
+        )
+        .first()
+        is not None
+    )
+
+    if has_high_severity and resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "APPROVED_AFTER_CLARIFICATION"):
         if not trimmed_notes:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -132,7 +145,7 @@ def resolve_escalated_case(
             )
 
     # 4. Coherent prescription status transition
-    if resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "MODIFIED_AND_APPROVED"):
+    if resolution_data.resolution_action in ("APPROVED_BY_CHIEF", "APPROVED_AFTER_CLARIFICATION"):
         target_rx_status = "reviewed"
     elif resolution_data.resolution_action == "REJECTED_RETURNED_TO_PRESCRIBER":
         target_rx_status = "resolved"
