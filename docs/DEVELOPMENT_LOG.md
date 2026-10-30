@@ -694,12 +694,73 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Milestone 6 Implementation Commit: `524383b` — *"Milestone 6: Inventory management APIs, atomic transaction tracking, and chief oversight dashboard"*
 - Milestone 6 Log Update: `4b7aabf` — *"docs: Record commit hash and completion details for Milestone 6"*
 - Milestone 7 Implementation Commit: `5f90496` — *"Milestone 7: Educational simulation backend, student assessment evaluation, and pedagogical feedback"*
+- Milestone 7 Audit Remediation Commit: `c3ec5dc` — *"Milestone 7 audit remediation: Replace character-length scoring with content rubrics, case-specific alternatives, and student-only submission RBAC"*
 
-### Known Limitations at Milestone 7
-- Educational cases and scoring rubrics are configured strictly for demonstration benchmark scenarios (`CASE-BEG-01`, `CASE-INT-01`, `CASE-ADV-01`); authoring new dynamic cases via REST API is not implemented in this prototype.
-- Submissions are evaluated via deterministic pattern matching and rule catalogs without natural language processing or LLMs.
-- ORM-level immutability for student submissions is enforced via SQLAlchemy event listeners (`before_update`, `before_delete`); direct raw SQL queries executed outside the ORM are not intercepted by SQLite triggers.
-- The educational simulation is purely an academic exercise; scores reflect adherence to demonstration rubrics and do not constitute clinical licensing or dispensing qualification.
+---
+
+## Milestone 7: Final Audit and Scoring Remediation
+
+**Date**: 2026-10-30  
+**Objective**: Replace character-length scoring with deterministic content-based rubrics, enforce case-specific acceptable determinations, and restrict educational submissions strictly to pharmacy students while preserving complete operational isolation.
+
+### Audit Discoveries & Remediations
+
+1. **Elimination of Character-Length Scoring**:
+   - *Issue*: Previously, documentation quality awarded points based on character thresholds (<20, <60, >=60 chars), allowing rambling text to receive unearned points and penalizing concise explanations.
+   - *Fix*: Replaced length-based scoring with a deterministic, content-grounded reasoning rubric. For each case, 3 specific clinical reasoning elements were configured with regex word-boundary keyword matching:
+     - `CASE-BEG-01`: Structural Beta-Lactam Cross-Reactivity (7 pts), Severe Anaphylaxis / ICU History (7 pts), Absolute Contraindication & Order Rejection (6 pts).
+     - `CASE-INT-01`: Dual Systemic NSAID Class Duplication (7 pts), Analgesic Ceiling Effect & Lack of Additive Benefit (7 pts), Compounded GI Bleeding or Nephrotoxicity Risks (6 pts).
+     - `CASE-ADV-01`: Unconfirmed Indication / Missing Diabetes Diagnosis (7 pts), Impaired Renal Function / Stage 3b CKD (eGFR 38) (7 pts), Max 1000 mg/day Limit & Fatal Lactic Acidosis Risk (6 pts).
+   - Concise responses that identify all required concepts receive full credit (20/20); long rambling responses lacking required elements receive 0 points. Partial credit is awarded transparently with element-level itemization.
+
+2. **Case-Specific Acceptable Determinations**:
+   - *Issue*: Generic fallback logic previously assumed identical alternative determination behavior across all cases.
+   - *Fix*: Configured explicit case-specific determination policies:
+     - `preferred_determination`: Primary action (50 pts, `PREFERRED`).
+     - `acceptable_alternatives`: Explicitly configured safe alternatives with case-specific rationale (e.g. `ESCALATE` awards 25 pts, `ACCEPTABLE_ALTERNATIVE`).
+     - `unsupported_determination`: Any unconfigured action (e.g. `OVERRIDE_WITH_RATIONALE` or `APPROVE` on a severe allergy) receives 0 pts and is marked `UNSUPPORTED`.
+   - Feedback transparently distinguishes preferred determinations from acceptable alternatives and unsupported/unsafe actions.
+
+3. **Restricted Educational Submissions (Student-Only RBAC)**:
+   - *Issue*: `POST /api/v1/education/cases/{case_id}/submit` previously accepted any authenticated user.
+   - *Fix*: Restricted submission authorization strictly to `pharmacy_student` users using `Depends(require_pharmacy_student)`.
+   - Staff Pharmacists and Chief Pharmacists attempting to submit receive `HTTP 403 Forbidden`.
+   - Browsing cases remains accessible to all authenticated roles.
+   - Chief Pharmacists retain supervisory authority to inspect student submissions for academic review.
+
+### Tests Run & Verification
+
+- **Educational Simulation Test Suite (`python -m pytest backend/tests/test_education.py`)**:
+  - Result: **17 passed (17 total)** in 23.34s
+  - Tests verified:
+    - `test_student_case_listing` (passed)
+    - `test_case_detail_access_and_hidden_criteria_protection` (passed)
+    - `test_short_complete_reasoning_gets_full_credit` (passed - 98 char concise response receives 20/20 pts)
+    - `test_long_irrelevant_reasoning_receives_no_bonus` (passed - >300 char rambling text receives 0/20 pts)
+    - `test_partial_reasoning_receives_partial_credit` (passed - identifies 1 element, misses 2; awards 7/20 pts)
+    - `test_case_specific_preferred_determinations` (passed - verifies REJECT is PREFERRED for all 3 cases)
+    - `test_case_specific_acceptable_alternatives` (passed - verifies ESCALATE is ACCEPTABLE_ALTERNATIVE with 25 pts)
+    - `test_unsupported_alternative_receives_zero_credit` (passed - OVERRIDE_WITH_RATIONALE receives 0 pts and UNSUPPORTED)
+    - `test_submission_authorization_roles` (passed - student: 200 OK; staff pharmacist: 403; chief pharmacist: 403; unauth: 401)
+    - `test_invalid_submission_validation` (passed)
+    - `test_duplicate_submission_behavior_and_history_preservation` (passed)
+    - `test_student_submission_history_listing` (passed)
+    - `test_submission_ownership_enforcement_between_students` (passed)
+    - `test_student_access_to_operational_endpoints_denied` (passed)
+    - `test_educational_submission_does_not_mutate_operational_data` (passed)
+    - `test_pharmacist_oversight_and_immutability` (passed)
+    - `test_audit_event_logged_and_rollback_on_failure` (passed)
+- **Full Backend Test Suite (`python -m pytest`)**:
+  - Result: **98 passed (98 total)** in 70.39s (100% pass rate)
+  - Auth (13), Database (8), Education (17), Health (4), Inventory (15), Review Workflow (15), Verification Engine (26).
+- **Frontend Test Suite (`npm test --prefix frontend`)**:
+  - Result: **3 passed (3 total)** in 12.96s with zero regressions.
+
+### Known Limitations at Milestone 7 Audit Remediation
+- Educational evaluation uses transparent regex word-boundary keyword patterns matching configured clinical rubric elements; it does not parse free-form clinical semantics with natural language understanding models or external LLMs.
+- Case-specific rubric configurations are static and defined for benchmark scenarios (`CASE-BEG-01`, `CASE-INT-01`, `CASE-ADV-01`).
+- The simulation is purely an academic learning aid; scoring is not clinically validated and does not confer qualification or licensure for autonomous dispensing.
+
 
 
 
