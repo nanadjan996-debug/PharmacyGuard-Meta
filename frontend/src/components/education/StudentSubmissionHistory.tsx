@@ -454,6 +454,32 @@ export const StudentSubmissionHistory: React.FC<StudentSubmissionHistoryProps> =
                 </ul>
               </div>
             )}
+
+            {/* Modal Footer Actions */}
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-mono">
+                {inspectionData.case_code} • Attempt #{inspectionData.attempt_number}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleCloseModal}>
+                  Close
+                </Button>
+                {onSelectCase && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      const cId = inspectionData.case_code || inspectionData.case_id;
+                      handleCloseModal();
+                      onSelectCase(cId);
+                    }}
+                    data-testid="modal-retake-case-btn"
+                  >
+                    Retake Case
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </Modal>

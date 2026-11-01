@@ -16,6 +16,7 @@ import { EmptyState } from '../common/EmptyState';
 import { UserRole } from '../../types/api';
 import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWorkspace';
 import { ChiefOversightWorkspace } from '../oversight/ChiefOversightWorkspace';
+import { StudentSimulationWorkspace } from '../education/StudentSimulationWorkspace';
 
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
@@ -63,7 +64,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
                   ? 'Stage 2 Workstation'
                   : primaryRole === 'chief_pharmacist'
                   ? 'Stage 3 Oversight Workstation'
-                  : 'Stage 1 Shell'}
+                  : 'Stage 4 Student Simulation Lab'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
@@ -174,27 +175,9 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
             <ChiefOversightWorkspace />
           )}
 
-          {/* Pharmacy Student placeholder */}
+          {/* Pharmacy Student Live Simulation Workstation */}
           {primaryRole === 'pharmacy_student' && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
-                Pharmacy Student Simulation Capabilities
-              </h3>
-              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                <p>
-                  As a <strong>Pharmacy Student</strong>, you operate in an isolated educational simulation environment:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm">
-                  <li>Access synthetic clinical practice cases without impacting live patient queues.</li>
-                  <li>Formulate clinical determination and document reasoning explanation.</li>
-                  <li>Receive transparent, rubric-based deterministic evaluations and immediate feedback.</li>
-                  <li>Review personal assessment history and score progressions.</li>
-                </ul>
-                <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  Ready for <strong>Stage 4</strong>: Student Simulation Lab & Deterministic Rubric Assessments.
-                </div>
-              </div>
-            </div>
+            <StudentSimulationWorkspace />
           )}
         </div>
       )}
