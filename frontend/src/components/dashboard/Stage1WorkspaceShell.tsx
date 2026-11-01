@@ -14,6 +14,7 @@ import { Modal } from '../common/Modal';
 import { SkeletonLoader } from '../common/SkeletonLoader';
 import { EmptyState } from '../common/EmptyState';
 import { UserRole } from '../../types/api';
+import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWorkspace';
 
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
@@ -57,7 +58,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
                 {primaryRole.replace('_', ' ')} Workstation
               </h2>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                Stage 1 Shell Active
+                {primaryRole === 'staff_pharmacist' ? 'Stage 2 Workstation' : 'Stage 1 Shell'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
@@ -158,30 +159,17 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
             </div>
           </div>
 
-          {/* Role specific guide */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
-              Current Role Permissions & Capabilities
-            </h3>
-            {primaryRole === 'staff_pharmacist' && (
-              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                <p>
-                  As a <strong>Staff Pharmacist</strong>, you are authorized to verify clinical prescriptions in the verification queue:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm">
-                  <li>Inspect patient demographics, medication orders, and prescriber records.</li>
-                  <li>Review deterministic safety findings: Drug-Drug Interactions, Allergies, Dosage, Duplicate Therapy.</li>
-                  <li>Submit <code>ACCEPT</code> (requires clinical rationale if HIGH-severity finding exists).</li>
-                  <li>Submit <code>OVERRIDE</code> (requires non-empty clinical rationale).</li>
-                  <li>Submit <code>ESCALATE</code> (requires clarification/escalation reason stored in notes).</li>
-                </ul>
-                <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  Ready for <strong>Stage 2</strong>: Clinical Verification Queue & Interactive Review Dialog.
-                </div>
-              </div>
-            )}
+          {/* Staff Pharmacist Live Prescription Workflow */}
+          {primaryRole === 'staff_pharmacist' && (
+            <StaffPrescriptionWorkspace />
+          )}
 
-            {primaryRole === 'chief_pharmacist' && (
+          {/* Chief Pharmacist placeholder */}
+          {primaryRole === 'chief_pharmacist' && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+                Chief Pharmacist Supervisory Capabilities
+              </h3>
               <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
                 <p>
                   As a <strong>Chief Pharmacist</strong>, you possess supervisory authority across the hospital pharmacy:
@@ -196,9 +184,15 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
                   Ready for <strong>Stage 3</strong>: Chief Oversight, Escalation Resolution & Inventory Management.
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {primaryRole === 'pharmacy_student' && (
+          {/* Pharmacy Student placeholder */}
+          {primaryRole === 'pharmacy_student' && (
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
+                Pharmacy Student Simulation Capabilities
+              </h3>
               <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
                 <p>
                   As a <strong>Pharmacy Student</strong>, you operate in an isolated educational simulation environment:
@@ -213,8 +207,8 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
                   Ready for <strong>Stage 4</strong>: Student Simulation Lab & Deterministic Rubric Assessments.
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

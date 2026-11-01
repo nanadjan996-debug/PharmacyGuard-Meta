@@ -28,6 +28,8 @@ import {
   StudentSubmissionResponse,
   StudentSubmissionListItem,
   HealthCheckResponse,
+  VerificationResponse,
+  PharmacistReviewDetail,
 } from '../types/api';
 
 const TOKEN_STORAGE_KEY = 'pharmacyguard_access_token';
@@ -264,11 +266,17 @@ class ApiClient {
       if (params?.limit !== undefined) query.set('limit', String(params.limit));
 
       const qs = query.toString();
-      return this.request<PrescriptionQueueItemResponse[]>(`/prescriptions${qs ? `?${qs}` : ''}`);
+      return this.request<PrescriptionQueueItemResponse[]>(`/prescriptions/queue${qs ? `?${qs}` : ''}`);
     },
 
     getDetail: async (id: string): Promise<PrescriptionDetailResponse> => {
       return this.request<PrescriptionDetailResponse>(`/prescriptions/${id}`);
+    },
+
+    verify: async (id: string): Promise<VerificationResponse> => {
+      return this.request<VerificationResponse>(`/prescriptions/${id}/verify`, {
+        method: 'POST',
+      });
     },
 
     submitReview: async (id: string, review: ReviewActionRequest): Promise<ReviewActionResponse> => {
@@ -276,6 +284,10 @@ class ApiClient {
         method: 'POST',
         body: JSON.stringify(review),
       });
+    },
+
+    getReviews: async (id: string): Promise<PharmacistReviewDetail[]> => {
+      return this.request<PharmacistReviewDetail[]>(`/prescriptions/${id}/reviews`);
     },
 
     resolveEscalation: async (

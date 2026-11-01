@@ -68,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateWorkspace }) => {
                   PharmacyGuard
                 </h1>
                 <span className="text-[9px] sm:text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                  Stage 1 Shell
+                  Clinical Workstation
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 leading-none mt-0.5 hidden xs:block sm:block">
