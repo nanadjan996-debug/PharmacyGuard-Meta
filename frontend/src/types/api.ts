@@ -309,6 +309,42 @@ export interface ChiefOversightDashboardResponse {
   disclaimer: string;
 }
 
+export interface OverrideLedgerItem {
+  review_id: string;
+  prescription_id: string;
+  prescription_number: string;
+  patient_name: string;
+  reviewer_id: string;
+  reviewer_name: string;
+  action: string;
+  override_rationale: string | null;
+  notes: string | null;
+  findings_snapshotted: number;
+  created_at: string | null;
+}
+
+export interface AuditLogItem {
+  id: string;
+  timestamp: string | null;
+  actor_id: string | null;
+  actor_username: string | null;
+  actor_role: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+}
+
+export interface WorkflowSummaryResponse {
+  prescription_counts_by_status: Record<string, number>;
+  total_reviews: number;
+  review_counts_by_action: Record<string, number>;
+  escalations_pending: number;
+  escalations_resolved: number;
+  disclaimer: string;
+}
+
 export interface EscalationQueueItemResponse {
   escalation_id: string;
   prescription_id: string;

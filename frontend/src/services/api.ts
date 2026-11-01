@@ -22,6 +22,10 @@ import {
   InventoryTransactionRequest,
   InventoryTransactionResponse,
   ChiefOversightDashboardResponse,
+  InventoryExceptionItem,
+  OverrideLedgerItem,
+  AuditLogItem,
+  WorkflowSummaryResponse,
   EducationalCaseListItem,
   EducationalCaseDetailResponse,
   StudentSubmissionRequest,
@@ -294,7 +298,8 @@ class ApiClient {
       id: string,
       resolution: EscalationResolutionRequest
     ): Promise<EscalationResolutionResponse> => {
-      return this.request<EscalationResolutionResponse>(`/prescriptions/${id}/resolve-escalation`, {
+      // Backend route is POST /oversight/escalations/{prescription_id}/resolve
+      return this.request<EscalationResolutionResponse>(`/oversight/escalations/${id}/resolve`, {
         method: 'POST',
         body: JSON.stringify(resolution),
       });
@@ -324,6 +329,10 @@ class ApiClient {
       return this.request<InventoryItemResponse[]>(`/inventory${qs ? `?${qs}` : ''}`);
     },
 
+    getSummary: async (): Promise<InventorySummaryResponse> => {
+      return this.request<InventorySummaryResponse>('/inventory/summary');
+    },
+
     getItemDetail: async (medicationId: string): Promise<InventoryItemDetailResponse> => {
       return this.request<InventoryItemDetailResponse>(`/inventory/${medicationId}`);
     },
@@ -347,8 +356,34 @@ class ApiClient {
       return this.request<EscalationQueueItemResponse[]>('/oversight/escalations');
     },
 
+    resolveEscalation: async (
+      prescriptionId: string,
+      resolution: EscalationResolutionRequest
+    ): Promise<EscalationResolutionResponse> => {
+      return this.request<EscalationResolutionResponse>(`/oversight/escalations/${prescriptionId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify(resolution),
+      });
+    },
+
     getInventorySummary: async (): Promise<InventorySummaryResponse> => {
-      return this.request<InventorySummaryResponse>('/oversight/inventory-summary');
+      return this.request<InventorySummaryResponse>('/inventory/summary');
+    },
+
+    getInventoryExceptions: async (): Promise<InventoryExceptionItem[]> => {
+      return this.request<InventoryExceptionItem[]>('/oversight/inventory-exceptions');
+    },
+
+    getOverrideLedger: async (): Promise<OverrideLedgerItem[]> => {
+      return this.request<OverrideLedgerItem[]>('/oversight/override-ledger');
+    },
+
+    getAuditLog: async (limit: number = 50): Promise<AuditLogItem[]> => {
+      return this.request<AuditLogItem[]>(`/oversight/audit-log?limit=${limit}`);
+    },
+
+    getWorkflowSummary: async (): Promise<WorkflowSummaryResponse> => {
+      return this.request<WorkflowSummaryResponse>('/oversight/workflow-summary');
     },
   };
 

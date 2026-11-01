@@ -15,6 +15,7 @@ import { SkeletonLoader } from '../common/SkeletonLoader';
 import { EmptyState } from '../common/EmptyState';
 import { UserRole } from '../../types/api';
 import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWorkspace';
+import { ChiefOversightWorkspace } from '../oversight/ChiefOversightWorkspace';
 
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
@@ -58,7 +59,11 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
                 {primaryRole.replace('_', ' ')} Workstation
               </h2>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                {primaryRole === 'staff_pharmacist' ? 'Stage 2 Workstation' : 'Stage 1 Shell'}
+                {primaryRole === 'staff_pharmacist'
+                  ? 'Stage 2 Workstation'
+                  : primaryRole === 'chief_pharmacist'
+                  ? 'Stage 3 Oversight Workstation'
+                  : 'Stage 1 Shell'}
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
@@ -164,27 +169,9 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
             <StaffPrescriptionWorkspace />
           )}
 
-          {/* Chief Pharmacist placeholder */}
+          {/* Chief Pharmacist Live Oversight & Inventory Workstation */}
           {primaryRole === 'chief_pharmacist' && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-2">
-                Chief Pharmacist Supervisory Capabilities
-              </h3>
-              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-                <p>
-                  As a <strong>Chief Pharmacist</strong>, you possess supervisory authority across the hospital pharmacy:
-                </p>
-                <ul className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm">
-                  <li>Resolve escalated prescriptions: <code>APPROVED_AFTER_CLARIFICATION</code> or <code>REJECTED</code>.</li>
-                  <li>High-severity approvals strictly require mandatory non-empty rationale.</li>
-                  <li>Inspect pharmacy inventory status summaries, deficits, and transaction audit trails.</li>
-                  <li>Update medication minimum inventory reorder thresholds with real-time recalculation.</li>
-                </ul>
-                <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  Ready for <strong>Stage 3</strong>: Chief Oversight, Escalation Resolution & Inventory Management.
-                </div>
-              </div>
-            </div>
+            <ChiefOversightWorkspace />
           )}
 
           {/* Pharmacy Student placeholder */}
@@ -368,11 +355,11 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-start space-x-3.5">
-              <Clock className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 flex items-start space-x-3.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Stage 2 · Next
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Stage 2 · Completed
                 </span>
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
                   Staff Pharmacist Verification Queue & Review Actions
@@ -383,17 +370,17 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-start space-x-3.5">
-              <Clock className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
+            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 flex items-start space-x-3.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Stage 3
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Stage 3 · Current Milestone Delivered
                 </span>
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
                   Chief Pharmacist Oversight, Escalation Resolution & Inventory Management
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Supervisory escalation workspace, HIGH-finding rationale enforcement, inventory status cards, threshold editor, and audit transaction log.
+                  Executive dashboard, supervisory escalation resolution workstation, HIGH-finding rationale enforcement, central inventory management with restock and discrepancy adjustments, and audit ledger.
                 </p>
               </div>
             </div>
