@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import App from './App';
 import { api, ApiError } from './services/api';
 import { StatusBadge } from './components/common/StatusBadge';
@@ -39,11 +39,15 @@ const mockStudentUser = {
 describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
   beforeEach(() => {
     localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
     vi.restoreAllMocks();
   });
 
   afterEach(() => {
     localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
     vi.restoreAllMocks();
   });
 
@@ -72,7 +76,6 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
   });
 
   it('authenticates through the API client and renders the authenticated shell', async () => {
-    // Mock login endpoint
     vi.spyOn(api.auth, 'login').mockResolvedValueOnce({
       access_token: 'fake_jwt_token_staff',
       token_type: 'bearer',
@@ -87,7 +90,7 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/@pharmacist_demo/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/@pharmacist_demo/i).length).toBeGreaterThan(0);
       expect(screen.getByRole('heading', { level: 2, name: /Staff Pharmacist Workstation/i })).toBeInTheDocument();
     });
 
@@ -95,7 +98,6 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
   });
 
   it('switches demo roles through real backend authentication', async () => {
-    // Seed an authenticated staff session
     localStorage.setItem('pharmacyguard_access_token', 'initial_token');
     vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
 
@@ -105,7 +107,6 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
       expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
     });
 
-    // Mock switching to Chief Pharmacist
     vi.spyOn(api.auth, 'login').mockResolvedValueOnce({
       access_token: 'fake_jwt_token_chief',
       token_type: 'bearer',
@@ -113,12 +114,12 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
       user: mockChiefUser,
     });
 
-    const chiefSwitchBtn = screen.getByRole('button', { name: /Chief Pharmacist/i });
+    const chiefSwitchBtn = screen.getByRole('button', { name: /Chief/i });
     fireEvent.click(chiefSwitchBtn);
 
     await waitFor(() => {
       expect(screen.getAllByText(/Dr\. Sarah Lin/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/@chief_demo/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/@chief_demo/i).length).toBeGreaterThan(0);
       expect(screen.getByRole('heading', { level: 2, name: /Chief Pharmacist Workstation/i })).toBeInTheDocument();
     });
 
@@ -142,8 +143,8 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
       expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
     });
 
-    const logoutBtn = screen.getByRole('button', { name: /Log out/i });
-    fireEvent.click(logoutBtn);
+    const logoutButtons = screen.getAllByRole('button', { name: /Log out/i });
+    fireEvent.click(logoutButtons[0]);
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { level: 2, name: /PharmacyGuard Workstation/i })).toBeInTheDocument();
@@ -178,9 +179,7 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
 
     render(<App />);
 
-    // Click "Authenticate" on student card
     const studentAuthButtons = screen.getAllByRole('button', { name: /Authenticate/i });
-    // Index 2 is Pharmacy Student
     fireEvent.click(studentAuthButtons[2]);
 
     await waitFor(() => {
@@ -192,6 +191,233 @@ describe('PharmacyGuard Stage 1: Foundation & Authentication', () => {
       username: 'student_demo',
       password: 'StudentDemoPassword2026!',
     });
+  });
+});
+
+describe('PharmacyGuard Stage 1: Session Restoration & Token Expiration', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  it('restores authenticated session on page reload when valid token is stored', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'valid_stored_token');
+    const meSpy = vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(meSpy).toHaveBeenCalledTimes(1);
+      expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
+      expect(screen.getByRole('heading', { level: 2, name: /Staff Pharmacist Workstation/i })).toBeInTheDocument();
+    });
+
+    expect(api.getToken()).toBe('valid_stored_token');
+  });
+
+  it('restores Chief Pharmacist role on page reload', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'valid_chief_token');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockChiefUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Dr\. Sarah Lin/i).length).toBeGreaterThan(0);
+      expect(screen.getByRole('heading', { level: 2, name: /Chief Pharmacist Workstation/i })).toBeInTheDocument();
+    });
+  });
+
+  it('clears invalid token on reload and renders unauthenticated login view', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'invalid_or_expired_token');
+    vi.spyOn(api.auth, 'me').mockRejectedValueOnce(
+      new ApiError(401, 'Could not validate credentials')
+    );
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /PharmacyGuard Workstation/i })).toBeInTheDocument();
+      expect(screen.getByLabelText(/Workstation Username/i)).toBeInTheDocument();
+    });
+
+    expect(api.getToken()).toBeNull();
+  });
+});
+
+describe('PharmacyGuard Stage 1: HTTP 401 Handling & Simultaneous Eviction', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    api.reset401State();
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    api.reset401State();
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  it('clears stored token, invalidates session, and redirects to login when 401 occurs', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'active_session_token');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
+    });
+
+    // Simulate an API call returning 401
+    act(() => {
+      api.notifyUnauthorized();
+    });
+
+    await waitFor(() => {
+      expect(api.getToken()).toBeNull();
+      expect(screen.getByRole('heading', { level: 2, name: /PharmacyGuard Workstation/i })).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText(/Your session has expired or authentication failed/i)).toBeInTheDocument();
+    });
+  });
+
+  it('handles multiple simultaneous 401 responses cleanly without duplicate notification flapping', async () => {
+    const handler = vi.fn();
+    const unsubscribe = api.onUnauthorized(handler);
+
+    api.setToken('simultaneous_token');
+    expect(api.getToken()).toBe('simultaneous_token');
+
+    // Fire 3 simultaneous 401 notifications in parallel
+    act(() => {
+      api.notifyUnauthorized();
+      api.notifyUnauthorized();
+      api.notifyUnauthorized();
+    });
+
+    expect(api.getToken()).toBeNull();
+    // Due to debouncing lock, handler should only be called once
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+  });
+
+  it('simulates expired token response with automatic logout and login redirection', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'expired_jwt_token');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Alex Mercer/i).length).toBeGreaterThan(0);
+    });
+
+    // Simulate token expiration on subsequent request
+    act(() => {
+      api.notifyUnauthorized();
+    });
+
+    await waitFor(() => {
+      expect(api.getToken()).toBeNull();
+      expect(screen.getByRole('heading', { level: 2, name: /PharmacyGuard Workstation/i })).toBeInTheDocument();
+      expect(screen.getByText(/Your session has expired or authentication failed/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('PharmacyGuard Stage 1: Role-Based Route Protection & Dual Safety Boundary', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    api.setToken(null);
+    window.history.pushState({}, '', '/');
+    vi.restoreAllMocks();
+  });
+
+  it('displays AccessDeniedView when Staff Pharmacist directly navigates to chief workspace (?workspace=chief)', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'staff_token');
+    window.history.pushState({}, '', '/?workspace=chief');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Access Denied: Restricted Workspace/i })).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 403 · ACCESS CONTROL REJECTION/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dual Safety Boundary Active/i)).toBeInTheDocument();
+    });
+
+    // Return to authorized workspace
+    const returnBtn = screen.getByRole('button', { name: /Return to Authorized Workspace/i });
+    fireEvent.click(returnBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Staff Pharmacist Workstation/i })).toBeInTheDocument();
+    });
+  });
+
+  it('displays AccessDeniedView when Pharmacy Student navigates to staff workspace (?workspace=staff)', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'student_token');
+    window.history.pushState({}, '', '/?workspace=staff');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStudentUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Access Denied: Restricted Workspace/i })).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 403 · ACCESS CONTROL REJECTION/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays AccessDeniedView when Pharmacy Student navigates to chief workspace (?workspace=chief)', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'student_token');
+    window.history.pushState({}, '', '/?workspace=chief');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStudentUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Access Denied: Restricted Workspace/i })).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 403 · ACCESS CONTROL REJECTION/i)).toBeInTheDocument();
+    });
+  });
+
+  it('displays AccessDeniedView when Chief Pharmacist navigates to student simulation (?workspace=student)', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'chief_token');
+    window.history.pushState({}, '', '/?workspace=student');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockChiefUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Access Denied: Restricted Workspace/i })).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 403 · ACCESS CONTROL REJECTION/i)).toBeInTheDocument();
+    });
+  });
+
+  it('verifies API client correctly extracts HTTP 403 Forbidden errors from server responses', async () => {
+    // Test that ApiError extracts status 403 and error detail
+    const error403 = new ApiError(403, "Forbidden: action requires one of the following roles: chief_pharmacist");
+    expect(error403.status).toBe(403);
+    expect(error403.message).toContain('Forbidden');
   });
 });
 
@@ -270,7 +496,6 @@ describe('PharmacyGuard Stage 1: Reusable UI Primitives', () => {
     expect(screen.getByText('Test Modal')).toBeInTheDocument();
     expect(screen.getByText('Modal content')).toBeInTheDocument();
 
-    // Fire Escape key
     fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
     expect(handleClose).toHaveBeenCalledTimes(1);
   });

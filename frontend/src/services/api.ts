@@ -50,6 +50,7 @@ type UnauthorizedHandler = () => void;
 class ApiClient {
   private token: string | null = null;
   private unauthorizedHandlers: Set<UnauthorizedHandler> = new Set();
+  private isHandling401 = false;
 
   constructor() {
     // Restore token from localStorage on initialization
@@ -71,10 +72,44 @@ class ApiClient {
   }
 
   /**
+   * Idempotent notification for 401 Unauthorized to prevent duplicate flapping
+   * when multiple asynchronous requests fail simultaneously.
+   */
+  public notifyUnauthorized(): void {
+    this.setToken(null);
+    if (this.isHandling401) {
+      return;
+    }
+    this.isHandling401 = true;
+
+    this.unauthorizedHandlers.forEach((handler) => {
+      try {
+        handler();
+      } catch {
+        // ignore handler failures
+      }
+    });
+
+    setTimeout(() => {
+      this.isHandling401 = false;
+    }, 250);
+  }
+
+  /**
+   * Reset the 401 handling lock (used in testing or session resets).
+   */
+  public reset401State(): void {
+    this.isHandling401 = false;
+  }
+
+  /**
    * Set or clear the current authentication token.
    */
   public setToken(token: string | null): void {
     this.token = token;
+    if (token) {
+      this.isHandling401 = false;
+    }
     if (typeof window !== 'undefined') {
       try {
         if (token) {
@@ -130,16 +165,9 @@ class ApiClient {
       throw new ApiError(0, `Network failure: ${message}`);
     }
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized with debounced notification
     if (response.status === 401) {
-      this.setToken(null);
-      this.unauthorizedHandlers.forEach((handler) => {
-        try {
-          handler();
-        } catch {
-          // ignore handler failures
-        }
-      });
+      this.notifyUnauthorized();
     }
 
     if (!response.ok) {

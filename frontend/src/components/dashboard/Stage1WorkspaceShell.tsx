@@ -15,7 +15,12 @@ import { SkeletonLoader } from '../common/SkeletonLoader';
 import { EmptyState } from '../common/EmptyState';
 import { UserRole } from '../../types/api';
 
-export const Stage1WorkspaceShell: React.FC = () => {
+export interface Stage1WorkspaceShellProps {
+  workspace?: 'staff' | 'chief' | 'student';
+  onNavigateWorkspace?: (ws: 'staff' | 'chief' | 'student') => void;
+}
+
+export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
   const { user } = useAuth();
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'primitives' | 'roadmap'>(() => {
@@ -26,7 +31,15 @@ export const Stage1WorkspaceShell: React.FC = () => {
     return 'overview';
   });
 
-  const primaryRole: UserRole = (user?.roles?.[0] as UserRole) || 'staff_pharmacist';
+  const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
+    staff: 'staff_pharmacist',
+    chief: 'chief_pharmacist',
+    student: 'pharmacy_student',
+  };
+
+  const primaryRole: UserRole = workspace
+    ? workspaceToRole[workspace]
+    : ((user?.roles?.[0] as UserRole) || 'staff_pharmacist');
 
   return (
     <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
