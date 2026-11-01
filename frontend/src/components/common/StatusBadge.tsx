@@ -67,6 +67,18 @@ const statusConfigs: Record<string, StatusConfig> = {
     badgeClass: 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
     dotClass: 'bg-red-500',
   },
+
+  // Educational simulation statuses
+  COMPLETED: {
+    label: 'Completed',
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+    dotClass: 'bg-emerald-500',
+  },
+  NOT_ATTEMPTED: {
+    label: 'Not Attempted',
+    badgeClass: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+    dotClass: 'bg-slate-400',
+  },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', className = '' }) => {
