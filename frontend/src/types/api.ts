@@ -337,12 +337,12 @@ export interface AuditLogItem {
 }
 
 export interface WorkflowSummaryResponse {
-  prescription_counts_by_status: Record<string, number>;
-  total_reviews: number;
-  review_counts_by_action: Record<string, number>;
-  escalations_pending: number;
-  escalations_resolved: number;
-  disclaimer: string;
+  status: string;
+  total_prescriptions: number;
+  status_distribution: Record<string, number>;
+  department_distribution: Record<string, number>;
+  unresolved_escalations_count: number;
+  total_overrides_count: number;
 }
 
 export interface EscalationQueueItemResponse {
