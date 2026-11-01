@@ -19,6 +19,8 @@ from app.schemas.review import (
     EscalationDetail,
 )
 from app.services.verification import VerificationEngine, VerificationResponse
+from app.schemas.ai import AIExplanationResponse
+from app.services.baseten_service import baseten_service
 
 router = APIRouter(prefix="/prescriptions", tags=["Prescriptions & Verification Queue"])
 
@@ -390,20 +392,21 @@ def get_prescription_reviews(
 
 
 @router.post("/{prescription_id}/verify", response_model=VerificationResponse)
-def verify_prescription(
+async def verify_prescription(
     prescription_id: str,
     current_user: User = Depends(require_any_pharmacist),
     db: Session = Depends(get_db),
 ) -> VerificationResponse:
     """
-    Trigger deterministic rule-based verification on a stored prescription.
+    Trigger deterministic rule-based verification on a stored prescription,
+    followed by optional non-authoritative AI clinical explanation via Meta Muse Spark Open.
     
     Security & Operational Constraints:
     - Strictly protected: accessible ONLY to Staff Pharmacists and Chief Pharmacists.
     - Evaluates stored prescription against local synthetic reference rules.
     - Deterministic output: running multiple times produces identical, stably sorted findings.
     - Persists unreviewed findings (review_id=None), never overwriting historical pharmacist review findings.
-    - Does NOT alter prescription workflow status or create review records.
+    - Non-authoritative AI synthesis: AI explains findings, never approves prescriptions.
     - Appends an audit event recording the verification execution.
     """
     rx = db.query(Prescription).filter_by(id=prescription_id).first()
@@ -422,6 +425,22 @@ def verify_prescription(
             detail=f"Verification engine failure: {str(exc)}",
         )
 
+    # Step 2: Generate non-authoritative clinical explanation via Meta Muse Spark Open on Baseten
+    ai_explanation: AIExplanationResponse | None = None
+    try:
+        ai_explanation = await baseten_service.generate_explanation(rx, response.findings)
+    except Exception as ai_exc:
+        ai_explanation = AIExplanationResponse(
+            summary="AI clinical explanation could not be generated.",
+            finding_explanations=[],
+            clinical_context="Deterministic safety verification preserved.",
+            uncertainties=["Internal AI service exception."],
+            review_considerations=["Evaluate deterministic findings directly."],
+            ai_status="unavailable",
+            status_detail=str(ai_exc),
+        )
+    response.ai_explanation = ai_explanation
+
     # Record append-only audit event
     user_roles = [ur.role_id for ur in current_user.roles]
     audit_event = AuditEvent(
@@ -438,10 +457,44 @@ def verify_prescription(
             "review_required_count": response.summary.review_required_count,
             "max_severity": response.summary.max_severity,
             "requires_human_review": response.summary.requires_human_review,
+            "ai_status": ai_explanation.ai_status if ai_explanation else "disabled",
         }),
     )
     db.add(audit_event)
     db.commit()
 
     return response
+
+
+@router.post("/{prescription_id}/ai-explanation", response_model=AIExplanationResponse)
+async def explain_prescription_findings(
+    prescription_id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> AIExplanationResponse:
+    """
+    Generate or refresh structured clinical explanation for prescription safety findings
+    using Meta Muse Spark Open hosted on Baseten.
+    
+    Security & Safety Constraints:
+    - Strictly protected: accessible ONLY to Staff Pharmacists and Chief Pharmacists.
+    - Evaluates deterministic findings first if not already present.
+    - Strict 14.0s timeout limit with deterministic fallback.
+    - Non-authoritative: AI explanation cannot approve prescriptions or alter severity.
+    """
+    rx = db.query(Prescription).filter_by(id=prescription_id).first()
+    if not rx:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Prescription with ID {prescription_id} not found",
+        )
+
+    # Derive findings strictly from trusted database records
+    unreviewed_findings = [f for f in rx.findings if f.review_id is None]
+    if not unreviewed_findings:
+        engine = VerificationEngine(db)
+        verif_res = engine.verify(rx.id, persist=True)
+        unreviewed_findings = verif_res.findings
+
+    return await baseten_service.generate_explanation(rx, unreviewed_findings)
 

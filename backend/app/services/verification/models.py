@@ -1,6 +1,7 @@
 """Data models and schemas for the deterministic verification engine."""
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
+from app.schemas.ai import AIExplanationResponse
 
 FindingCategory = Literal[
     "INDICATION",
@@ -59,3 +60,4 @@ class VerificationResponse(BaseModel):
     """Full API response for verification endpoint."""
     summary: VerificationSummary
     findings: list[GeneratedFinding]
+    ai_explanation: Optional[AIExplanationResponse] = None

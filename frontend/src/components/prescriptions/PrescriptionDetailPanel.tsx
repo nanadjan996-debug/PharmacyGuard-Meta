@@ -14,12 +14,13 @@ import {
   Lock,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
-import { PrescriptionDetailResponse } from '../../types/api';
+import { PrescriptionDetailResponse, AIExplanationResponse } from '../../types/api';
 import { StatusBadge } from '../common/StatusBadge';
 import { SeverityBadge } from '../common/SeverityBadge';
 import { Button } from '../common/Button';
 import { SkeletonLoader } from '../common/SkeletonLoader';
 import { ReviewActionModal } from './ReviewActionModal';
+import { AIExplanationSection } from './AIExplanationSection';
 
 export interface PrescriptionDetailPanelProps {
   prescriptionId: string;
@@ -39,6 +40,10 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
   // Verification state
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+
+  // AI Explanation state
+  const [aiExplanation, setAiExplanation] = useState<AIExplanationResponse | null>(null);
+  const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
 
   // Review modal state
   const [modalAction, setModalAction] = useState<'ACCEPT' | 'OVERRIDE' | 'ESCALATE' | null>(() => {
@@ -77,6 +82,9 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
       setVerifyMessage(
         `Verification completed: ${result.summary.total_findings} findings evaluated (Max severity: ${result.summary.max_severity}).`
       );
+      if (result.ai_explanation) {
+        setAiExplanation(result.ai_explanation);
+      }
       // Reload fresh detail record
       await fetchDetail();
     } catch (err: unknown) {
@@ -84,6 +92,21 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
       setError(msg);
     } finally {
       setIsVerifying(false);
+    }
+  };
+
+  const handleRunAiExplanation = async () => {
+    if (!prescription) return;
+    setIsGeneratingAi(true);
+    setError(null);
+    try {
+      const res = await api.prescriptions.getAiExplanation(prescription.id);
+      setAiExplanation(res);
+    } catch (err: unknown) {
+      const msg = err instanceof ApiError ? err.message : 'AI explanation service request failed.';
+      setError(msg);
+    } finally {
+      setIsGeneratingAi(false);
     }
   };
 
@@ -404,6 +427,14 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
             </div>
           )}
         </div>
+
+        {/* Section 2: AI Clinical Explanation (Meta Muse Spark Open via Baseten) */}
+        <AIExplanationSection
+          explanation={aiExplanation}
+          isLoading={isGeneratingAi}
+          onGenerate={handleRunAiExplanation}
+          disabled={isVerifying}
+        />
 
         {/* Pharmacist Review History & Escalation Records */}
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 shadow-xs space-y-4">

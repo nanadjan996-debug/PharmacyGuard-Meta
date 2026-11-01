@@ -204,9 +204,31 @@ export interface VerificationSummary {
   disclaimer: string;
 }
 
+export interface FindingExplanation {
+  rule_identifier: string;
+  category: string;
+  severity: string;
+  clinical_explanation: string;
+}
+
+export type AIStatus = 'available' | 'unavailable' | 'timeout' | 'rejected' | 'disabled';
+
+export interface AIExplanationResponse {
+  summary: string;
+  finding_explanations: FindingExplanation[];
+  clinical_context: string;
+  uncertainties: string[];
+  review_considerations: string[];
+  ai_status: AIStatus;
+  status_detail: string | null;
+  model_name: string | null;
+  disclaimer: string;
+}
+
 export interface VerificationResponse {
   summary: VerificationSummary;
   findings: GeneratedFinding[];
+  ai_explanation?: AIExplanationResponse | null;
 }
 
 // ---------------------------------------------------------------------------

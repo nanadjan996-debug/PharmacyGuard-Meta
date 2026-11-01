@@ -20,6 +20,12 @@ class Settings(BaseSettings):
         "Not clinically validated. Not for medication dispensing."
     )
 
+    # Baseten Inference Configuration (Meta Muse Spark Open)
+    BASETEN_API_KEY: str | None = None
+    BASETEN_MODEL: str = "meta-models/muse-spark-open"
+    BASETEN_BASE_URL: str = "https://inference.baseten.co/v1"
+    BASETEN_TIMEOUT_SECONDS: float = 14.0
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
 

@@ -33,6 +33,7 @@ import {
   StudentSubmissionListItem,
   HealthCheckResponse,
   VerificationResponse,
+  AIExplanationResponse,
   PharmacistReviewDetail,
 } from '../types/api';
 
@@ -279,6 +280,12 @@ class ApiClient {
 
     verify: async (id: string): Promise<VerificationResponse> => {
       return this.request<VerificationResponse>(`/prescriptions/${id}/verify`, {
+        method: 'POST',
+      });
+    },
+
+    getAiExplanation: async (id: string): Promise<AIExplanationResponse> => {
+      return this.request<AIExplanationResponse>(`/prescriptions/${id}/ai-explanation`, {
         method: 'POST',
       });
     },
