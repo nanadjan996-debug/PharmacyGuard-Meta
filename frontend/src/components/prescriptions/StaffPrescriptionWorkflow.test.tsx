@@ -405,7 +405,7 @@ describe('Stage 2: ReviewActionModal & Rationale Enforcement', () => {
     fireEvent.click(submitBtn);
 
     expect(
-      screen.getByText(/Override rationale is mandatory when accepting a prescription with active high-priority clinical findings/i)
+      screen.getByText(/Override rationale is mandatory when accepting or overriding a prescription with high-priority clinical findings/i)
     ).toBeInTheDocument();
     expect(handleSuccess).not.toHaveBeenCalled();
   });
@@ -458,7 +458,88 @@ describe('Stage 2: ReviewActionModal & Rationale Enforcement', () => {
     });
   });
 
-  it('blocks OVERRIDE without clinical rationale', async () => {
+  it('blocks OVERRIDE without rationale when prescription contains active HIGH severity finding', async () => {
+    const handleSuccess = vi.fn();
+
+    render(
+      <ReviewActionModal
+        isOpen={true}
+        onClose={vi.fn()}
+        prescription={mockHighSeverityDetail}
+        initialAction="OVERRIDE"
+        onSuccess={handleSuccess}
+      />
+    );
+
+    const submitBtn = screen.getByRole('button', { name: /Confirm OVERRIDE/i });
+    fireEvent.click(submitBtn);
+
+    expect(
+      screen.getByText(/Override rationale is mandatory when accepting or overriding a prescription with high-priority clinical findings/i)
+    ).toBeInTheDocument();
+    expect(handleSuccess).not.toHaveBeenCalled();
+  });
+
+  it('submits OVERRIDE with rationale successfully when active HIGH finding exists', async () => {
+    const overrideResponse: ReviewActionResponse = {
+      status: 'success',
+      prescription_id: 'rx-synth-005',
+      prescription_number: 'RX-2026-0005',
+      action: 'OVERRIDE',
+      new_status: 'overridden',
+      review_id: 'rev-003',
+      findings_snapshotted: 1,
+      disclaimer: 'Advisory deterministic verification rule engine demonstration.',
+      created_at: new Date().toISOString(),
+    };
+
+    vi.spyOn(api.prescriptions, 'submitReview').mockResolvedValueOnce(overrideResponse);
+
+    const handleSuccess = vi.fn();
+
+    render(
+      <ReviewActionModal
+        isOpen={true}
+        onClose={vi.fn()}
+        prescription={mockHighSeverityDetail}
+        initialAction="OVERRIDE"
+        onSuccess={handleSuccess}
+      />
+    );
+
+    const rationaleInput = screen.getByLabelText(/Written Clinical Rationale/i);
+    fireEvent.change(rationaleInput, {
+      target: { value: 'Override approved: emergency stock requisition placed.' },
+    });
+
+    const submitBtn = screen.getByRole('button', { name: /Confirm OVERRIDE/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.prescriptions.submitReview).toHaveBeenCalledWith('rx-synth-005', {
+        action: 'OVERRIDE',
+        override_rationale: 'Override approved: emergency stock requisition placed.',
+        notes: undefined,
+      });
+      expect(handleSuccess).toHaveBeenCalledWith(overrideResponse);
+    });
+  });
+
+  it('allows OVERRIDE without rationale when prescription contains NO HIGH severity findings', async () => {
+    const overrideResponse: ReviewActionResponse = {
+      status: 'success',
+      prescription_id: 'rx-synth-001',
+      prescription_number: 'RX-2026-0001',
+      action: 'OVERRIDE',
+      new_status: 'overridden',
+      review_id: 'rev-004',
+      findings_snapshotted: 1,
+      disclaimer: 'Advisory deterministic verification rule engine demonstration.',
+      created_at: new Date().toISOString(),
+    };
+
+    vi.spyOn(api.prescriptions, 'submitReview').mockResolvedValueOnce(overrideResponse);
+
     const handleSuccess = vi.fn();
 
     render(
@@ -471,11 +552,63 @@ describe('Stage 2: ReviewActionModal & Rationale Enforcement', () => {
       />
     );
 
+    // Rationale field should be labeled (Optional)
+    expect(screen.getByText('(Optional)')).toBeInTheDocument();
+
     const submitBtn = screen.getByRole('button', { name: /Confirm OVERRIDE/i });
     fireEvent.click(submitBtn);
 
-    expect(screen.getByText(/Clinical rationale is mandatory for overriding clinical safety findings/i)).toBeInTheDocument();
-    expect(handleSuccess).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(api.prescriptions.submitReview).toHaveBeenCalledWith('rx-synth-001', {
+        action: 'OVERRIDE',
+        override_rationale: undefined,
+        notes: undefined,
+      });
+      expect(handleSuccess).toHaveBeenCalledWith(overrideResponse);
+    });
+  });
+
+  it('allows ACCEPT without rationale when prescription contains NO HIGH severity findings', async () => {
+    const acceptResponse: ReviewActionResponse = {
+      status: 'success',
+      prescription_id: 'rx-synth-001',
+      prescription_number: 'RX-2026-0001',
+      action: 'ACCEPT',
+      new_status: 'reviewed',
+      review_id: 'rev-005',
+      findings_snapshotted: 1,
+      disclaimer: 'Advisory deterministic verification rule engine demonstration.',
+      created_at: new Date().toISOString(),
+    };
+
+    vi.spyOn(api.prescriptions, 'submitReview').mockResolvedValueOnce(acceptResponse);
+
+    const handleSuccess = vi.fn();
+
+    render(
+      <ReviewActionModal
+        isOpen={true}
+        onClose={vi.fn()}
+        prescription={mockCleanDetail}
+        initialAction="ACCEPT"
+        onSuccess={handleSuccess}
+      />
+    );
+
+    // Written Clinical Rationale input is not required and not displayed for clean ACCEPT
+    expect(screen.queryByLabelText(/Written Clinical Rationale/i)).not.toBeInTheDocument();
+
+    const submitBtn = screen.getByRole('button', { name: /Confirm ACCEPT/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.prescriptions.submitReview).toHaveBeenCalledWith('rx-synth-001', {
+        action: 'ACCEPT',
+        override_rationale: undefined,
+        notes: undefined,
+      });
+      expect(handleSuccess).toHaveBeenCalledWith(acceptResponse);
+    });
   });
 
   it('submits ESCALATE with clarification notes carried in notes field', async () => {

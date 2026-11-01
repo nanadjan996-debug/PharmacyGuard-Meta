@@ -31,9 +31,9 @@ export const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
     (f) => f.severity === 'HIGH'
   );
 
+  // Backend contract: ACCEPT or OVERRIDE strictly requires non-empty rationale IF active unreviewed HIGH finding exists
   const isRationaleRequired =
-    (action === 'ACCEPT' && hasHighSeverityFinding) ||
-    action === 'OVERRIDE';
+    (action === 'ACCEPT' || action === 'OVERRIDE') && hasHighSeverityFinding;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,9 +45,7 @@ export const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
     // Client-side verification strictly aligning with backend validation rules
     if (isRationaleRequired && !trimmedRationale) {
       setError(
-        action === 'ACCEPT'
-          ? 'Override rationale is mandatory when accepting a prescription with active high-priority clinical findings.'
-          : 'Clinical rationale is mandatory for overriding clinical safety findings.'
+        'Override rationale is mandatory when accepting or overriding a prescription with high-priority clinical findings.'
       );
       return;
     }
@@ -193,11 +191,15 @@ export const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
               htmlFor="override-rationale"
               className="block text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1"
             >
-              Written Clinical Rationale <span className="text-red-600">*</span>
+              Written Clinical Rationale{' '}
+              {isRationaleRequired ? (
+                <span className="text-red-600">*</span>
+              ) : (
+                <span className="text-slate-400 font-normal">(Optional)</span>
+              )}
             </label>
             <textarea
               id="override-rationale"
-              required
               rows={3}
               value={rationale}
               onChange={(e) => {
@@ -205,7 +207,11 @@ export const ReviewActionModal: React.FC<ReviewActionModalProps> = ({
                 setRationale(e.target.value);
               }}
               disabled={isSubmitting}
-              placeholder="Document clinical rationale explaining why dispensing is safe or how risks are mitigated..."
+              placeholder={
+                isRationaleRequired
+                  ? 'Mandatory: Document clinical rationale explaining why dispensing is safe despite high-severity findings...'
+                  : 'Optional: Document clinical rationale explaining reasons for overriding safety checks...'
+              }
               className="w-full p-2.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
             />
             <p className="text-[10px] text-slate-400 mt-1">

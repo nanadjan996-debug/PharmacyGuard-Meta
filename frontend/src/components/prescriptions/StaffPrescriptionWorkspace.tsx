@@ -71,3 +71,4 @@ export const StaffPrescriptionWorkspace: React.FC<StaffPrescriptionWorkspaceProp
     </div>
   );
 };
+
