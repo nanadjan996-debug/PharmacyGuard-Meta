@@ -412,8 +412,16 @@ class ApiClient {
       });
     },
 
+    listSubmissions: async (): Promise<StudentSubmissionListItem[]> => {
+      return this.request<StudentSubmissionListItem[]>('/education/submissions');
+    },
+
     getHistory: async (): Promise<StudentSubmissionListItem[]> => {
-      return this.request<StudentSubmissionListItem[]>('/education/history');
+      return this.request<StudentSubmissionListItem[]>('/education/submissions');
+    },
+
+    getSubmissionDetail: async (id: string): Promise<StudentSubmissionResponse> => {
+      return this.request<StudentSubmissionResponse>(`/education/submissions/${id}`);
     },
   };
 }
