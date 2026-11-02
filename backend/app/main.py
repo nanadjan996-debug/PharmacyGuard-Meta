@@ -34,19 +34,60 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 # Optional: Mount compiled frontend static assets for unified production deployment
 from pathlib import Path
+from fastapi import Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 _FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if _FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="frontend")
-else:
-    @app.get("/")
-    def root():
+    assets_dir = _FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="static_assets")
+
+    @app.get("/favicon.png", include_in_schema=False)
+    def favicon():
+        fav_path = _FRONTEND_DIST / "favicon.png"
+        if fav_path.is_file():
+            return FileResponse(fav_path)
+        return None
+
+    @app.get("/logo.png", include_in_schema=False)
+    def logo():
+        logo_path = _FRONTEND_DIST / "logo.png"
+        if logo_path.is_file():
+            return FileResponse(logo_path)
+        return None
+
+
+@app.get("/")
+def root(request: Request):
+    accept = request.headers.get("accept", "")
+    if "text/html" in accept and _FRONTEND_DIST.is_dir():
+        index_file = _FRONTEND_DIST / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file)
+    return {
+        "project": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "engine": "deterministic_rule_based",
+        "status": "online",
+        "advisory": settings.SYSTEM_DISCLAIMER,
+        "docs": "/docs",
+    }
+
+
+# Fallback for client-side HTML5 history navigation in production unified mode
+if _FRONTEND_DIST.is_dir():
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_fallback(request: Request, full_path: str):
+        accept = request.headers.get("accept", "")
+        # If client is requesting an HTML page and not an API call
+        if "text/html" in accept and not full_path.startswith("api/"):
+            index_file = _FRONTEND_DIST / "index.html"
+            if index_file.is_file():
+                return FileResponse(index_file)
         return {
-            "project": settings.PROJECT_NAME,
-            "version": settings.VERSION,
-            "engine": "deterministic_rule_based",
-            "status": "online",
-            "advisory": settings.SYSTEM_DISCLAIMER,
-            "docs": "/docs",
+            "error": "Not Found",
+            "path": full_path,
         }
+

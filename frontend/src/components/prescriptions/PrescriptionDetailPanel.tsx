@@ -12,6 +12,7 @@ import {
   AlertCircle,
   History,
   Lock,
+  ChevronDown,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
 import { PrescriptionDetailResponse, AIExplanationResponse } from '../../types/api';
@@ -44,6 +45,9 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
   // AI Explanation state
   const [aiExplanation, setAiExplanation] = useState<AIExplanationResponse | null>(null);
   const [isGeneratingAi, setIsGeneratingAi] = useState<boolean>(false);
+
+  // Collapsible audit history state
+  const [showAuditHistory, setShowAuditHistory] = useState<boolean>(false);
 
   // Review modal state
   const [modalAction, setModalAction] = useState<'ACCEPT' | 'OVERRIDE' | 'ESCALATE' | null>(() => {
@@ -258,20 +262,20 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Full Name</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold block text-[11px] uppercase tracking-wider">Full Name</span>
                   <span className="font-bold text-slate-900 dark:text-white text-sm">{prescription.patient_name}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Medical Record # (MRN)</span>
-                  <span className="font-mono font-semibold text-slate-900 dark:text-white">{prescription.patient_mrn}</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold block text-[11px] uppercase tracking-wider">Medical Record # (MRN)</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{prescription.patient_mrn}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Date of Birth / Gender</span>
-                  <span className="text-slate-700 dark:text-slate-300">{prescription.patient_dob} · {prescription.patient_gender}</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold block text-[11px] uppercase tracking-wider">Date of Birth / Gender</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-medium">{prescription.patient_dob} · {prescription.patient_gender}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Weight & Height</span>
-                  <span className="text-slate-700 dark:text-slate-300">{prescription.patient_weight_kg} kg · {prescription.patient_height_cm} cm</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold block text-[11px] uppercase tracking-wider">Weight & Height</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-medium">{prescription.patient_weight_kg} kg · {prescription.patient_height_cm} cm</span>
                 </div>
               </div>
             </div>
@@ -285,15 +289,15 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
                 <span>Prescribing Clinician & Notes</span>
               </div>
               <div className="space-y-1 text-xs">
-                <p className="font-semibold text-slate-900 dark:text-white">
+                <p className="font-bold text-slate-900 dark:text-white">
                   {prescription.prescriber_name}
-                  <span className="text-slate-400 font-normal ml-2 text-[11px]">({prescription.prescriber_department})</span>
+                  <span className="text-slate-500 dark:text-slate-400 font-medium ml-2 text-[11px]">({prescription.prescriber_department})</span>
                 </p>
                 <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200/80 dark:border-slate-800 text-[11px]">
-                  <span className="font-semibold text-slate-700 dark:text-slate-300 block mb-0.5">
+                  <span className="font-bold text-slate-700 dark:text-slate-300 block mb-0.5">
                     Clinical Context & Indication:
                   </span>
-                  <p className="text-slate-600 dark:text-slate-400 italic leading-relaxed">
+                  <p className="text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
                     {prescription.clinical_notes || 'No clinical notes provided by prescriber.'}
                   </p>
                 </div>
@@ -445,102 +449,6 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
                 </div>
               )}
             </div>
-
-            {/* Audit Trail & Historical Decisions */}
-            <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-5 bg-white dark:bg-slate-900 shadow-2xs space-y-4">
-              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-                <History className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-                <span>Audit Trail & Historical Decisions</span>
-              </div>
-
-              {/* Escalations */}
-              {prescription.escalations && prescription.escalations.length > 0 && (
-                <div className="space-y-2.5">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Chief Pharmacist Escalation Logs
-                  </span>
-                  {prescription.escalations.map((esc) => (
-                    <div
-                      key={esc.id}
-                      className="p-3.5 rounded-lg bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 text-xs space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-orange-900 dark:text-orange-200">
-                          Escalated by {esc.escalated_by_name}
-                        </span>
-                        <span className="text-slate-400 font-mono text-[11px]">
-                          {new Date(esc.created_at).toLocaleString()}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 dark:text-slate-300">
-                        <strong>Reason:</strong> {esc.escalation_reason}
-                      </p>
-                      {esc.resolved_at ? (
-                        <div className="mt-2 pt-2 border-t border-orange-200/80 dark:border-orange-800/80">
-                          <p className="text-emerald-700 dark:text-emerald-300 font-semibold">
-                            Resolved as {esc.resolution_action} by {esc.resolved_by_name} on{' '}
-                            {new Date(esc.resolved_at).toLocaleString()}
-                          </p>
-                          {esc.resolution_notes && (
-                            <p className="text-slate-600 dark:text-slate-400 mt-0.5">
-                              <strong>Chief Notes:</strong> {esc.resolution_notes}
-                            </p>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="inline-block text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded mt-1">
-                          Awaiting Chief Pharmacist Resolution
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Pharmacist Reviews */}
-              {prescription.reviews && prescription.reviews.length > 0 ? (
-                <div className="space-y-2.5">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Pharmacist Review Decisions ({prescription.reviews.length})
-                  </span>
-                  {prescription.reviews.map((rev) => (
-                    <div
-                      key={rev.id}
-                      className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-slate-900 dark:text-white">{rev.reviewer_name}</span>
-                          <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400">
-                            {rev.reviewer_role}
-                          </span>
-                          <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
-                            [{rev.action}]
-                          </span>
-                        </div>
-                        <span className="text-slate-400 font-mono text-[11px]">
-                          {new Date(rev.created_at).toLocaleString()}
-                        </span>
-                      </div>
-
-                      {rev.override_rationale && (
-                        <div className="p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded text-slate-800 dark:text-slate-200">
-                          <strong>Override Rationale:</strong> {rev.override_rationale}
-                        </div>
-                      )}
-
-                      {rev.notes && (
-                        <p className="text-slate-600 dark:text-slate-400">
-                          <strong>Notes:</strong> {rev.notes}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400 italic">No formal review decisions finalized yet.</p>
-              )}
-            </div>
           </div>
 
           {/* RIGHT COLUMN: Meta AI Clinical Copilot (5 cols) */}
@@ -553,6 +461,124 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
             />
           </div>
         </div>
+
+        {/* Prescription Decision & Audit History: Full-Width Collapsible Section */}
+        {((prescription.reviews && prescription.reviews.length > 0) ||
+          (prescription.escalations && prescription.escalations.length > 0)) && (
+          <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAuditHistory(!showAuditHistory)}
+              className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100/70 dark:hover:bg-slate-800 flex items-center justify-between text-left transition"
+            >
+              <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <History className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                <span>
+                  Prescription Decision & Audit History (
+                  {(prescription.reviews?.length || 0) + (prescription.escalations?.length || 0)})
+                </span>
+              </div>
+              <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                <span>{showAuditHistory ? 'Collapse History' : 'Expand History'}</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-500 transition-transform ${
+                    showAuditHistory ? 'rotate-180' : ''
+                  }`}
+                />
+              </div>
+            </button>
+
+            {showAuditHistory && (
+              <div className="p-5 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                {/* Escalations */}
+                {prescription.escalations && prescription.escalations.length > 0 && (
+                  <div className="space-y-2.5">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+                      Chief Pharmacist Escalation Logs
+                    </span>
+                    {prescription.escalations.map((esc) => (
+                      <div
+                        key={esc.id}
+                        className="p-3.5 rounded-lg bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 text-xs space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-orange-900 dark:text-orange-200">
+                            Escalated by {esc.escalated_by_name}
+                          </span>
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                            {new Date(esc.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-slate-800 dark:text-slate-200 font-medium">
+                          <strong>Reason:</strong> {esc.escalation_reason}
+                        </p>
+                        {esc.resolved_at ? (
+                          <div className="mt-2 pt-2 border-t border-orange-200/80 dark:border-orange-800/80">
+                            <p className="text-emerald-700 dark:text-emerald-300 font-semibold">
+                              Resolved as {esc.resolution_action} by {esc.resolved_by_name} on{' '}
+                              {new Date(esc.resolved_at).toLocaleString()}
+                            </p>
+                            {esc.resolution_notes && (
+                              <p className="text-slate-700 dark:text-slate-300 mt-0.5 font-medium">
+                                <strong>Chief Notes:</strong> {esc.resolution_notes}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-block text-[11px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded mt-1">
+                            Awaiting Chief Pharmacist Resolution
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pharmacist Reviews */}
+                {prescription.reviews && prescription.reviews.length > 0 && (
+                  <div className="space-y-2.5">
+                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block">
+                      Pharmacist Review Decisions ({prescription.reviews.length})
+                    </span>
+                    {prescription.reviews.map((rev) => (
+                      <div
+                        key={rev.id}
+                        className="p-3.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-bold text-slate-900 dark:text-white">{rev.reviewer_name}</span>
+                            <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium">
+                              {rev.reviewer_role}
+                            </span>
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
+                              [{rev.action}]
+                            </span>
+                          </div>
+                          <span className="text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                            {new Date(rev.created_at).toLocaleString()}
+                          </span>
+                        </div>
+
+                        {rev.override_rationale && (
+                          <div className="p-2.5 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded text-slate-800 dark:text-slate-200 font-medium">
+                            <strong>Override Rationale:</strong> {rev.override_rationale}
+                          </div>
+                        )}
+
+                        {rev.notes && (
+                          <p className="text-slate-700 dark:text-slate-300 font-medium">
+                            <strong>Notes:</strong> {rev.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Review Action Modal */}

@@ -48,72 +48,75 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                   Meta Muse Spark Open
                 </h3>
-                <span className="text-[10px] font-mono font-normal normal-case px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0 whitespace-nowrap">
                   Baseten Inference
                 </span>
               </div>
             </div>
 
             {/* Status Badge */}
-            <div className="shrink-0">
+            <div className="shrink-0 whitespace-nowrap">
               {isLoading ? (
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 animate-pulse"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 animate-pulse whitespace-nowrap"
                 >
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
                   <span>AI Processing (14s max)...</span>
                 </span>
               ) : status === 'available' ? (
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 whitespace-nowrap"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                   <span>AI Explanation Available</span>
                 </span>
               ) : status === 'timeout' ? (
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 whitespace-nowrap"
                 >
-                  <Clock className="w-3.5 h-3.5" />
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
                   <span>AI Timed Out (&gt;14s)</span>
                 </span>
               ) : status === 'rejected' ? (
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800 whitespace-nowrap"
                 >
-                  <XCircle className="w-3.5 h-3.5" />
+                  <XCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>AI Response Rejected</span>
                 </span>
               ) : (
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 whitespace-nowrap"
                 >
-                  <Bot className="w-3.5 h-3.5" />
+                  <Bot className="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-slate-400" />
                   <span>AI Unavailable</span>
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/60">
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
               Advisory clinical explanation and findings synthesis. Non-authoritative decision support.
             </p>
-            <Button
-              variant="outline"
-              size="sm"
-              isLoading={isLoading}
-              disabled={disabled}
-              icon={<Sparkles className="w-3.5 h-3.5 text-sky-600" />}
-              onClick={onGenerate}
-            >
-              {explanation ? 'Refresh AI Analysis' : 'Explain with AI'}
-            </Button>
+            <div className="shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                isLoading={isLoading}
+                disabled={disabled}
+                icon={<Sparkles className="w-3.5 h-3.5 text-sky-600 shrink-0" />}
+                onClick={onGenerate}
+                className="whitespace-nowrap font-semibold shadow-2xs"
+              >
+                {explanation ? 'Refresh AI Analysis' : 'Explain with AI'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -136,22 +136,23 @@ export const AuditAndOverrideLedger: React.FC = () => {
   return (
     <div className="space-y-6" data-testid="audit-override-ledger-view">
       {/* View Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gradient-to-r from-purple-50/70 via-white to-indigo-50/40 dark:from-slate-850 dark:to-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xs">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-purple-400" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             Compliance, Safety Overrides & System Audit Ledger
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-1">
             Immutable supervisory records of clinical safety overrides, justification rationales, and security events.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button
             size="sm"
-            variant="ghost"
+            variant="outline"
             onClick={() => fetchAll(true)}
             isLoading={isRefreshing}
+            className="shadow-2xs font-semibold"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh Records
@@ -160,18 +161,18 @@ export const AuditAndOverrideLedger: React.FC = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex border-b border-slate-800 gap-4 text-sm font-medium">
+      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-4 text-sm font-medium">
         <button
           onClick={() => setActiveSubTab('overrides')}
           className={`pb-3 px-1 border-b-2 flex items-center gap-2 transition ${
             activeSubTab === 'overrides'
-              ? 'border-purple-500 text-purple-300 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-purple-600 text-purple-700 dark:text-purple-400 font-bold'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
           }`}
         >
-          <FileCheck2 className="w-4 h-4" />
+          <FileCheck2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
           Clinical Override Ledger
-          <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-full font-mono text-slate-300">
+          <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-mono font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             {overrides.length}
           </span>
         </button>
@@ -180,13 +181,13 @@ export const AuditAndOverrideLedger: React.FC = () => {
           onClick={() => setActiveSubTab('audit')}
           className={`pb-3 px-1 border-b-2 flex items-center gap-2 transition ${
             activeSubTab === 'audit'
-              ? 'border-indigo-500 text-indigo-300 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-indigo-600 text-indigo-700 dark:text-indigo-400 font-bold'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
           System Audit Stream
-          <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-full font-mono text-slate-300">
+          <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full font-mono font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             {auditEvents.length}
           </span>
         </button>
@@ -203,17 +204,17 @@ export const AuditAndOverrideLedger: React.FC = () => {
               placeholder="Search overrides by patient, Rx#, reviewer..."
               value={overrideSearch}
               onChange={(e) => setOverrideSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
             />
           </div>
 
           {isOverridesLoading ? (
             <SkeletonLoader type="table" count={5} />
           ) : overridesError ? (
-            <div className="p-8 bg-slate-900 border border-rose-900/40 rounded-xl text-center space-y-3">
-              <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
-              <h4 className="text-base font-semibold text-white">Error Loading Override Ledger</h4>
-              <p className="text-xs text-slate-400">{overridesError}</p>
+            <div className="p-8 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-xl text-center space-y-3 shadow-2xs">
+              <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white">Error Loading Override Ledger</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{overridesError}</p>
               <Button size="sm" variant="outline" onClick={fetchOverrides}>
                 Retry
               </Button>
@@ -236,10 +237,10 @@ export const AuditAndOverrideLedger: React.FC = () => {
               }
             />
           ) : (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="bg-slate-950/80 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs uppercase font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="px-4 py-3">Prescription & Patient</th>
                       <th className="px-4 py-3">Reviewer</th>
@@ -248,50 +249,50 @@ export const AuditAndOverrideLedger: React.FC = () => {
                       <th className="px-4 py-3">Timestamp</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredOverrides.map((ovr) => (
-                      <tr key={ovr.review_id} className="hover:bg-slate-800/40 transition">
+                      <tr key={ovr.review_id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
                         {/* Rx & Patient */}
                         <td className="px-4 py-3.5">
-                          <div className="font-mono text-xs font-semibold text-indigo-400">
+                          <div className="font-mono text-xs font-bold text-sky-700 dark:text-sky-400">
                             {ovr.prescription_number}
                           </div>
-                          <div className="font-medium text-white text-sm mt-0.5">
+                          <div className="font-bold text-slate-900 dark:text-white text-sm mt-0.5">
                             {ovr.patient_name}
                           </div>
-                          <span className="text-[11px] text-slate-500">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                             Snapshotted: {ovr.findings_snapshotted} findings
                           </span>
                         </td>
 
                         {/* Reviewer */}
-                        <td className="px-4 py-3.5 text-xs text-slate-300">
-                          <div className="font-medium text-white flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
+                        <td className="px-4 py-3.5 text-xs text-slate-700 dark:text-slate-300">
+                          <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-500" />
                             {ovr.reviewer_name}
                           </div>
-                          <span className="text-slate-500 text-[11px]">Pharmacist</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-medium text-[11px]">Pharmacist</span>
                         </td>
 
                         {/* Action Badge */}
                         <td className="px-4 py-3.5">
-                          <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-purple-950/80 text-purple-300 border border-purple-800/50">
+                          <span className="px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                             {ovr.action}
                           </span>
                         </td>
 
                         {/* Override Rationale Box */}
                         <td className="px-4 py-3.5 max-w-md">
-                          <div className="p-2.5 bg-purple-950/20 border border-purple-900/40 rounded-lg text-xs space-y-1">
-                            <div className="font-semibold text-purple-300 flex items-center gap-1">
-                              <ShieldAlert className="w-3.5 h-3.5" />
+                          <div className="p-2.5 bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg text-xs space-y-1">
+                            <div className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1">
+                              <ShieldAlert className="w-3.5 h-3.5 text-purple-600" />
                               Clinical Justification:
                             </div>
-                            <p className="text-slate-200 whitespace-pre-wrap">
+                            <p className="text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap leading-relaxed">
                               {ovr.override_rationale || '—'}
                             </p>
                             {ovr.notes && (
-                              <p className="text-slate-400 text-[11px] border-t border-purple-900/30 pt-1 mt-1">
+                              <p className="text-slate-600 dark:text-slate-400 font-medium text-[11px] border-t border-purple-200/60 dark:border-purple-900/30 pt-1 mt-1">
                                 Additional Notes: {ovr.notes}
                               </p>
                             )}
@@ -299,7 +300,7 @@ export const AuditAndOverrideLedger: React.FC = () => {
                         </td>
 
                         {/* Timestamp */}
-                        <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap">
+                        <td className="px-4 py-3.5 text-xs text-slate-600 dark:text-slate-400 font-mono font-medium whitespace-nowrap">
                           {formatDateTime(ovr.created_at)}
                         </td>
                       </tr>
@@ -323,17 +324,17 @@ export const AuditAndOverrideLedger: React.FC = () => {
               placeholder="Search audit events by action, actor, role, or entity..."
               value={auditSearch}
               onChange={(e) => setAuditSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 shadow-2xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
             />
           </div>
 
           {isAuditLoading ? (
             <SkeletonLoader type="table" count={6} />
           ) : auditError ? (
-            <div className="p-8 bg-slate-900 border border-rose-900/40 rounded-xl text-center space-y-3">
-              <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
-              <h4 className="text-base font-semibold text-white">Error Loading Audit Log</h4>
-              <p className="text-xs text-slate-400">{auditError}</p>
+            <div className="p-8 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 rounded-xl text-center space-y-3 shadow-2xs">
+              <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+              <h4 className="text-base font-semibold text-slate-900 dark:text-white">Error Loading Audit Log</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{auditError}</p>
               <Button size="sm" variant="outline" onClick={fetchAuditLog}>
                 Retry
               </Button>
@@ -356,10 +357,10 @@ export const AuditAndOverrideLedger: React.FC = () => {
               }
             />
           ) : (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm text-slate-300">
-                  <thead className="bg-slate-950/80 text-xs uppercase font-semibold text-slate-400 border-b border-slate-800">
+                <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-800/60 text-xs uppercase font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="px-4 py-3">Timestamp</th>
                       <th className="px-4 py-3">Actor & Role</th>
@@ -369,38 +370,38 @@ export const AuditAndOverrideLedger: React.FC = () => {
                       <th className="px-4 py-3 text-right">Details</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 text-xs font-mono">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-mono">
                     {filteredAuditEvents.map((evt) => {
                       const isExpanded = expandedEventIds.has(evt.id);
                       return (
                         <React.Fragment key={evt.id}>
-                          <tr className="hover:bg-slate-800/40 transition">
-                            <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                          <tr className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                               {formatDateTime(evt.timestamp)}
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-slate-200 font-medium">
+                              <span className="text-slate-900 dark:text-white font-bold">
                                 {evt.actor_username || 'SYSTEM'}
                               </span>
                               {evt.actor_role && (
-                                <span className="ml-1.5 text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded font-sans">
+                                <span className="ml-1.5 text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded font-sans font-medium">
                                   {evt.actor_role}
                                 </span>
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-indigo-400 font-semibold">{evt.action}</span>
+                              <span className="text-indigo-600 dark:text-indigo-400 font-bold">{evt.action}</span>
                             </td>
-                            <td className="px-4 py-3 text-slate-400">
-                              <span className="text-slate-300">{evt.entity_type}</span>:{' '}
+                            <td className="px-4 py-3 text-slate-600 dark:text-slate-400 font-medium">
+                              <span className="text-slate-900 dark:text-white font-semibold">{evt.entity_type}</span>:{' '}
                               {evt.entity_id ? `${evt.entity_id.substring(0, 8)}...` : '—'}
                             </td>
-                            <td className="px-4 py-3 text-slate-500">{evt.ip_address || '—'}</td>
+                            <td className="px-4 py-3 text-slate-500 font-medium">{evt.ip_address || '—'}</td>
                             <td className="px-4 py-3 text-right">
                               {evt.details ? (
                                 <button
                                   onClick={() => toggleExpand(evt.id)}
-                                  className="text-xs text-indigo-400 hover:text-indigo-300 font-sans inline-flex items-center gap-1"
+                                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-sans font-semibold inline-flex items-center gap-1"
                                 >
                                   {isExpanded ? 'Hide' : 'Inspect'}
                                   {isExpanded ? (
@@ -410,14 +411,14 @@ export const AuditAndOverrideLedger: React.FC = () => {
                                   )}
                                 </button>
                               ) : (
-                                <span className="text-slate-600">—</span>
+                                <span className="text-slate-400">—</span>
                               )}
                             </td>
                           </tr>
                           {isExpanded && evt.details && (
-                            <tr className="bg-slate-950/80">
-                              <td colSpan={6} className="px-6 py-3 border-t border-slate-800">
-                                <pre className="text-[11px] font-mono text-slate-300 whitespace-pre-wrap overflow-x-auto bg-slate-900 p-3 rounded-lg border border-slate-800">
+                            <tr className="bg-slate-50/60 dark:bg-slate-950/80">
+                              <td colSpan={6} className="px-6 py-3 border-t border-slate-200 dark:border-slate-800">
+                                <pre className="text-[11px] font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap overflow-x-auto bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
                                   {JSON.stringify(evt.details, null, 2)}
                                 </pre>
                               </td>

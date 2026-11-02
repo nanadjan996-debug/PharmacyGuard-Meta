@@ -162,3 +162,4 @@ This specification is designed to comply with:
 - **FDA Guidance on Clinical Decision Support Software (September 2022)**: Ensuring software is non-device CDS where clinicians can independently review the basis of the recommendations.
 - **EU Artificial Intelligence Act (High-Risk AI System Requirements)**: Mandating human oversight, transparency, data governance, and mitigation of algorithmic bias in medical applications.
 - **CPIC Standard Operating Procedures**: Adhering to clinical pharmacogenetics guideline dissemination standards.
+

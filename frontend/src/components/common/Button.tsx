@@ -51,7 +51,7 @@ export const Button: React.FC<ButtonProps> = ({
       type={type}
       disabled={isDisabled}
       aria-busy={isLoading}
-      className={`inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 select-none disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 select-none disabled:cursor-not-allowed whitespace-nowrap shrink-0 ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...rest}
     >
       {isLoading ? (
