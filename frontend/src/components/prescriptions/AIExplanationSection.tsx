@@ -88,13 +88,21 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
                   <XCircle className="w-3.5 h-3.5 shrink-0" />
                   <span>AI Response Rejected</span>
                 </span>
-              ) : (
+              ) : status === 'unavailable' ? (
                 <span
                   data-testid="ai-status-badge"
                   className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 whitespace-nowrap"
                 >
                   <Bot className="w-3.5 h-3.5 shrink-0 text-slate-600 dark:text-slate-400" />
                   <span>AI Unavailable</span>
+                </span>
+              ) : (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 whitespace-nowrap shadow-2xs"
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
+                  <span>AI Ready · On-Demand</span>
                 </span>
               )}
             </div>
