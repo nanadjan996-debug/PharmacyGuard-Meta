@@ -32,13 +32,21 @@ app.add_middleware(
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
 
-@app.get("/")
-def root():
-    return {
-        "project": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "engine": "deterministic_rule_based",
-        "status": "online",
-        "advisory": settings.SYSTEM_DISCLAIMER,
-        "docs": "/docs",
-    }
+# Optional: Mount compiled frontend static assets for unified production deployment
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+_FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if _FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="frontend")
+else:
+    @app.get("/")
+    def root():
+        return {
+            "project": settings.PROJECT_NAME,
+            "version": settings.VERSION,
+            "engine": "deterministic_rule_based",
+            "status": "online",
+            "advisory": settings.SYSTEM_DISCLAIMER,
+            "docs": "/docs",
+        }
