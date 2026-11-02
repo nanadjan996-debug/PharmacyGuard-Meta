@@ -110,6 +110,15 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
     }
   };
 
+  // Optional query param ?ai=1 to automatically trigger live AI explanation on load
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ai') === '1' && prescription && !aiExplanation && !isGeneratingAi) {
+      handleRunAiExplanation();
+    }
+  }, [prescription, aiExplanation, isGeneratingAi]);
+
   if (isLoading && !prescription) {
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs space-y-6">

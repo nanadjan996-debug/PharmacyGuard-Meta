@@ -23,17 +23,20 @@ from app.schemas.ai import AIExplanationResponse, FindingExplanation
 logger = logging.getLogger("pharmacyguard.baseten")
 
 
+_UNSET: Any = object()
+
+
 class BasetenService:
     """Client for Meta Muse Spark Open inference hosted on Baseten."""
 
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Any = _UNSET,
         base_url: str | None = None,
         model_name: str | None = None,
         timeout_seconds: float | None = None,
     ):
-        self.api_key = api_key if api_key is not None else settings.BASETEN_API_KEY
+        self.api_key = settings.BASETEN_API_KEY if api_key is _UNSET else api_key
         self.base_url = (base_url or settings.BASETEN_BASE_URL).rstrip("/")
         self.model_name = model_name or settings.BASETEN_MODEL
         self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.BASETEN_TIMEOUT_SECONDS
@@ -91,7 +94,7 @@ class BasetenService:
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,
-            "max_tokens": 1500,
+            "max_tokens": 4096,
         }
 
         try:
@@ -100,7 +103,11 @@ class BasetenService:
                 res.raise_for_status()
                 response_data = res.json()
 
-            raw_content = response_data["choices"][0]["message"]["content"]
+            message = response_data["choices"][0].get("message", {})
+            raw_content = message.get("content")
+            if not raw_content and message.get("reasoning_content"):
+                raw_content = message.get("reasoning_content")
+
             return self._validate_and_parse_response(raw_content, findings)
 
         except httpx.TimeoutException:
@@ -247,21 +254,22 @@ class BasetenService:
             "IgE-mediated cross-reactivity, duplicate cyclooxygenase inhibition), and patient context.\n"
             "5. UNCERTAINTIES & MISSING DATA: Identify missing clinical parameters, such as unmonitored lab values "
             "(e.g., eGFR, INR, electrolytes) or unclear clinical indications.\n"
-            "6. JSON OUTPUT FORMAT: Output ONLY a single, valid JSON object matching this schema exactly:\n"
+            "6. JSON OUTPUT FORMAT: Output ONLY a single, valid, complete JSON object matching this schema exactly:\n"
             "{\n"
-            '  "summary": "Concise 2-3 sentence clinical synthesis for the human pharmacist.",\n'
+            '  "summary": "Concise 2-sentence clinical synthesis for the human pharmacist.",\n'
             '  "finding_explanations": [\n'
             '    {\n'
             '      "rule_identifier": "RULE-IDENTIFIER-EXACT",\n'
             '      "category": "CATEGORY-EXACT",\n'
             '      "severity": "SEVERITY-EXACT",\n'
-            '      "clinical_explanation": "Detailed clinical rationale explaining the finding and risk."\n'
+            '      "clinical_explanation": "1-2 concise sentences explaining the clinical mechanism and risk."\n'
             '    }\n'
             '  ],\n'
-            '  "clinical_context": "Synthesis of patient condition, medication regimen, and encounter context.",\n'
-            '  "uncertainties": ["Uncertainty or missing parameter 1", "Uncertainty 2"],\n'
-            '  "review_considerations": ["Actionable recommendation for human pharmacist review."]\n'
+            '  "clinical_context": "1-2 sentence synthesis of patient condition and encounter context.",\n'
+            '  "uncertainties": ["1-2 concise bullet points on missing parameters"],\n'
+            '  "review_considerations": ["1-2 concise actionable points for the reviewing pharmacist."]\n'
             "}\n"
+            "CRITICAL: Keep explanations concise and factual (under 250 words total). Ensure the JSON is completely closed.\n"
             "Do not include markdown backticks (```json) or conversational text outside the JSON object."
         )
 
@@ -283,6 +291,18 @@ class BasetenService:
         does not hallucinate rule identifiers, preserves deterministic severities,
         and makes no autonomous approval claims.
         """
+        if not raw_text:
+            return AIExplanationResponse(
+                summary="AI clinical explanation could not be generated.",
+                finding_explanations=[],
+                clinical_context="Deterministic safety verification preserved.",
+                uncertainties=["Model returned empty content."],
+                review_considerations=["Evaluate deterministic findings directly."],
+                ai_status="rejected",
+                status_detail="Model output was empty or missing.",
+                model_name=self.model_name,
+            )
+
         # Strip potential markdown fences if returned
         cleaned = raw_text.strip()
         if cleaned.startswith("```"):
@@ -293,17 +313,27 @@ class BasetenService:
         try:
             data = json.loads(cleaned)
         except json.JSONDecodeError as exc:
-            logger.warning("Model returned invalid JSON: %s. Raw preview: %s", exc, raw_text[:200])
-            return AIExplanationResponse(
-                summary="AI clinical explanation rejected due to invalid response formatting.",
-                finding_explanations=[],
-                clinical_context="Deterministic safety verification preserved.",
-                uncertainties=["Model output was not valid JSON."],
-                review_considerations=["Evaluate deterministic findings directly."],
-                ai_status="rejected",
-                status_detail=f"Model output parsing error: {str(exc)}",
-                model_name=self.model_name,
-            )
+            # Fallback: attempt to extract JSON object { ... }
+            json_match = re.search(r"(\{.*\})", cleaned, re.DOTALL)
+            data = None
+            if json_match:
+                try:
+                    data = json.loads(json_match.group(1))
+                except json.JSONDecodeError:
+                    data = None
+
+            if data is None:
+                logger.warning("Model returned invalid JSON: %s. Raw preview: %s", exc, raw_text[:200])
+                return AIExplanationResponse(
+                    summary="AI clinical explanation rejected due to invalid response formatting.",
+                    finding_explanations=[],
+                    clinical_context="Deterministic safety verification preserved.",
+                    uncertainties=["Model output was not valid JSON."],
+                    review_considerations=["Evaluate deterministic findings directly."],
+                    ai_status="rejected",
+                    status_detail=f"Model output parsing error: {str(exc)}",
+                    model_name=self.model_name,
+                )
 
         if not isinstance(data, dict):
             return AIExplanationResponse(

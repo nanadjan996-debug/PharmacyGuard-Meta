@@ -1,4 +1,8 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_ENV_FILE = _BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -22,11 +26,15 @@ class Settings(BaseSettings):
 
     # Baseten Inference Configuration (Meta Muse Spark Open)
     BASETEN_API_KEY: str | None = None
-    BASETEN_MODEL: str = "meta-models/muse-spark-open"
+    BASETEN_MODEL: str = "meta-models/muse-spark-open-1026"
     BASETEN_BASE_URL: str = "https://inference.baseten.co/v1"
     BASETEN_TIMEOUT_SECONDS: float = 14.0
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=(str(_ENV_FILE), ".env"),
+        case_sensitive=True,
+        extra="ignore",
+    )
 
 
 settings = Settings()
