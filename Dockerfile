@@ -36,3 +36,4 @@ WORKDIR /app/backend
 
 # Initialize and seed database idempotently on boot, then start Uvicorn
 CMD ["sh", "-c", "python -m app.core.init_db && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+
