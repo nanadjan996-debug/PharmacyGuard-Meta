@@ -34,98 +34,105 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
   return (
     <div
       aria-label="AI Clinical Explanation Section"
-      className="rounded-xl border border-indigo-200 dark:border-indigo-900/60 bg-gradient-to-b from-indigo-50/40 to-white dark:from-indigo-950/20 dark:to-slate-900 p-5 shadow-xs space-y-4 transition-all"
+      className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden transition-all"
     >
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-100 dark:border-indigo-900/40 pb-3">
-        <div className="space-y-1">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
-              <Sparkles className="w-4 h-4" />
+      <div className="p-4 sm:p-5 bg-gradient-to-r from-sky-50/50 via-white to-indigo-50/30 dark:from-slate-850 dark:to-slate-900 border-b border-slate-100 dark:border-slate-800">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 rounded-lg bg-sky-600 text-white shadow-2xs shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="flex items-center flex-wrap gap-1.5">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                  Meta Muse Spark Open
+                </h3>
+                <span className="text-[10px] font-mono font-normal normal-case px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
+                  Baseten Inference
+                </span>
+              </div>
             </div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center space-x-2">
-              <span>Meta Muse Spark Open</span>
-              <span className="text-[10px] font-mono font-normal normal-case px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                Baseten Hosted Inference
-              </span>
-            </h3>
+
+            {/* Status Badge */}
+            <div className="shrink-0">
+              {isLoading ? (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-200 border border-sky-300 dark:border-sky-700 animate-pulse"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>AI Processing (14s max)...</span>
+                </span>
+              ) : status === 'available' ? (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>AI Explanation Available</span>
+                </span>
+              ) : status === 'timeout' ? (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>AI Timed Out (&gt;14s)</span>
+                </span>
+              ) : status === 'rejected' ? (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>AI Response Rejected</span>
+                </span>
+              ) : (
+                <span
+                  data-testid="ai-status-badge"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
+                >
+                  <Bot className="w-3.5 h-3.5" />
+                  <span>AI Unavailable</span>
+                </span>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Advisory clinical explanation and findings synthesis. Non-authoritative decision support.
-          </p>
-        </div>
 
-        <div className="flex items-center space-x-2 self-start sm:self-center">
-          {/* Status Badge */}
-          {isLoading ? (
-            <span
-              data-testid="ai-status-badge"
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700 animate-pulse"
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Advisory clinical explanation and findings synthesis. Non-authoritative decision support.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              isLoading={isLoading}
+              disabled={disabled}
+              icon={<Sparkles className="w-3.5 h-3.5 text-sky-600" />}
+              onClick={onGenerate}
             >
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              <span>AI Processing (14s max)...</span>
-            </span>
-          ) : status === 'available' ? (
-            <span
-              data-testid="ai-status-badge"
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>AI Explanation Available</span>
-            </span>
-          ) : status === 'timeout' ? (
-            <span
-              data-testid="ai-status-badge"
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>AI Timed Out (&gt;14s)</span>
-            </span>
-          ) : status === 'rejected' ? (
-            <span
-              data-testid="ai-status-badge"
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800"
-            >
-              <XCircle className="w-3.5 h-3.5" />
-              <span>AI Response Rejected</span>
-            </span>
-          ) : (
-            <span
-              data-testid="ai-status-badge"
-              className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700"
-            >
-              <Bot className="w-3.5 h-3.5" />
-              <span>AI Unavailable</span>
-            </span>
-          )}
-
-          <Button
-            variant="outline"
-            size="sm"
-            isLoading={isLoading}
-            disabled={disabled}
-            icon={<Sparkles className="w-3.5 h-3.5 text-indigo-600" />}
-            onClick={onGenerate}
-          >
-            {explanation ? 'Refresh AI Analysis' : 'Explain with AI'}
-          </Button>
+              {explanation ? 'Refresh AI Analysis' : 'Explain with AI'}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Non-Authoritative Advisory Notice Banner */}
-      <div
-        role="note"
-        className="p-3 bg-indigo-50/70 dark:bg-indigo-950/40 rounded-lg border border-indigo-200 dark:border-indigo-800/80 text-[11px] text-indigo-900 dark:text-indigo-300 flex items-start space-x-2"
-      >
-        <Info className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
-        <div className="flex-1 space-y-0.5">
-          <p className="font-semibold">Non-Authoritative Clinical Decision Support</p>
-          <p className="text-[10px] text-indigo-700 dark:text-indigo-400 leading-relaxed">
-            {explanation?.disclaimer ||
-              'Meta Muse Spark Open interprets deterministic safety findings into clinical explanations. It has no authority to approve prescriptions, authorize dispensing, or alter rule severities.'}
-          </p>
+      <div className="p-4 sm:p-5 space-y-4">
+        {/* Non-Authoritative Advisory Notice Banner */}
+        <div
+          role="note"
+          className="p-3 bg-sky-50/60 dark:bg-sky-950/40 rounded-xl border border-sky-100 dark:border-sky-800/80 text-[11px] text-sky-900 dark:text-sky-300 flex items-start space-x-2"
+        >
+          <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-0.5">
+            <p className="font-semibold">Non-Authoritative Clinical Decision Support</p>
+            <p className="text-[10px] text-sky-800 dark:text-sky-400 leading-relaxed">
+              {explanation?.disclaimer ||
+                'Meta Muse Spark Open interprets deterministic safety findings into clinical explanations. It has no authority to approve prescriptions, authorize dispensing, or alter rule severities.'}
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Main Content Area */}
       {isLoading ? (
@@ -293,6 +300,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

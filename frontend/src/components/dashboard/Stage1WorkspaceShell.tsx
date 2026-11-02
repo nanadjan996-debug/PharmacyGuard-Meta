@@ -1,18 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Activity,
   Award,
   GraduationCap,
-  CheckCircle2,
-  Clock,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../common/Button';
-import { StatusBadge } from '../common/StatusBadge';
-import { SeverityBadge } from '../common/SeverityBadge';
-import { Modal } from '../common/Modal';
-import { SkeletonLoader } from '../common/SkeletonLoader';
-import { EmptyState } from '../common/EmptyState';
 import { UserRole } from '../../types/api';
 import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWorkspace';
 import { ChiefOversightWorkspace } from '../oversight/ChiefOversightWorkspace';
@@ -25,14 +17,6 @@ export interface Stage1WorkspaceShellProps {
 
 export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
   const { user } = useAuth();
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'primitives' | 'roadmap'>(() => {
-    if (typeof window !== 'undefined') {
-      const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'primitives' || tabParam === 'roadmap') return tabParam;
-    }
-    return 'overview';
-  });
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',
@@ -45,362 +29,68 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
     : ((user?.roles?.[0] as UserRole) || 'staff_pharmacist');
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 space-y-6">
-      {/* Workspace Banner */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-start space-x-4">
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-600 dark:text-emerald-400 shrink-0">
-            {primaryRole === 'staff_pharmacist' && <Activity className="w-6 h-6" />}
-            {primaryRole === 'chief_pharmacist' && <Award className="w-6 h-6" />}
-            {primaryRole === 'pharmacy_student' && <GraduationCap className="w-6 h-6" />}
+    <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-5 space-y-6">
+      {/* Modern Clinical Station Banner */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl px-5 py-4 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="p-2.5 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-800/80 rounded-xl text-sky-600 dark:text-sky-400 shrink-0 shadow-2xs">
+            {primaryRole === 'staff_pharmacist' && <Activity className="w-5 h-5 text-blue-600 dark:text-sky-400" />}
+            {primaryRole === 'chief_pharmacist' && <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
+            {primaryRole === 'pharmacy_student' && <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           </div>
           <div>
-            <div className="flex items-center space-x-2.5">
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white capitalize">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white capitalize">
                 {primaryRole.replace('_', ' ')} Workstation
               </h2>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
                 {primaryRole === 'staff_pharmacist'
                   ? 'Stage 2 Workstation'
                   : primaryRole === 'chief_pharmacist'
                   ? 'Stage 3 Oversight Workstation'
                   : 'Stage 4 Student Simulation Lab'}
               </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-              Signed in as <strong className="text-slate-800 dark:text-slate-200">{user?.full_name}</strong> (
-              <span className="font-mono text-xs">{user?.username}</span>). Authorized roles from backend JWT:{' '}
-              <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                {user?.roles?.join(', ')}
+              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Station Online</span>
               </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Clinician: <strong className="text-slate-700 dark:text-slate-200 font-medium">{user?.full_name}</strong> · Role: <span className="font-mono text-[11px] text-sky-700 dark:text-sky-400">{user?.roles?.join(', ')}</span>
             </p>
           </div>
         </div>
 
-        {/* Tab switchers */}
-        <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-medium self-start md:self-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('overview')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              activeTab === 'overview'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('primitives')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              activeTab === 'primitives'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            UI Primitives Catalog
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('roadmap')}
-            className={`px-3 py-1.5 rounded-md transition-colors ${
-              activeTab === 'roadmap'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            Stage Roadmap
-          </button>
+        {/* Clinical Engine & Model Status Badges */}
+        <div className="flex items-center space-x-2 self-start sm:self-auto text-xs">
+          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-[11px]">
+            <span className="text-slate-400 font-medium">Safety Engine:</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">Deterministic Active</span>
+          </div>
+          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-50/80 dark:bg-sky-950/50 border border-sky-200/70 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 text-[11px]">
+            <span className="text-sky-600 dark:text-sky-400 font-medium">Meta AI:</span>
+            <span className="font-semibold font-mono">Muse Spark Open</span>
+          </div>
         </div>
       </div>
 
-      {/* Tab 1: Overview */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Authentication & RBAC
-                </span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">
-                21 Endpoints
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Typed contracts verified against FastAPI Pydantic v2 schemas.
-              </p>
-            </div>
+      {/* Main Clinical Workstation */}
+      <div className="space-y-6">
+        {/* Staff Pharmacist Live Prescription Workflow */}
+        {primaryRole === 'staff_pharmacist' && (
+          <StaffPrescriptionWorkspace />
+        )}
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Role Quick-Switching
-                </span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white capitalize">
-                Live Backend
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Direct authentication via real credentials. Zero simulated fake tokens.
-              </p>
-            </div>
+        {/* Chief Pharmacist Live Oversight & Inventory Workstation */}
+        {primaryRole === 'chief_pharmacist' && (
+          <ChiefOversightWorkspace />
+        )}
 
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Session Safety
-                </span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                Auto 401 Eviction
-              </p>
-              <p className="text-xs text-slate-500 mt-1">
-                Automatic session cleanup, audit log dispatch, and clean token handling.
-              </p>
-            </div>
-          </div>
-
-          {/* Staff Pharmacist Live Prescription Workflow */}
-          {primaryRole === 'staff_pharmacist' && (
-            <StaffPrescriptionWorkspace />
-          )}
-
-          {/* Chief Pharmacist Live Oversight & Inventory Workstation */}
-          {primaryRole === 'chief_pharmacist' && (
-            <ChiefOversightWorkspace />
-          )}
-
-          {/* Pharmacy Student Live Simulation Workstation */}
-          {primaryRole === 'pharmacy_student' && (
-            <StudentSimulationWorkspace />
-          )}
-        </div>
-      )}
-
-      {/* Tab 2: UI Primitives Catalog */}
-      {activeTab === 'primitives' && (
-        <div className="space-y-6">
-          {/* Status Badges */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              1. StatusBadge Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Accessible badges for prescription workflow and inventory inventory states.
-            </p>
-            <div className="flex flex-wrap gap-2.5 items-center">
-              <StatusBadge status="pending" />
-              <StatusBadge status="reviewed" />
-              <StatusBadge status="overridden" />
-              <StatusBadge status="escalated" />
-              <StatusBadge status="resolved" />
-              <StatusBadge status="IN_STOCK" />
-              <StatusBadge status="LOW_STOCK" />
-              <StatusBadge status="OUT_OF_STOCK" />
-            </div>
-          </div>
-
-          {/* Severity Badges */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              2. SeverityBadge Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Strictly color-coded clinical safety severity levels.
-            </p>
-            <div className="flex flex-wrap gap-3 items-center">
-              <SeverityBadge severity="HIGH" />
-              <SeverityBadge severity="MODERATE" />
-              <SeverityBadge severity="LOW" />
-              <SeverityBadge severity="INFO" />
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              3. Button Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Variants, sizes, and states designed for clinical workstation efficiency.
-            </p>
-            <div className="flex flex-wrap gap-3 items-center">
-              <Button variant="primary">Primary Action</Button>
-              <Button variant="secondary">Secondary Action</Button>
-              <Button variant="danger">Danger Action</Button>
-              <Button variant="outline">Outline Button</Button>
-              <Button variant="ghost">Ghost Button</Button>
-              <Button variant="primary" isLoading>
-                Loading
-              </Button>
-              <Button variant="secondary" disabled>
-                Disabled
-              </Button>
-            </div>
-          </div>
-
-          {/* Modal Demo */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              4. Modal Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Accessible dialog with backdrop, Escape key listener, and keyboard trap.
-            </p>
-            <Button variant="secondary" onClick={() => setIsDemoModalOpen(true)}>
-              Open Verification Modal Demo
-            </Button>
-
-            <Modal
-              isOpen={isDemoModalOpen}
-              onClose={() => setIsDemoModalOpen(false)}
-              title="Prescription Clinical Rationale Modal"
-              subtitle="Demonstrating accessible modal primitive with keyboard support."
-              footer={
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setIsDemoModalOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={() => setIsDemoModalOpen(false)}>
-                    Confirm Action
-                  </Button>
-                </>
-              }
-            >
-              <div className="space-y-3">
-                <p className="text-xs text-slate-600 dark:text-slate-400">
-                  This modal verifies full accessibility compliance, including focus handling, backdrop dismiss, and Escape key dismissal.
-                </p>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs font-mono text-slate-600 dark:text-slate-300">
-                  Modal test payload: verified for clinical action dialogues in Stage 2.
-                </div>
-              </div>
-            </Modal>
-          </div>
-
-          {/* Skeleton Loaders */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              5. SkeletonLoader Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Content placeholder skeletons for asynchronous prescription and inventory queries.
-            </p>
-            <SkeletonLoader type="text" count={3} />
-          </div>
-
-          {/* Empty State */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">
-              6. EmptyState Primitive
-            </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              Accessible empty state illustration when queues or tables have zero records.
-            </p>
-            <EmptyState
-              title="No Pending Prescriptions"
-              description="All queued prescription verification checks have been processed for this shift."
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Tab 3: Stage Roadmap */}
-      {activeTab === 'roadmap' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-xs space-y-5">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-              Frontend Implementation Phased Plan
-            </h3>
-            <p className="text-xs text-slate-500">
-              Contract-verified staged delivery according to the approved architecture.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 flex items-start space-x-3.5">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Stage 1 · Current Milestone
-                </span>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  Foundation, Authentication, Navigation Shell & UI Primitives
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  API client with 401 handling, AuthContext with live backend role switching, responsive header, compact advisory disclaimer, and reusable UI primitives.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 flex items-start space-x-3.5">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Stage 2 · Completed
-                </span>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  Staff Pharmacist Verification Queue & Review Actions
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Queue table, filters, prescription detail panel with findings list, and review submission dialogs with client validation for required rationales.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20 flex items-start space-x-3.5">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-                  Stage 3 · Current Milestone Delivered
-                </span>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  Chief Pharmacist Oversight, Escalation Resolution & Inventory Management
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Executive dashboard, supervisory escalation resolution workstation, HIGH-finding rationale enforcement, central inventory management with restock and discrepancy adjustments, and audit ledger.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-start space-x-3.5">
-              <Clock className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Stage 4
-                </span>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  Pharmacy Student Educational Simulation & Rubric Assessment
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Interactive case study lab, dynamic determination selection, clinical reasoning documentation, rubric scoring results, and performance history.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-start space-x-3.5">
-              <Clock className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Stage 5
-                </span>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-0.5">
-                  End-to-End Verification, Responsive Polish & Final Security Audit
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Full regression test execution, responsive layout audit across viewport sizes, error boundary verification, and build bundle validation.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Pharmacy Student Live Simulation Workstation */}
+        {primaryRole === 'pharmacy_student' && (
+          <StudentSimulationWorkspace />
+        )}
+      </div>
     </div>
   );
 };
-

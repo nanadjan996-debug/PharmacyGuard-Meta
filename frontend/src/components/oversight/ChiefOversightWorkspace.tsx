@@ -76,7 +76,7 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
       {/* If a prescription is currently being inspected in clinical detail view */}
       {inspectedPrescriptionId ? (
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
             <Button
               size="sm"
               variant="outline"
@@ -86,7 +86,7 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
               <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
               Return to Escalation Queue
             </Button>
-            <span className="text-xs text-indigo-400 font-mono">
+            <span className="text-xs text-sky-600 dark:text-sky-400 font-mono">
               Chief Pharmacist Clinical Inspection View
             </span>
           </div>
@@ -98,13 +98,13 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
       ) : (
         <>
           {/* Chief Workspace Main Tab Bar */}
-          <div className="flex border-b border-slate-800 gap-2 sm:gap-6 overflow-x-auto pb-1 text-sm font-medium">
+          <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2 sm:gap-6 overflow-x-auto pb-1 text-sm font-medium">
             <button
               onClick={() => handleTabChange('overview')}
               className={`pb-3 px-2 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
                 activeTab === 'overview'
-                  ? 'border-indigo-500 text-indigo-300 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-sky-600 text-sky-700 dark:text-sky-400 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <TrendingUp className="w-4 h-4" />
@@ -115,8 +115,8 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
               onClick={() => handleTabChange('escalations')}
               className={`pb-3 px-2 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
                 activeTab === 'escalations'
-                  ? 'border-orange-500 text-orange-300 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-orange-500 text-orange-700 dark:text-orange-400 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <ShieldAlert className="w-4 h-4" />
@@ -127,8 +127,8 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
               onClick={() => handleTabChange('inventory')}
               className={`pb-3 px-2 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
                 activeTab === 'inventory'
-                  ? 'border-emerald-500 text-emerald-300 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <Boxes className="w-4 h-4" />
@@ -139,8 +139,8 @@ export const ChiefOversightWorkspace: React.FC<ChiefOversightWorkspaceProps> = (
               onClick={() => handleTabChange('audit')}
               className={`pb-3 px-2 border-b-2 flex items-center gap-2 whitespace-nowrap transition ${
                 activeTab === 'audit'
-                  ? 'border-purple-500 text-purple-300 font-semibold'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'border-purple-600 text-purple-700 dark:text-purple-400 font-semibold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
