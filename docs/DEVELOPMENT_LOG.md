@@ -761,6 +761,169 @@ Running `init_database()` multiple times performs existence checks on unique key
 - Case-specific rubric configurations are static and defined for benchmark scenarios (`CASE-BEG-01`, `CASE-INT-01`, `CASE-ADV-01`).
 - The simulation is purely an academic learning aid; scoring is not clinically validated and does not confer qualification or licensure for autonomous dispensing.
 
+---
+
+## Milestone 8: Complete Frontend Workstation Implementation (Stages 1–5)
+
+**Date**: 2026-10-31 to 2026-11-01  
+**Objective**: Build and verify production React 19 frontend interfaces corresponding to all backend clinical and educational contracts, with complete role-based isolation, route protection, deterministic rule triggers, inventory controls, and student evaluation workflows.
+
+### Workstations Implemented
+1. **Stage 1 — Route Protection & Session Controller**:
+   - Implemented `AuthProvider` with automatic HTTP 401 eviction, local storage session persistence, and instant workspace redirect.
+   - Built `AccessDeniedView` and role-restricted navigation guards preventing privilege escalation.
+2. **Stage 2 — Staff Pharmacist Workstation**:
+   - Built `PrescriptionQueueTable` with status filtering, multi-field search, and high-severity alert toggle.
+   - Built `PrescriptionDetailPanel` rendering complete patient demographics, prescriber notes, line items, and deterministic findings.
+   - Implemented `ReviewActionModal` strictly requiring non-empty pharmacist rationale for `OVERRIDE_WITH_RATIONALE` actions.
+3. **Stage 3 — Chief Pharmacist Oversight & Workstation**:
+   - Built `ChiefOversightDashboard` tracking inventory valuation ($2,414.40), active stock exceptions, pending escalations, and total overrides.
+   - Built `EscalationResolutionModal` enforcing minimum 5-character resolution rationale.
+   - Built `CentralInventoryWorkstation` with balance tracking, reorder thresholds, and stock adjustment modal preventing negative inventory balances.
+4. **Stage 4 — Pharmacy Student Simulation Lab**:
+   - Built `CaseCatalog` with difficulty filtering (`BEGINNER`, `INTERMEDIATE`, `ADVANCED`) and completion status tracking.
+   - Built `AssessmentStudio` strictly protecting academic integrity (hiding preferred determinations and rubrics until after submission).
+   - Built `EvaluationResultsView` rendering deterministic 50/30/20 scores (Determination 50 pts, Findings 30 pts, Clinical Reasoning 20 pts).
+   - Built `StudentSubmissionHistory` with chronological attempt inspection.
+5. **Stage 5 — Cross-Role System Hardening**:
+   - End-to-end integration tests verifying concurrent role switches, HTTP 409 conflict handling on resolved escalations, and audit log generation.
+
+### Commits & Git Provenance
+- `a5cdfc8` — *"Stage 1 verification remediation: 401 eviction, session restoration, role-based route guard, responsive layout"*
+- `7e8f88f` — *"Stage 2: Staff Pharmacist prescription verification workflow"*
+- `ad35c44` — *"fix(review): align OVERRIDE rationale validation with backend contract and expand test coverage"*
+- `a8662bb` — *"feat(stage-3): implement Chief Pharmacist oversight, escalation resolution, and central inventory management"*
+- `07a81fe` — *"fix(oversight): align WorkflowSummaryResponse contract with backend schema"*
+- `22fb6e4` — *"feat(stage-4): harmonize education API client with verified FastAPI contracts (Phase 4.1)"*
+- `de09604` — *"feat(stage-4): implement student Case Catalog and Assessment Studio (Prompt 1)"*
+- `cb3a2ef` — *"feat(stage-4): implement Evaluation Results and Student Submission History (Prompt 2)"*
+- `5183440` — *"feat(stage-4): integrate student simulation workspace and complete verification"*
+- `02995a8` — *"chore(stage-5): harden system and complete final verification"*
+
+---
+
+## Milestone 9: Meta Muse Spark Open AI Copilot Integration (Stages 6 & 6.1)
+
+**Date**: 2026-11-01 to 2026-11-02  
+**Objective**: Integrate Meta's frontier model **Muse Spark Open** (`meta-models/muse-spark-open-1026`) via Baseten inference API into the Staff Pharmacist workflow with deterministic primacy and robust safety guardrails.
+
+### Safety Boundaries & Implementation
+1. **Deterministic Rule Engine Primacy**:
+   - Deterministic verification runs before AI invocation. AI receives structured findings and provides clinical context, pharmacological mechanisms, and clinical uncertainties.
+   - AI is strictly prohibited from approving prescriptions, authorizing dispensing, or changing rule severities.
+2. **Anti-Approval Safety Screen**:
+   - Backend output validation checks responses for autonomous approval language. If the model attempts to authorize dispensing, the response is rejected (`ai_status="rejected"`).
+3. **Bounded 14.0s Inference Timeout**:
+   - Configured an explicit 14.0-second safety timeout (`BASETEN_TIMEOUT_SECONDS=14.0`). If Baseten inference exceeds 14 seconds, the system returns a safe timeout fallback (`ai_status="timeout"`), leaving deterministic safety findings 100% operational.
+4. **Persistent Non-Authoritative Disclaimer**:
+   - All AI clinical responses display a clear, persistent clinical advisory disclaimer.
+5. **Live Baseten Integration (Stage 6.1)**:
+   - Configured official hackathon model routing to `meta-models/muse-spark-open-1026` via `https://inference.baseten.co/v1`.
+   - Verified live responses on test scenarios with structured clinical context, uncertainties, and review considerations.
+
+### Commits & Git Provenance
+- `3d64fb9` — *"feat(stage-6): integrate Meta Muse Spark Open through Baseten"*
+- `b89b881` — *"fix(stage-6.1): resolve Baseten hackathon model routing and response parsing"*
+- `de51409` — *"docs: update README with hackathon architecture, Meta AI integration, and test suite summary"*
+- `e682557` — *"style(branding): integrate official shield logo and visual identity"*
+
+---
+
+## Milestone 10: Multi-Stage Containerization & Render Cloud Deployment
+
+**Date**: 2026-11-02  
+**Objective**: Build a production-grade multi-stage Docker container that builds the Vite React frontend and embeds it directly into FastAPI's static asset mounting, allowing single-port cloud deployment on Render without disrupting existing services.
+
+### Architecture & Deployment
+1. **Multi-Stage Dockerfile**:
+   - Stage 1 (Node 20): Installs frontend dependencies and executes `tsc -b && vite build`, outputting compiled assets to `/app/frontend/dist`.
+   - Stage 2 (Python 3.11-slim): Installs backend requirements, copies backend application code, and copies `/frontend/dist` directly into the web application directory.
+2. **Unified Static Asset & Catch-All Routing**:
+   - Mounted `/assets` directly to `frontend/dist/assets`.
+   - Added a SPA catch-all fallback route serving `frontend/dist/index.html` for any client-side routes (`/`, `?workspace=chief`, etc.), while preserving `/api/v1/*` routes.
+3. **Cloud Infrastructure on Render**:
+   - Service Name: `PharmacyGuard-Meta`
+   - Runtime: Docker
+   - GitHub Repository: `https://github.com/nanadjan996-debug/PharmacyGuard-Meta`
+   - Live URL: `https://pharmacyguard-meta.onrender.com`
+   - Configured Environment Variables:
+     - `BASETEN_API_KEY`: Configured production inference token
+     - `BASETEN_MODEL`: `meta-models/muse-spark-open-1026`
+     - `BASETEN_BASE_URL`: `https://inference.baseten.co/v1`
+     - `BASETEN_TIMEOUT_SECONDS`: `14.0`
+4. **Live Cloud Endpoint Verification**:
+   - `GET https://pharmacyguard-meta.onrender.com/api/v1/health` -> `HTTP 200 OK`
+   - `POST https://pharmacyguard-meta.onrender.com/api/v1/auth/login` -> `HTTP 200 OK` (JWT issued)
+   - `GET https://pharmacyguard-meta.onrender.com/api/v1/prescriptions/queue` -> `HTTP 200 OK` (5 seeded scenarios)
+   - `POST https://pharmacyguard-meta.onrender.com/api/v1/prescriptions/rx-synth-001/ai-explanation` -> `HTTP 200 OK` (Live Meta Muse Spark Open response)
+
+### Commits & Git Provenance
+- `cd66385` — *"feat(deploy): configure unified multi-stage Dockerfile and cloud deployment configs"*
+- `fdaf878` — *"chore: clean up file line endings"*
+- `cdfcd73` — *"chore: merge remote license"*
+
+---
+
+## Milestone 11: Clinical Workstation Ergonomics & Cognitive Load Overhaul
+
+**Date**: 2026-11-02  
+**Objective**: Redesign the UI across all 4 workflows (Staff Pharmacist, Chief Pharmacist, Student Simulation, and Global Advisory/Login) to eliminate "AI-generated" visual noise and prevent pharmacist alert fatigue, while strictly preserving 100% of clinical data fields.
+
+### Ergonomic Improvements
+1. **Preservation of All Clinical Data**:
+   - Zero patient demographics, MRNs, dosages, routes, instructions, prescriber notes, or safety findings were omitted or collapsed behind hidden tabs.
+2. **Staff Pharmacist Two-Column Review Layout**:
+   - Left Column (7/12 width): Prescribed medication items table + Deterministic verification findings with severity badges + Audit trail.
+   - Right Column (5/12 width): Sticky **Meta Muse Spark Open** AI Copilot card.
+   - Result: Pharmacists can cross-examine order line items on the left against the AI's clinical synthesis on the right without endless vertical scrolling.
+3. **Hospital Station Status Bar**:
+   - Replaced loud developer test panels with an executive hospital station strip (`● Station Online`, `Safety Engine: Deterministic Active`, `Meta AI: Muse Spark Open`).
+4. **Chief Pharmacist Executive Restyling**:
+   - Converted harsh pitch-black containers into soft medical cards with clear metric indicators and direct navigation shortcuts.
+5. **Student Simulation Lab Clean Hierarchy**:
+   - Professional simulation catalog with difficulty badges, learning objectives, and completion status.
+6. **Automated Verification**:
+   - Frontend Vitest suite: **114 / 114 tests passed** across all 9 test suites.
+   - Production Vite build: Compiled cleanly in 32s with zero TypeScript warnings.
+
+### Commits & Git Provenance
+- `d751e3c` — *"style(ui): elevate clinical workstation ergonomics, reduce cognitive noise, and refine visual hierarchy across all roles"*
+
+---
+
+## Milestone 12: Future Clinical Grounding Specification — Population-Specific Pharmacogenomics & Domain-Constrained Medical RAG
+
+**Date**: 2026-11-02  
+**Objective**: Formulate architectural and clinical specifications requiring future clinical releases of PharmacyGuard to ground the AI in curated, evidence-based medical compendiums and demographic-adjusted guidelines to prevent dangerous population-specific treatment errors.
+
+### Clinical Background & Problem Statement
+Generic frontier LLMs trained on uncurated corpora pose acute patient safety hazards if applied unconstrained to clinical pharmacotherapy:
+1. **Hypertension in Patients of African Descent**:
+   - Major clinical guidelines (ACC/AHA, JNC-8, British Hypertension Society, Pan-African Society of Cardiology) demonstrate that Black patients have lower circulating plasma renin levels.
+   - Calcium channel blockers (CCBs, e.g., Amlodipine) or thiazide/thiazide-like diuretics are the recommended first-line monotherapy.
+   - Monotherapy with ACE inhibitors (e.g., Lisinopril) or ARBs produces significantly lower blood pressure reduction and carries a **3- to 4-fold higher incidence of life-threatening angioedema**.
+   - An ungrounded AI might recommend standard ACE inhibitor titration without recognizing demographic contraindications or failure of monotherapy efficacy.
+2. **Pharmacogenomic & Enzymatic Variations**:
+   - **G6PD Deficiency**: Highest prevalence in individuals of African, Mediterranean, and Southeast Asian ancestry. Exposure to oxidant medications (e.g., Rasburicase, Dapsone, Primaquine, Nitrofurantoin) precipitates acute hemolytic anemia.
+   - **CYP Polymorphisms**: High prevalence of CYP2C19 loss-of-function alleles (*2, *3) in specific ethnic groups compromises Clopidogrel (Plavix) bioactivation, requiring alternative P2Y12 inhibitors (Ticagrelor, Prasugrel).
+3. **Sickle Cell Disease / Trait Considerations**:
+   - High prevalence in populations of sub-Saharan African descent; acute pain crises require distinct multimodal analgesia while avoiding nephrotoxic NSAID escalation in patients with underlying sickle cell nephropathy.
+
+### Architectural Solution: Domain-Constrained Medical RAG
+Future clinical releases of PharmacyGuard will implement a four-pillar safety architecture:
+1. **Vetted Clinical Guideline Compendium**:
+   - Clinical Pharmacogenetics Implementation Consortium (CPIC) Guidelines.
+   - WHO Essential Medicines & Regional Treatment Guidelines.
+   - ACC/AHA Population-Specific Hypertension & Cardiovascular Recommendations.
+   - South African Heart Association & Pan-African Society of Cardiology Guidelines.
+2. **Demographic & Pharmacogenomic Pre-Inference Validation**:
+   - Patient profiles will include structured demographic and pharmacogenomic data fields (`ancestry_demographic`, `g6pd_status`, `cyp2c19_genotype`).
+   - The inference engine dynamically injects mandatory population-specific retrieval constraints before the model generates clinical commentary.
+3. **Strict Guideline Lineage & Citation Check**:
+   - The model must cite the exact clinical guideline document, section, and publication year.
+   - If a treatment recommendation conflicts with population-specific guidelines, the deterministic safety engine immediately triggers a **HIGH SEVERITY POPULATION PHARMACOTHERAPY ALERT** and flags the prescription for mandatory human pharmacist review.
+4. **Reference Document**: Detailed implementation specification published in `docs/CLINICAL_POPULATION_GUIDANCE_SPEC.md`.
+
 
 
 
