@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Activity, Award, GraduationCap, AlertCircle, ArrowRight, Lock, User as UserIcon } from 'lucide-react';
+import { ShieldCheck, Activity, Award, GraduationCap, AlertCircle, ArrowRight, Lock, User as UserIcon, Brain, Users } from 'lucide-react';
 import { useAuth, DEMO_CREDENTIALS } from '../../context/AuthContext';
 import { Button } from '../common/Button';
 import { UserRole } from '../../types/api';
@@ -70,17 +70,47 @@ export const LoginView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
+    <div className="flex-1 flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full">
       <div className="text-center mb-8">
-        <div className="inline-flex p-3 bg-emerald-600 rounded-2xl text-white shadow-md mb-3">
-          <ShieldCheck className="w-8 h-8" aria-hidden="true" />
+        <div className="flex justify-center mb-3">
+          <img
+            src="/logo.png"
+            alt="PharmacyGuard Shield Logo"
+            className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-md hover:scale-105 transition-transform"
+          />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          PharmacyGuard Workstation
+        <h2
+          aria-label="PharmacyGuard Workstation"
+          className="text-3xl sm:text-4xl font-black tracking-tight leading-none flex items-center justify-center"
+        >
+          <span className="text-sky-500">PHARMACY</span><span className="text-blue-700 dark:text-blue-400">GUARD</span>
+          <span className="text-slate-800 dark:text-white font-extrabold ml-2 text-2xl sm:text-3xl">Workstation</span>
         </h2>
-        <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-          Hospital prescription verification, safety escalation oversight, and pharmacy student simulation environment.
+        <p className="mt-2 text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 tracking-wide">
+          AI Clinical Verification Agent
         </p>
+        <div className="w-16 h-0.5 bg-sky-500 mx-auto my-2 rounded-full"></div>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+          For Pharmacists &amp; Pharmacy Students
+        </p>
+
+        {/* 3 Core Pillars matching branding */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 max-w-lg mx-auto text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <div className="flex items-center space-x-1.5">
+            <ShieldCheck className="w-4 h-4 text-sky-500" />
+            <span>Safer Decisions</span>
+          </div>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <div className="flex items-center space-x-1.5">
+            <Brain className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>AI-Powered Verification</span>
+          </div>
+          <span className="text-slate-300 dark:text-slate-700">|</span>
+          <div className="flex items-center space-x-1.5">
+            <Users className="w-4 h-4 text-emerald-600" />
+            <span>Human In the Loop</span>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

@@ -122,7 +122,7 @@ const MainLayout: React.FC = () => {
       {/* Persistent System Footer */}
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-3 px-4 sm:px-6 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>PharmacyGuard Meta Rebuild · Stage 1 Foundation & Architecture</span>
+          <span>PharmacyGuard · AI Clinical Verification Agent (Meta Global AI Developer Hackathon)</span>
           <span className="font-mono text-[11px]">
             API Backend: <span className="text-emerald-600 dark:text-emerald-400">Online</span> (Proxy: /api/v1)
           </span>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Activity, Award, GraduationCap, LogOut, Loader2, User as UserIcon } from 'lucide-react';
+import { Activity, Award, GraduationCap, LogOut, Loader2, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
 
@@ -59,20 +59,21 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateWorkspace }) => {
         {/* Brand identity */}
         <div className="flex items-center justify-between md:justify-start">
           <div className="flex items-center space-x-2.5 sm:space-x-3">
-            <div className="p-1.5 sm:p-2 bg-emerald-600 rounded-lg text-white shadow-sm flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
+            <div className="shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="PharmacyGuard Logo" className="w-7 h-7 sm:w-9 sm:h-9 object-contain drop-shadow-xs" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-sm sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                  PharmacyGuard
+                <h1 className="text-sm sm:text-lg font-black tracking-tight leading-none">
+                  <span className="text-sky-500">PHARMACY</span>
+                  <span className="text-blue-700 dark:text-blue-400">GUARD</span>
                 </h1>
-                <span className="text-[9px] sm:text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                  Clinical Workstation
+                <span className="text-[9px] sm:text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 font-semibold">
+                  AI Agent
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 leading-none mt-0.5 hidden xs:block sm:block">
-                Prescription Verification & Operational Decision Support
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 leading-none mt-1 hidden xs:block sm:block">
+                AI Clinical Verification Agent • For Pharmacists &amp; Students
               </p>
             </div>
           </div>
