@@ -97,12 +97,13 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
                   <span>AI Unavailable</span>
                 </span>
               ) : (
+                /* Initial unanalyzed state (explanation is null or not requested yet) */
                 <span
                   data-testid="ai-status-badge"
-                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 whitespace-nowrap shadow-2xs"
+                  className="inline-flex items-center space-x-1.5 text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 whitespace-nowrap shadow-2xs"
                 >
-                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
-                  <span>AI Ready · On-Demand</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span>AI Ready on Demand</span>
                 </span>
               )}
             </div>
@@ -157,12 +158,22 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
           </p>
         </div>
       ) : !explanation ? (
-        <div className="p-6 text-center text-xs text-slate-500 italic bg-white/60 dark:bg-slate-800/40 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
-          <Bot className="w-8 h-8 text-slate-400 mx-auto" />
-          <p>No AI explanation requested yet for this prescription.</p>
-          <p className="text-[11px] text-slate-400">
-            Click &ldquo;Explain with AI&rdquo; to generate natural-language clinical context using Meta Muse Spark Open.
-          </p>
+        <div className="p-6 text-center rounded-xl bg-gradient-to-b from-sky-50/40 via-white to-slate-50/60 dark:from-slate-800/40 dark:to-slate-900/40 border border-sky-100 dark:border-slate-800 space-y-2 shadow-2xs">
+          <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 flex items-center justify-center mx-auto shadow-2xs">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+              Meta Muse Spark Open Ready
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              No AI explanation requested yet for this prescription. Click{' '}
+              <strong className="text-slate-900 dark:text-white font-semibold">
+                &ldquo;Explain with AI&rdquo;
+              </strong>{' '}
+              above to generate natural-language clinical context, mechanistic pharmacology explanations, and cross-reactivity synthesis.
+            </p>
+          </div>
         </div>
       ) : status === 'timeout' ? (
         <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-2">

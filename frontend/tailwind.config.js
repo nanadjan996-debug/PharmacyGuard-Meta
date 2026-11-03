@@ -12,10 +12,12 @@ export default {
           'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
-          '"Segoe UI"',
+          '"San Francisco Pro"',
+          '"SF Pro Display"',
+          '"SF Pro Text"',
           'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
+          '"Source Sans 3"',
+          '"Segoe UI"',
           'sans-serif',
         ],
         mono: [
@@ -43,4 +45,3 @@ export default {
   },
   plugins: [],
 }
-
