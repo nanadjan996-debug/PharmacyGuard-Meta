@@ -133,12 +133,12 @@ export const CaseCatalog: React.FC<CaseCatalogProps> = ({
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-medium border border-indigo-400/30">
               <GraduationCap className="w-3.5 h-3.5" />
-              <span>Interactive Clinical Pharmacy Simulation</span>
+              <span>Inpatient & Regional Clinical Cases</span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">Clinical Practice Case Catalog</h1>
             <p className="text-sm text-slate-300 leading-relaxed">
-              Explore synthetic patient scenarios designed to cultivate clinical verification acumen,
-              detect therapeutic duplications, identify contraindications, and evaluate dosage safety.
+              Structured simulation cases modeled on high-frequency hospital presentations, regional demographic nuances,
+              and unconventional clinical scenarios where real patient constraints diverge from standard textbook practice.
             </p>
           </div>
 
@@ -164,7 +164,7 @@ export const CaseCatalog: React.FC<CaseCatalogProps> = ({
         {/* Advisory Disclaimer */}
         <div className="mt-4 pt-3 border-t border-indigo-800/30 text-xs text-indigo-300/80 flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
-          <span>Synthetic pedagogical benchmark cases. Assessments are evaluated against objective 100-point rubrics.</span>
+          <span>Simulated hospital encounters & unconventional therapy protocols. Evaluated across objective 100-point rubrics.</span>
         </div>
       </div>
 

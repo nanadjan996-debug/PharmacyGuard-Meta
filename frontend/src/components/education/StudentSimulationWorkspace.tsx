@@ -209,7 +209,7 @@ export const StudentSimulationWorkspace: React.FC<StudentSimulationWorkspaceProp
         {/* Simulation Environment Mode Badge */}
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium px-2 py-1 bg-indigo-50 dark:bg-indigo-950/40 rounded-md border border-indigo-200 dark:border-indigo-900/60">
           <Sparkles className="w-3.5 h-3.5 shrink-0" />
-          <span>Deterministic Clinical Simulation</span>
+          <span>Hospital & Regional Case Simulation</span>
         </div>
       </div>
 
@@ -240,7 +240,7 @@ export const StudentSimulationWorkspace: React.FC<StudentSimulationWorkspaceProp
                 No Case Selected for Assessment
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-md mx-auto">
-                Please select a synthetic educational case from the catalog to review patient history, analyze orders, and submit your structured clinical evaluation.
+                Select a clinical case from the catalog to evaluate hospital presentations, regional demographic nuances, and unique therapeutic regimens.
               </p>
               <div className="mt-6">
                 <Button

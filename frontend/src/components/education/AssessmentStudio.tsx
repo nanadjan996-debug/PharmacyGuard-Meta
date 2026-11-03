@@ -248,7 +248,7 @@ export const AssessmentStudio: React.FC<AssessmentStudioProps> = ({
           <Info className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5" />
           <span>
             {caseDetail.disclaimer ||
-              'Advisory educational simulation prototype. Synthetic training benchmark only; not for clinical decision-making or autonomous patient care.'}
+              'Case-based experiential simulation. Modeled after high-frequency hospital presentations, regional demographic nuances, and unconventional clinical scenarios.'}
           </span>
         </div>
       </div>
@@ -259,7 +259,7 @@ export const AssessmentStudio: React.FC<AssessmentStudioProps> = ({
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
           <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 font-semibold text-sm text-slate-800 dark:text-slate-200">
             <User className="w-4 h-4 text-indigo-500" />
-            <span>Synthetic Patient Clinical Profile</span>
+            <span>Patient Inpatient Profile & Encounter History</span>
           </div>
           <div className="p-5 space-y-4 flex-1">
             <div className="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed text-sm">
@@ -490,7 +490,7 @@ export const AssessmentStudio: React.FC<AssessmentStudioProps> = ({
         {/* Footer Submission Bar */}
         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
-            <span className="font-semibold">Academic Integrity Notice:</span> Submissions are evaluated against standard benchmark rubrics and permanently recorded in your student attempt ledger.
+            <span className="font-semibold">Academic Integrity Notice:</span> Submissions are evaluated against standardized clinical rubrics and benchmark institutional practices, recorded permanently in your student attempt ledger.
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
