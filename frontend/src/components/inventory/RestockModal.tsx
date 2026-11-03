@@ -70,28 +70,29 @@ export const RestockModal: React.FC<RestockModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-5" data-testid="restock-modal-form">
         {/* Medication Context Header */}
-        <div className="bg-slate-50 dark:bg-slate-950/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+        <div className="bg-slate-50 dark:bg-slate-900/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">{item.medication_id}</span>
-              <h4 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{item.generic_name}</h4>
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{item.generic_name}</h4>
               <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">{item.brand_name} · {item.standard_strength} ({item.dosage_form})</p>
             </div>
             <div className="text-right">
               <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Current Stock</span>
-              <span className="text-lg font-mono font-bold text-slate-900 dark:text-slate-100">{item.quantity_on_hand}</span> <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">units</span>
+              <span className="text-base font-mono font-bold text-slate-900 dark:text-slate-100">{item.quantity_on_hand}</span>
+              <span className="text-xs text-slate-600 dark:text-slate-400 ml-1">units</span>
             </div>
           </div>
-          <div className="mt-3 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-2.5 font-medium">
-            <span>Location: <strong className="text-slate-800 dark:text-slate-200">{item.location}</strong></span>
-            <span>Threshold: <strong className="text-slate-800 dark:text-slate-200">{item.reorder_threshold} units</strong></span>
+          <div className="mt-3 text-xs text-slate-600 dark:text-slate-400 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-2.5">
+            <span>Location: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{item.location}</strong></span>
+            <span>Threshold: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{item.reorder_threshold} units</strong></span>
           </div>
         </div>
 
         {/* Quantity Field */}
         <div>
-          <label htmlFor="restock-quantity" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
-            Received Units to Add to Inventory <span className="text-rose-600 dark:text-rose-400">*</span>
+          <label htmlFor="restock-quantity" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+            Received Units to Add to Inventory <span className="text-red-500">*</span>
           </label>
           <input
             id="restock-quantity"
@@ -101,20 +102,21 @@ export const RestockModal: React.FC<RestockModalProps> = ({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
             disabled={isSubmitting}
-            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-2xs font-mono font-medium"
             placeholder="e.g. 50"
           />
           {isValidQuantity && (
             <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-1.5 flex items-center gap-1">
-              <span>New balance after receipt:</span>
-              <strong className="font-mono">{item.quantity_on_hand + numQuantity} units</strong>
+              <span>New balance will be</span>
+              <strong className="font-bold font-mono text-emerald-800 dark:text-emerald-300">{item.quantity_on_hand + numQuantity}</strong>
+              <span>units.</span>
             </p>
           )}
         </div>
 
         {/* Reason / PO Tracking */}
         <div>
-          <label htmlFor="restock-reason" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 uppercase tracking-wider">
+          <label htmlFor="restock-reason" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
             Distributor Invoice / PO or Shipment Note
           </label>
           <input
@@ -123,20 +125,20 @@ export const RestockModal: React.FC<RestockModalProps> = ({
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             disabled={isSubmitting}
-            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-2xs"
             placeholder="e.g. McKesson PO-98124 receipt"
           />
         </div>
 
         {error && (
-          <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-lg text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+          <div className="p-3 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-lg text-xs flex items-center gap-2 font-medium">
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
           <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
