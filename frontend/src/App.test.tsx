@@ -374,6 +374,32 @@ describe('PharmacyGuard Stage 1: Role-Based Route Protection & Dual Safety Bound
     });
   });
 
+  it('allows switching directly to the required demo role from AccessDeniedView', async () => {
+    localStorage.setItem('pharmacyguard_access_token', 'staff_token');
+    window.history.pushState({}, '', '/?workspace=chief');
+    vi.spyOn(api.auth, 'me').mockResolvedValueOnce(mockStaffUser);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Access Denied: Restricted Workspace/i })).toBeInTheDocument();
+    });
+
+    vi.spyOn(api.auth, 'login').mockResolvedValueOnce({
+      access_token: 'fake_jwt_token_chief',
+      token_type: 'bearer',
+      expires_in_minutes: 60,
+      user: mockChiefUser,
+    });
+
+    const switchBtn = screen.getByRole('button', { name: /Switch to Chief Pharmacist Account/i });
+    fireEvent.click(switchBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 2, name: /Chief Pharmacist Workstation/i })).toBeInTheDocument();
+    });
+  });
+
   it('displays AccessDeniedView when Pharmacy Student navigates to staff workspace (?workspace=staff)', async () => {
     localStorage.setItem('pharmacyguard_access_token', 'student_token');
     window.history.pushState({}, '', '/?workspace=staff');

@@ -78,13 +78,13 @@ export const LoginView: React.FC = () => {
     setPassword(creds.password);
     setActiveSubmittingRole(role);
     try {
+      await login(creds);
       if (typeof window !== 'undefined') {
         const targetWs = role === 'chief_pharmacist' ? 'chief' : role === 'pharmacy_student' ? 'student' : 'staff';
         const url = new URL(window.location.href);
         url.searchParams.set('workspace', targetWs);
         window.history.replaceState({}, '', url.toString());
       }
-      await login(creds);
     } catch {
       // Error handled by AuthContext
     } finally {

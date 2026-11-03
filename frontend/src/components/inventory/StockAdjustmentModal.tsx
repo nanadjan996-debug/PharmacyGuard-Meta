@@ -106,32 +106,32 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
     >
       <form onSubmit={handleSubmit} className="space-y-5" data-testid="stock-adjustment-form">
         {/* Chief Authorization Callout */}
-        <div className="p-3 bg-indigo-950/40 border border-indigo-900/60 rounded-xl flex items-start gap-2.5 text-xs text-indigo-300">
-          <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+        <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 rounded-xl flex items-start gap-2.5 text-xs text-indigo-900 dark:text-indigo-300">
+          <ShieldAlert className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold block text-indigo-200">Restricted Supervisory Action</span>
+            <span className="font-bold block text-indigo-950 dark:text-indigo-200">Restricted Supervisory Action</span>
             Adjustments modify perpetual inventory counts for waste, cycle count corrections, or breakage. Every transaction is permanently audited.
           </div>
         </div>
 
         {/* Medication Context */}
-        <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+        <div className="bg-slate-50 dark:bg-slate-950/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-xs font-mono text-indigo-400 font-semibold">{item.medication_id}</span>
-              <h4 className="text-sm font-semibold text-white">{item.generic_name}</h4>
-              <p className="text-xs text-slate-400">{item.brand_name} · {item.dosage_form}</p>
+              <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">{item.medication_id}</span>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white mt-0.5">{item.generic_name}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">{item.brand_name} · {item.dosage_form}</p>
             </div>
             <div className="text-right">
-              <span className="text-xs text-slate-500 block">Current Balance</span>
-              <span className="text-base font-mono font-bold text-slate-200">{item.quantity_on_hand}</span> units
+              <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Current Balance</span>
+              <span className="text-base font-mono font-bold text-slate-900 dark:text-slate-100">{item.quantity_on_hand}</span> <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">units</span>
             </div>
           </div>
         </div>
 
         {/* Adjustment Direction */}
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
             Adjustment Direction
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -140,14 +140,16 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               onClick={() => setDirection('DECREASE')}
               className={`p-3 rounded-xl border text-left flex items-center gap-3 transition ${
                 direction === 'DECREASE'
-                  ? 'bg-rose-950/40 border-rose-500/60 ring-1 ring-rose-500/40 text-rose-300'
-                  : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:border-slate-700'
+                  ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-500/30 text-rose-900 dark:bg-rose-950/40 dark:border-rose-500/60 dark:text-rose-200'
+                  : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
-              <ArrowDownRight className="w-4 h-4 text-rose-400" />
+              <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400">
+                <ArrowDownRight className="w-4 h-4" />
+              </div>
               <div>
-                <span className="text-xs font-bold block text-white">Decrease (-)</span>
-                <span className="text-[11px] text-slate-400">Waste, breakage, expired</span>
+                <span className="text-xs font-bold block text-slate-900 dark:text-white">Decrease (-)</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Waste, breakage, expired</span>
               </div>
             </button>
 
@@ -156,14 +158,16 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
               onClick={() => setDirection('INCREASE')}
               className={`p-3 rounded-xl border text-left flex items-center gap-3 transition ${
                 direction === 'INCREASE'
-                  ? 'bg-emerald-950/40 border-emerald-500/60 ring-1 ring-emerald-500/40 text-emerald-300'
-                  : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:border-slate-700'
+                  ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-500/30 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/60 dark:text-emerald-200'
+                  : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
               }`}
             >
-              <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">
+                <ArrowUpRight className="w-4 h-4" />
+              </div>
               <div>
-                <span className="text-xs font-bold block text-white">Increase (+)</span>
-                <span className="text-[11px] text-slate-400">Found stock, recount</span>
+                <span className="text-xs font-bold block text-slate-900 dark:text-white">Increase (+)</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Found stock, recount</span>
               </div>
             </button>
           </div>
@@ -171,8 +175,8 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
 
         {/* Quantity Field */}
         <div>
-          <label htmlFor="adjust-quantity" className="block text-xs font-semibold text-slate-300 mb-1.5">
-            Adjustment Quantity (Units) <span className="text-rose-400">*</span>
+          <label htmlFor="adjust-quantity" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+            Adjustment Quantity (Units) <span className="text-rose-600 dark:text-rose-400">*</span>
           </label>
           <input
             id="adjust-quantity"
@@ -182,16 +186,16 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             value={quantity}
             onChange={(e) => setQuantity(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
             disabled={isSubmitting}
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
             placeholder="e.g. 5"
           />
 
           {/* Real-time Projected Balance Preview */}
-          <div className="mt-2 text-xs flex justify-between items-center p-2 rounded bg-slate-950/80 border border-slate-800">
-            <span className="text-slate-400">Projected Balance:</span>
+          <div className="mt-2 text-xs flex justify-between items-center p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800">
+            <span className="text-slate-600 dark:text-slate-400 font-medium">Projected Balance:</span>
             <span
-              className={`font-mono font-bold ${
-                isNegative ? 'text-rose-400 animate-pulse' : 'text-slate-200'
+              className={`font-mono font-bold text-sm ${
+                isNegative ? 'text-rose-600 dark:text-rose-400 animate-pulse' : 'text-slate-900 dark:text-slate-100'
               }`}
             >
               {item.quantity_on_hand} {direction === 'INCREASE' ? '+' : '-'} {numQuantity || 0} = {projectedBalance} units
@@ -199,8 +203,8 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
           </div>
 
           {isNegative && (
-            <div className="mt-1.5 p-2 bg-rose-950/80 border border-rose-800 rounded text-[11px] text-rose-300 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+            <div className="mt-1.5 p-2 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 rounded-lg text-[11px] text-rose-800 dark:text-rose-300 flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
               <span>Negative Inventory Guard: Stock cannot fall below 0 units (current balance: {item.quantity_on_hand}).</span>
             </div>
           )}
@@ -209,10 +213,10 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
         {/* Mandatory Reason */}
         <div>
           <div className="flex justify-between items-center mb-1.5">
-            <label htmlFor="adjust-reason" className="text-xs font-semibold text-slate-300">
-              Discrepancy Justification / Clinical Audit Reason <span className="text-rose-400">*</span>
+            <label htmlFor="adjust-reason" className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Discrepancy Justification / Clinical Audit Reason <span className="text-rose-600 dark:text-rose-400">*</span>
             </label>
-            <span className={`text-[11px] font-mono ${isReasonTooShort ? 'text-amber-400' : 'text-slate-400'}`}>
+            <span className={`text-[11px] font-mono font-semibold ${isReasonTooShort ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
               {trimmedReason.length}/3 min chars
             </span>
           </div>
@@ -223,19 +227,19 @@ export const StockAdjustmentModal: React.FC<StockAdjustmentModalProps> = ({
             onChange={(e) => setReason(e.target.value)}
             disabled={isSubmitting}
             placeholder="e.g. Dropped vial during preparation, verified discarded with second witness."
-            className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
           />
         </div>
 
         {error && (
-          <div className="p-3 bg-rose-950/60 border border-rose-800 text-rose-200 rounded-lg text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 rounded-lg text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Modal Actions */}
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+        <div className="flex justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
           <Button type="button" variant="ghost" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>

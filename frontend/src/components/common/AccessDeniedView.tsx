@@ -1,7 +1,7 @@
-import React from 'react';
-import { ShieldAlert, Lock, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldAlert, Lock, ArrowLeft, UserCheck } from 'lucide-react';
 import { Button } from './Button';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, DEMO_CREDENTIALS } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
 
 export interface AccessDeniedViewProps {
@@ -24,13 +24,28 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
   requiredRole,
   onNavigateHome,
 }) => {
-  const { user } = useAuth();
+  const { user, switchRole } = useAuth();
+  const [isSwitching, setIsSwitching] = useState(false);
 
   const userRolesFormatted = user?.roles
     ? user.roles.map((r) => roleNames[r] || r).join(', ')
     : 'None';
   const targetWorkspaceFormatted = roleNames[requestedWorkspace] || requestedWorkspace;
   const requiredRoleFormatted = roleNames[requiredRole] || requiredRole;
+
+  const validDemoRole = (requiredRole in DEMO_CREDENTIALS) ? (requiredRole as UserRole) : null;
+
+  const handleSwitchToRequiredRole = async () => {
+    if (!validDemoRole || isSwitching) return;
+    setIsSwitching(true);
+    try {
+      await switchRole(validDemoRole);
+    } catch (err) {
+      console.error('Failed to switch to required role:', err);
+    } finally {
+      setIsSwitching(false);
+    }
+  };
 
   return (
     <div
@@ -76,14 +91,28 @@ export const AccessDeniedView: React.FC<AccessDeniedViewProps> = ({
         </p>
       </div>
 
-      <Button
-        variant="primary"
-        size="md"
-        icon={<ArrowLeft className="w-4 h-4" />}
-        onClick={onNavigateHome}
-      >
-        Return to Authorized Workspace
-      </Button>
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-lg">
+        <Button
+          variant="primary"
+          size="md"
+          icon={<ArrowLeft className="w-4 h-4" />}
+          onClick={onNavigateHome}
+        >
+          Return to Authorized Workspace
+        </Button>
+
+        {validDemoRole && (
+          <Button
+            variant="secondary"
+            size="md"
+            icon={<UserCheck className="w-4 h-4" />}
+            isLoading={isSwitching}
+            onClick={handleSwitchToRequiredRole}
+          >
+            Switch to {requiredRoleFormatted} Account
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

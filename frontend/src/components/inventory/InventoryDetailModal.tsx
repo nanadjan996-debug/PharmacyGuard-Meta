@@ -111,17 +111,17 @@ export const InventoryDetailModal: React.FC<InventoryDetailModalProps> = ({
       ) : itemDetail ? (
         <div className="space-y-6" data-testid="inventory-detail-content">
           {/* Item Clinical & Storage Metadata */}
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-800 pb-3">
+          <div className="bg-slate-50 dark:bg-slate-950/80 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <span className="text-xs font-mono font-semibold text-indigo-400">
+                <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
                   {itemDetail.medication_id}
                 </span>
-                <h3 className="text-lg font-bold text-white mt-0.5">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
                   {itemDetail.generic_name}{' '}
-                  <span className="text-sm text-slate-400 font-normal">({itemDetail.brand_name})</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400 font-normal">({itemDetail.brand_name})</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
                   {itemDetail.drug_class} · {itemDetail.standard_strength} ({itemDetail.dosage_form})
                 </p>
               </div>
@@ -132,75 +132,75 @@ export const InventoryDetailModal: React.FC<InventoryDetailModalProps> = ({
 
             {/* Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400 flex items-center gap-1 block mb-1">
-                  <Boxes className="w-3.5 h-3.5 text-slate-400" />
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mb-1">
+                  <Boxes className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   On Hand
                 </span>
-                <span className="text-xl font-bold font-mono text-white">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-white">
                   {itemDetail.quantity_on_hand}
                 </span>
-                <span className="text-[11px] text-slate-500 block">units</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">units</span>
               </div>
 
-              <div className="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400 flex items-center gap-1 block mb-1">
-                  <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mb-1">
+                  <Layers className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                   Reorder Threshold
                 </span>
-                <span className="text-xl font-bold font-mono text-slate-300">
+                <span className="text-xl font-bold font-mono text-slate-900 dark:text-slate-300">
                   {itemDetail.reorder_threshold}
                 </span>
-                <span className="text-[11px] text-slate-500 block">units (baseline)</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">units (baseline)</span>
               </div>
 
-              <div className="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400 flex items-center gap-1 block mb-1">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mb-1">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Unit Acquisition
                 </span>
-                <span className="text-xl font-bold font-mono text-emerald-400">
+                <span className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
                   {formatCurrency(itemDetail.unit_cost_cents)}
                 </span>
-                <span className="text-[11px] text-slate-500 block">per unit</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">per unit</span>
               </div>
 
-              <div className="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
-                <span className="text-xs text-slate-400 flex items-center gap-1 block mb-1">
-                  <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+                <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium mb-1">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   Vault Location
                 </span>
-                <span className="text-sm font-semibold text-slate-200 truncate block">
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-200 truncate block">
                   {itemDetail.location}
                 </span>
-                <span className="text-[11px] text-slate-500 block">Lot: {itemDetail.lot_number}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono block">Lot: {itemDetail.lot_number}</span>
               </div>
             </div>
           </div>
 
           {/* Chronological Inventory Transaction History */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-            <div className="p-3.5 bg-slate-900/80 border-b border-slate-800 flex justify-between items-center">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-2xs">
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-indigo-400" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200">
+                <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                   Perpetual Transaction Ledger
                 </h4>
               </div>
-              <span className="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">
+              <span className="text-xs bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-400 px-2.5 py-0.5 rounded-full font-mono font-medium">
                 {itemDetail.transactions?.length || 0} events
               </span>
             </div>
 
             {!itemDetail.transactions || itemDetail.transactions.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs">
-                <Clock className="w-6 h-6 text-slate-500 mx-auto mb-2 opacity-60" />
+              <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-xs">
+                <Clock className="w-6 h-6 text-slate-400 mx-auto mb-2 opacity-60" />
                 No inventory receipts or adjustments recorded for this formulary item yet.
               </div>
             ) : (
               <div className="overflow-x-auto max-h-72 overflow-y-auto">
-                <table className="w-full text-left text-xs text-slate-300">
-                  <thead className="bg-slate-950/70 text-[11px] uppercase font-semibold text-slate-400 sticky top-0 border-b border-slate-800">
+                <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-50 dark:bg-slate-950/70 text-[11px] uppercase font-semibold text-slate-600 dark:text-slate-400 sticky top-0 border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="px-4 py-2">Timestamp</th>
                       <th className="px-4 py-2">Transaction Type</th>
@@ -210,18 +210,18 @@ export const InventoryDetailModal: React.FC<InventoryDetailModalProps> = ({
                       <th className="px-4 py-2">Audited Actor</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/80 font-mono">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-mono">
                     {itemDetail.transactions.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-800/30 transition">
-                        <td className="px-4 py-2 text-slate-400 whitespace-nowrap">
+                      <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                        <td className="px-4 py-2 text-slate-500 dark:text-slate-400 whitespace-nowrap">
                           {formatDateTime(tx.created_at)}
                         </td>
                         <td className="px-4 py-2">
                           <span
-                            className={`font-semibold px-1.5 py-0.5 rounded text-[10px] ${
+                            className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
                               tx.transaction_type === 'RESTOCK'
-                                ? 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/50'
-                                : 'bg-purple-950/70 text-purple-400 border border-purple-800/50'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-400 dark:border-emerald-800/50'
+                                : 'bg-purple-50 text-purple-800 border border-purple-200 dark:bg-purple-950/70 dark:text-purple-400 dark:border-purple-800/50'
                             }`}
                           >
                             {tx.transaction_type}
@@ -229,18 +229,18 @@ export const InventoryDetailModal: React.FC<InventoryDetailModalProps> = ({
                         </td>
                         <td className="px-4 py-2 text-right font-bold whitespace-nowrap">
                           {tx.quantity_delta > 0 ? (
-                            <span className="text-emerald-400">+{tx.quantity_delta}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400">+{tx.quantity_delta}</span>
                           ) : (
-                            <span className="text-rose-400">{tx.quantity_delta}</span>
+                            <span className="text-rose-600 dark:text-rose-400">{tx.quantity_delta}</span>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-right text-slate-200">
+                        <td className="px-4 py-2 text-right font-semibold text-slate-900 dark:text-slate-200">
                           {tx.quantity_after}
                         </td>
-                        <td className="px-4 py-2 font-sans text-slate-400 max-w-xs truncate">
+                        <td className="px-4 py-2 font-sans text-slate-600 dark:text-slate-400 max-w-xs truncate font-medium">
                           {tx.reason || '—'}
                         </td>
-                        <td className="px-4 py-2 text-slate-300">
+                        <td className="px-4 py-2 text-slate-700 dark:text-slate-300 font-semibold">
                           {tx.actor_username || 'SYSTEM'}
                         </td>
                       </tr>
@@ -252,7 +252,7 @@ export const InventoryDetailModal: React.FC<InventoryDetailModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
             <span className="text-[11px] text-slate-500">
               Perpetual ledger updates atomically on every approved dispensing and shipment receipt.
             </span>

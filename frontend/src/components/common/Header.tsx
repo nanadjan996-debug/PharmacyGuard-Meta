@@ -55,13 +55,14 @@ export const Header: React.FC<HeaderProps> = ({ currentWorkspace, onNavigateWork
     if (switchingRole) return;
     setSwitchingRole(role);
     try {
-      // Synchronously align workspace state and URL to prevent race conditions during role switch
+      // 1. Authenticate with real backend API for the target demo role FIRST
+      await switchRole(role);
+      // 2. Only navigate to the target workspace after new credentials and roles are active
       if (targetWorkspace && onNavigateWorkspace) {
         onNavigateWorkspace(targetWorkspace);
       }
-      await switchRole(role);
-    } catch {
-      // Handled by AuthContext error state
+    } catch (err) {
+      console.error('Failed to switch demo role:', err);
     } finally {
       setSwitchingRole(null);
     }
