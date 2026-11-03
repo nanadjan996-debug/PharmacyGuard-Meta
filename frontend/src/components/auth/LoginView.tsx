@@ -60,6 +60,11 @@ export const LoginView: React.FC = () => {
     e.preventDefault();
     if (!username.trim() || !password) return;
     try {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('workspace');
+        window.history.replaceState({}, '', url.toString());
+      }
       await login({ username: username.trim(), password });
     } catch {
       // Error handled by AuthContext
@@ -73,6 +78,12 @@ export const LoginView: React.FC = () => {
     setPassword(creds.password);
     setActiveSubmittingRole(role);
     try {
+      if (typeof window !== 'undefined') {
+        const targetWs = role === 'chief_pharmacist' ? 'chief' : role === 'pharmacy_student' ? 'student' : 'staff';
+        const url = new URL(window.location.href);
+        url.searchParams.set('workspace', targetWs);
+        window.history.replaceState({}, '', url.toString());
+      }
       await login(creds);
     } catch {
       // Error handled by AuthContext

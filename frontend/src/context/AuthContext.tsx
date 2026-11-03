@@ -144,6 +144,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch {
       // Best-effort backend logout, always clear frontend state
     } finally {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('workspace');
+        url.searchParams.delete('tab');
+        url.searchParams.delete('case');
+        url.searchParams.delete('rx');
+        window.history.replaceState({}, '', url.toString());
+      }
       api.setToken(null);
       setUser(null);
       setToken(null);

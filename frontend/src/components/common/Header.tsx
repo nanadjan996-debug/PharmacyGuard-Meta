@@ -32,7 +32,7 @@ const roleDisplayMap: Record<
   },
 };
 
-export const Header: React.FC<HeaderProps> = ({ onNavigateWorkspace }) => {
+export const Header: React.FC<HeaderProps> = ({ currentWorkspace, onNavigateWorkspace }) => {
   const { user, logout, switchRole, isLoading } = useAuth();
   const [switchingRole, setSwitchingRole] = useState<UserRole | null>(null);
 
@@ -40,14 +40,28 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateWorkspace }) => {
   const primaryRole: UserRole = (user?.roles?.[0] as UserRole) || 'staff_pharmacist';
 
   const handleRoleSwitch = async (role: UserRole) => {
-    if (primaryRole === role || switchingRole) return;
+    const targetWorkspace = roleDisplayMap[role]?.workspace;
+
+    // If already authenticated with this role:
+    if (primaryRole === role) {
+      // If currently stuck on an unauthorized or mismatched workspace (e.g. 403 Access Denied),
+      // clicking the role button immediately returns the user to their authorized workspace
+      if (targetWorkspace && onNavigateWorkspace && currentWorkspace !== targetWorkspace) {
+        onNavigateWorkspace(targetWorkspace);
+      }
+      return;
+    }
+
+    if (switchingRole) return;
     setSwitchingRole(role);
     try {
-      await switchRole(role);
-      const targetWorkspace = roleDisplayMap[role]?.workspace;
+      // Synchronously align workspace state and URL to prevent race conditions during role switch
       if (targetWorkspace && onNavigateWorkspace) {
         onNavigateWorkspace(targetWorkspace);
       }
+      await switchRole(role);
+    } catch {
+      // Handled by AuthContext error state
     } finally {
       setSwitchingRole(null);
     }
@@ -105,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateWorkspace }) => {
             {(['staff_pharmacist', 'chief_pharmacist', 'pharmacy_student'] as UserRole[]).map((role) => {
               const config = roleDisplayMap[role];
               const IconComponent = config.icon;
-              const isActive = primaryRole === role;
+              const isActive = primaryRole === role && (currentWorkspace === undefined || currentWorkspace === config.workspace);
               const isSwitching = switchingRole === role;
 
               return (

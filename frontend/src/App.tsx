@@ -56,6 +56,18 @@ const MainLayout: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Synchronize workspace state with URL parameters on user authentication / role transitions
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('workspace');
+      if (param === 'staff' || param === 'chief' || param === 'student') {
+        setWorkspace(param as WorkspaceType);
+      } else {
+        setWorkspace(null);
+      }
+    }
+  }, [user]);
+
   // Strict role verification for the target workspace
   const isAuthorized = useMemo(() => {
     if (!user || !user.roles) return false;
