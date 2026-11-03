@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Calendar,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
 import {
@@ -16,6 +17,7 @@ import {
   StudentSubmissionResponse,
 } from '../../types/api';
 import { Button } from '../common/Button';
+import { ClinicalReportModal } from './ClinicalReportModal';
 import { Modal } from '../common/Modal';
 import { SkeletonLoader } from '../common/SkeletonLoader';
 import { EmptyState } from '../common/EmptyState';
@@ -41,6 +43,7 @@ export const StudentSubmissionHistory: React.FC<StudentSubmissionHistoryProps> =
   // Inspection modal state
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [inspectionData, setInspectionData] = useState<StudentSubmissionResponse | null>(null);
+  const [showHistoryReport, setShowHistoryReport] = useState<boolean>(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -461,6 +464,15 @@ export const StudentSubmissionHistory: React.FC<StudentSubmissionHistoryProps> =
                 {inspectionData.case_code} • Attempt #{inspectionData.attempt_number}
               </span>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistoryReport(true)}
+                  className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1 text-indigo-600" />
+                  View Report
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleCloseModal}>
                   Close
                 </Button>
@@ -483,6 +495,15 @@ export const StudentSubmissionHistory: React.FC<StudentSubmissionHistoryProps> =
           </div>
         )}
       </Modal>
+
+      {/* Official Clinical Assessment Report Modal Preview */}
+      {showHistoryReport && inspectionData && (
+        <ClinicalReportModal
+          isOpen={showHistoryReport}
+          onClose={() => setShowHistoryReport(false)}
+          submission={inspectionData}
+        />
+      )}
     </div>
   );
 };

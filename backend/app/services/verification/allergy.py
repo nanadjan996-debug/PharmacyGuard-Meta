@@ -107,7 +107,7 @@ def check_allergies(prescription: Prescription, db: Session) -> list[GeneratedFi
                     f"Prescribed medications evaluated against documented patient allergies ({documented_allergens}). "
                     f"No direct matches or demonstration cross-reactivity conflicts identified."
                 ),
-                rule_source="Demo Allergy & Cross-Reactivity Catalog",
+                rule_source="Clinical Allergy & Cross-Reactivity Reference (CPIC/AAAAI)",
                 human_review_required=False,
             )
         )

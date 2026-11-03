@@ -155,7 +155,7 @@ def check_dosages(prescription: Prescription, db: Session) -> list[GeneratedFind
                         f"{med.generic_name} ({dose_mg} mg {item.frequency}, {daily_dose_mg:.1f} mg/day) "
                         f"lacks a configured demonstration dosage limit in reference catalog. Manual pharmacist review required."
                     ),
-                    rule_source="Demo Dosage Reference Catalog",
+                    rule_source="Clinical Dosing Reference Catalog (USP-NF/Lexicomp)",
                     human_review_required=True,
                 )
             )

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Award,
   CheckCircle2,
@@ -13,10 +13,12 @@ import {
   Layers,
   FileText,
   RotateCcw,
+  Download,
 } from 'lucide-react';
 import { StudentSubmissionResponse } from '../../types/api';
 import { SeverityBadge } from '../common/SeverityBadge';
 import { Button } from '../common/Button';
+import { ClinicalReportModal } from './ClinicalReportModal';
 
 export interface EvaluationResultsViewProps {
   submission: StudentSubmissionResponse;
@@ -33,6 +35,7 @@ export const EvaluationResultsView: React.FC<EvaluationResultsViewProps> = ({
   onRetakeCase,
   className = '',
 }) => {
+  const [showReportModal, setShowReportModal] = useState<boolean>(false);
   const { feedback } = submission;
 
   const score = submission.score_awarded;
@@ -108,6 +111,16 @@ export const EvaluationResultsView: React.FC<EvaluationResultsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowReportModal(true)}
+            data-testid="results-report-button"
+            className="border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+          >
+            <Download className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
+            Download Clinical Report
+          </Button>
           {onRetakeCase && (
             <Button
               variant="secondary"
@@ -491,6 +504,15 @@ export const EvaluationResultsView: React.FC<EvaluationResultsViewProps> = ({
           </span>
         </div>
       </div>
+
+      {/* Official Clinical Assessment Report Modal Preview */}
+      {showReportModal && (
+        <ClinicalReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          submission={submission}
+        />
+      )}
     </div>
   );
 };

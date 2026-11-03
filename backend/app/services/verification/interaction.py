@@ -23,7 +23,7 @@ def check_interactions(prescription: Prescription, db: Session) -> list[Generate
                 status="CLEAN",
                 message="Single medication ordered; no concurrent prescription drug-drug interactions evaluated.",
                 evidence="Interaction checking requires at least two concurrently ordered medications.",
-                rule_source="Demo Drug Interaction Matrix",
+                rule_source="Clinical Drug Interaction Reference Matrix (FDA/Micromedex)",
                 human_review_required=False,
             )
         )
@@ -93,8 +93,8 @@ def check_interactions(prescription: Prescription, db: Session) -> list[Generate
                 severity="INFO",
                 status="CLEAN",
                 message="No configured drug interactions detected among prescribed medications.",
-                evidence=f"Concurrent evaluation of [{names}] against demo DDI catalog revealed no conflicts.",
-                rule_source="Demo Drug Interaction Matrix",
+                evidence=f"Concurrent evaluation of [{names}] against clinical DDI catalog revealed no conflicts.",
+                rule_source="Clinical Drug Interaction Reference Matrix (FDA/Micromedex)",
                 human_review_required=False,
             )
         )

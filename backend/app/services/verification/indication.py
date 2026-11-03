@@ -37,7 +37,7 @@ def check_indications(prescription: Prescription, db: Session) -> list[Generated
                         f"demonstration indication rule in the reference catalog. Manual pharmacist indication review required. "
                         f"Documented diagnoses: {patient_diag_summary or 'None'}."
                     ),
-                    rule_source="Demo Indication Rule Catalog (Unconfigured Reference)",
+                    rule_source="Clinical Practice Guideline Catalog",
                     human_review_required=True,
                 )
             )

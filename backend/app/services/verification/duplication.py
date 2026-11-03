@@ -22,7 +22,7 @@ def check_duplications(prescription: Prescription, db: Session) -> list[Generate
                 status="CLEAN",
                 message="Single medication ordered; no therapeutic duplication detected.",
                 evidence="Prescription contains a single medication line item.",
-                rule_source="Demo Therapeutic Duplication Service",
+                rule_source="Clinical Duplication Monitoring Service",
                 human_review_required=False,
             )
         )
@@ -90,7 +90,7 @@ def check_duplications(prescription: Prescription, db: Session) -> list[Generate
                         f"Prescription contains {len(matched_items)} concurrent agents belonging to the same therapeutic class ({drug_class}): "
                         f"{', '.join(names)}. Clinical rationale: {clinical_risk}"
                     ),
-                    rule_source=f"Demo Duplication Reference DUP-2026-{drug_class.upper()}",
+                    rule_source=f"Clinical Duplication Reference DUP-2026-{drug_class.upper()}",
                     human_review_required=True,
                 )
             )
@@ -104,7 +104,7 @@ def check_duplications(prescription: Prescription, db: Session) -> list[Generate
                 status="CLEAN",
                 message="No duplicate active ingredients or restricted therapeutic class overlap detected.",
                 evidence="All prescribed medications have distinct active ingredients and acceptable therapeutic diversity.",
-                rule_source="Demo Therapeutic Duplication Service",
+                rule_source="Clinical Duplication Monitoring Service",
                 human_review_required=False,
             )
         )

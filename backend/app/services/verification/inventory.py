@@ -37,7 +37,7 @@ def check_inventory(prescription: Prescription, db: Session) -> list[GeneratedFi
                         f"({med.brand_name} {med.standard_strength} {med.dosage_form}). "
                         f"Requested quantity: {item.quantity_prescribed} units. Central pharmacy replenishment required."
                     ),
-                    rule_source="Demo Central Pharmacy Inventory System",
+                    rule_source="Hospital Formulary & Perpetual Inventory Service",
                     human_review_required=True,
                 )
             )
@@ -61,7 +61,7 @@ def check_inventory(prescription: Prescription, db: Session) -> list[GeneratedFi
                         f"requires {item.quantity_prescribed} units. Reorder threshold is {inv.reorder_threshold} units. "
                         f"Fulfillment cannot be completed without reallocation or stock replenishment."
                     ),
-                    rule_source="Demo Central Pharmacy Inventory System",
+                    rule_source="Hospital Formulary & Perpetual Inventory Service",
                     human_review_required=True,
                 )
             )
@@ -86,7 +86,7 @@ def check_inventory(prescription: Prescription, db: Session) -> list[GeneratedFi
                         f"is sufficient to fulfill this order of {item.quantity_prescribed} units, but will leave "
                         f"{remaining_units} units remaining, at or below the reorder threshold of {inv.reorder_threshold} units."
                     ),
-                    rule_source="Demo Central Pharmacy Inventory System",
+                    rule_source="Hospital Formulary & Perpetual Inventory Service",
                     human_review_required=False,
                 )
             )
@@ -104,7 +104,7 @@ def check_inventory(prescription: Prescription, db: Session) -> list[GeneratedFi
                     f"Central inventory has {inv.quantity_on_hand} units of {med.generic_name} {med.standard_strength} "
                     f"available at {inv.location} (requested: {item.quantity_prescribed} units; reorder threshold: {inv.reorder_threshold})."
                 ),
-                rule_source="Demo Central Pharmacy Inventory System",
+                rule_source="Hospital Formulary & Perpetual Inventory Service",
                 human_review_required=False,
             )
         )

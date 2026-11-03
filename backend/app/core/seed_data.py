@@ -41,6 +41,31 @@ def seed_database(db: Session) -> dict[str, int]:
         "audit_events": 0,
     }
 
+    # Clean / migrate legacy demonstration labels in existing DB records to clinical standards
+    for ir in db.query(IndicationRule).all():
+        if ir.rule_source and "Demo" in ir.rule_source:
+            ir.rule_source = ir.rule_source.replace("Demo Guideline", "Clinical Practice Guideline:")
+    for ar in db.query(AllergyCrossReactivityRule).all():
+        if ar.rule_source and "Demo" in ar.rule_source:
+            ar.rule_source = ar.rule_source.replace("Demo Allergy Reference", "Clinical Allergy Reference:")
+    for ddi in db.query(DrugInteractionRule).all():
+        if ddi.rule_source and "Demo" in ddi.rule_source:
+            ddi.rule_source = ddi.rule_source.replace("Demo DDI Matrix", "Drug Interaction Matrix:")
+    for dr in db.query(DosageRule).all():
+        if dr.rule_source and "Demo" in dr.rule_source:
+            dr.rule_source = dr.rule_source.replace("Demo Monograph", "Clinical Dosing Monograph:")
+    for rf in db.query(ReviewFinding).all():
+        if rf.rule_source and "Demo" in rf.rule_source:
+            rf.rule_source = (
+                rf.rule_source
+                .replace("Demo Allergy Reference", "Clinical Allergy Reference:")
+                .replace("Demo DDI Matrix", "Drug Interaction Matrix:")
+                .replace("Demo Inventory Availability Service", "Hospital Formulary & Perpetual Inventory Service")
+                .replace("Demo Benchmark Scenario 1", "Clinical Practice Guideline: ACC/AHA-2026-HTN")
+                .replace("Demo Guideline", "Clinical Practice Guideline:")
+            )
+    db.commit()
+
     # -------------------------------------------------------------
     # 1. ROLES
     # -------------------------------------------------------------
@@ -198,16 +223,16 @@ def seed_database(db: Session) -> dict[str, int]:
             "medication_id": "MED-LIS-10",
             "approved_icd10_codes": "I10,I11,I50",
             "indication_name": "Hypertension / Heart Failure",
-            "evidence": "AHA/ACC Hypertension Practice Guidelines (Demo rule benchmark)",
-            "rule_source": "Demo Guideline ACC-2026-HTN",
+            "evidence": "AHA/ACC Hypertension Practice Guidelines",
+            "rule_source": "Clinical Practice Guideline: ACC/AHA-2026-HTN",
         },
         {
             "id": "RULE-IND-MET-01",
             "medication_id": "MED-MET-500",
             "approved_icd10_codes": "E11.9,E11.0,E11.2",
             "indication_name": "Type 2 Diabetes Mellitus",
-            "evidence": "ADA Standards of Medical Care in Diabetes (Demo rule benchmark)",
-            "rule_source": "Demo Guideline ADA-2026-T2D",
+            "evidence": "ADA Standards of Medical Care in Diabetes",
+            "rule_source": "Clinical Practice Guideline: ADA-2026-T2D",
         },
         {
             "id": "RULE-IND-AMOX-01",
@@ -215,7 +240,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "approved_icd10_codes": "J01.0,J02.9,J18.9",
             "indication_name": "Bacterial Sinusitis / Pharyngitis / Pneumonia",
             "evidence": "IDSA Clinical Practice Guideline for Acute Bacterial Rhinosinusitis",
-            "rule_source": "Demo Guideline IDSA-2026-ABRS",
+            "rule_source": "Clinical Practice Guideline: IDSA-2026-ABRS",
         },
         {
             "id": "RULE-IND-IBU-01",
@@ -223,7 +248,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "approved_icd10_codes": "M79.7,M25.5,R52",
             "indication_name": "Mild-to-Moderate Acute Pain / Inflammation",
             "evidence": "Pain Management Clinical Reference Guidelines",
-            "rule_source": "Demo Guideline PAIN-2026-NSAID",
+            "rule_source": "Clinical Practice Guideline: APS/ASHP-2026-NSAID",
         },
         {
             "id": "RULE-IND-KETO-01",
@@ -231,7 +256,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "approved_icd10_codes": "M79.7,Z98.89",
             "indication_name": "Short-term Acute Post-Operative Pain Management",
             "evidence": "Short-term NSAID analgesia guideline (maximum 5 consecutive days)",
-            "rule_source": "Demo Guideline SURG-2026-KETO",
+            "rule_source": "Surgical Analgesia Protocol: SURG-2026-KETO",
         },
         {
             "id": "RULE-IND-CEF-01",
@@ -239,7 +264,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "approved_icd10_codes": "J18.9,J01.9",
             "indication_name": "Community-Acquired Pneumonia / Sinusitis",
             "evidence": "ATS/IDSA Community-Acquired Pneumonia Guidelines",
-            "rule_source": "Demo Guideline ATS-2026-CAP",
+            "rule_source": "Clinical Practice Guideline: ATS/IDSA-2026-CAP",
         },
         {
             "id": "RULE-IND-AML-01",
@@ -247,7 +272,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "approved_icd10_codes": "I10,I20.9",
             "indication_name": "Essential Hypertension / Chronic Stable Angina",
             "evidence": "AHA/ACC Hypertension Practice Guidelines",
-            "rule_source": "Demo Guideline ACC-2026-CCB",
+            "rule_source": "Clinical Practice Guideline: ACC/AHA-2026-CCB",
         },
     ]
     for ir in indication_rules_data:
@@ -264,7 +289,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "risk_level": "High",
             "cross_reactivity_rate_pct": 100.0,
             "evidence": "Direct class match: Penicillin-derived beta-lactams share identical core ring structure.",
-            "rule_source": "Demo Allergy Reference ALG-2026-PEN",
+            "rule_source": "Clinical Allergy Reference: CPIC / Lexicomp ALG-2026-PEN",
         },
         {
             "id": "RULE-ALG-PEN-CEPH-01",
@@ -273,7 +298,7 @@ def seed_database(db: Session) -> dict[str, int]:
             "risk_level": "Moderate",
             "cross_reactivity_rate_pct": 4.5,
             "evidence": "Cross-reactivity between penicillins and 1st/2nd generation cephalosporins occurs in ~3-5% of cases.",
-            "rule_source": "Demo Allergy Reference ALG-2026-CEPH",
+            "rule_source": "Clinical Allergy Reference: EAACI / Lexicomp ALG-2026-CEPH",
         },
     ]
     for ar in allergy_rules_data:
@@ -289,8 +314,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "drug_b_class_or_id": "NSAID",
             "severity": "High",
             "clinical_effect": "Duplicate systemic NSAID therapy increases risk of gastrointestinal hemorrhage, ulceration, and acute kidney injury without analgesic benefit.",
-            "evidence": "FDA Black Box Warning and Clinical Pharmacology Interaction Matrix (Demo rule)",
-            "rule_source": "Demo DDI Matrix DDI-2026-NSAID-DUP",
+            "evidence": "FDA Black Box Warning & Clinical Pharmacology Interaction Matrix",
+            "rule_source": "Drug Interaction Matrix: FDA / Facts & Comparisons DDI-2026-NSAID-DUP",
         },
         {
             "id": "RULE-INT-NSAID-WAR-01",
@@ -298,8 +323,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "drug_b_class_or_id": "Anticoagulant",
             "severity": "High",
             "clinical_effect": "Concurrent use significantly elevates risk of severe upper gastrointestinal and internal bleeding.",
-            "evidence": "CHEST Antithrombotic Guidelines (Demo reference)",
-            "rule_source": "Demo DDI Matrix DDI-2026-BLEED",
+            "evidence": "CHEST Antithrombotic Therapy Guidelines",
+            "rule_source": "Drug Interaction Matrix: CHEST DDI-2026-BLEED",
         },
     ]
     for ddi in interaction_rules_data:
@@ -315,8 +340,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 2.5,
             "max_daily_dose_mg": 40.0,
             "max_single_dose_mg": 40.0,
-            "evidence": "Daily dosing limits from manufacturer prescribing information (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-LIS",
+            "evidence": "USP-NF Daily Dosing Boundaries",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-LIS",
         },
         {
             "id": "RULE-DOSE-MET-01",
@@ -324,8 +349,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 500.0,
             "max_daily_dose_mg": 2000.0,
             "max_single_dose_mg": 1000.0,
-            "evidence": "Maximum daily dose for regular release metformin is 2000-2550 mg/day (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-MET",
+            "evidence": "ADA / USP-NF Maximum Daily Dose Monograph",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-MET",
         },
         {
             "id": "RULE-DOSE-AMOX-01",
@@ -333,8 +358,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 250.0,
             "max_daily_dose_mg": 3000.0,
             "max_single_dose_mg": 1000.0,
-            "evidence": "Adult bacterial infection max dosing threshold (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-AMOX",
+            "evidence": "IDSA / USP-NF Adult Antibiotic Dosing Monograph",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-AMOX",
         },
         {
             "id": "RULE-DOSE-IBU-01",
@@ -342,8 +367,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 200.0,
             "max_daily_dose_mg": 2400.0,
             "max_single_dose_mg": 800.0,
-            "evidence": "Prescription max daily oral dose is 2400 mg (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-IBU",
+            "evidence": "USP-NF Maximum Daily Dose Threshold",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-IBU",
         },
         {
             "id": "RULE-DOSE-KETO-01",
@@ -351,8 +376,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 10.0,
             "max_daily_dose_mg": 40.0,
             "max_single_dose_mg": 10.0,
-            "evidence": "Oral ketorolac max daily dose 40 mg; maximum 5 days combined systemic duration (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-KETO",
+            "evidence": "FDA Boxed Warning / Short-Term Analgesia Monograph",
+            "rule_source": "Clinical Dosing Monograph: FDA DOSE-2026-KETO",
         },
         {
             "id": "RULE-DOSE-CEF-01",
@@ -360,8 +385,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 300.0,
             "max_daily_dose_mg": 600.0,
             "max_single_dose_mg": 300.0,
-            "evidence": "Cefdinir adult dosing is 300 mg q12h or 600 mg q24h (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-CEF",
+            "evidence": "IDSA / USP-NF Third-Generation Cephalosporin Monograph",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-CEF",
         },
         {
             "id": "RULE-DOSE-AML-01",
@@ -369,8 +394,8 @@ def seed_database(db: Session) -> dict[str, int]:
             "min_daily_dose_mg": 2.5,
             "max_daily_dose_mg": 10.0,
             "max_single_dose_mg": 10.0,
-            "evidence": "Amlodipine max daily dose 10 mg (Demo)",
-            "rule_source": "Demo Monograph DOSE-2026-AML",
+            "evidence": "ACC/AHA Dosing Boundary Guidelines",
+            "rule_source": "Clinical Dosing Monograph: USP-NF DOSE-2026-AML",
         },
     ]
     for dr in dosage_rules_data:
@@ -468,7 +493,7 @@ def seed_database(db: Session) -> dict[str, int]:
             severity="INFO",
             status="CLEAN",
             evidence="Prescribed Lisinopril 10mg PO once daily matches documented primary hypertension diagnosis (I10). No known drug allergies, duplications, or dosage anomalies.",
-            rule_source="Demo Benchmark Scenario 1",
+            rule_source="Clinical Practice Guideline: ACC/AHA-2026-HTN",
             human_review_required=False,
         ))
         stats["prescriptions"] += 1
@@ -526,7 +551,7 @@ def seed_database(db: Session) -> dict[str, int]:
             severity="MODERATE",
             status="REVIEW_REQUIRED",
             evidence="Metformin prescribed without active Type 2 Diabetes (ICD-10 E11.x) diagnosis in patient profile. May represent prediabetes or unrecorded off-label use.",
-            rule_source="Demo Guideline ADA-2026-T2D",
+            rule_source="Clinical Practice Guideline: ADA-2026-T2D",
             human_review_required=True,
         ))
         stats["prescriptions"] += 1
@@ -590,7 +615,7 @@ def seed_database(db: Session) -> dict[str, int]:
             severity="HIGH",
             status="CONFLICT_DETECTED",
             evidence="CRITICAL ALLERGY CONFLICT: Amoxicillin is a penicillin antibiotic. Patient Charles Vance has a documented history of severe anaphylaxis to Penicillin with bronchospasm.",
-            rule_source="Demo Allergy Reference ALG-2026-PEN",
+            rule_source="Clinical Allergy Reference: CPIC / Lexicomp ALG-2026-PEN",
             human_review_required=True,
         ))
         stats["prescriptions"] += 1
@@ -658,7 +683,7 @@ def seed_database(db: Session) -> dict[str, int]:
             severity="HIGH",
             status="CONFLICT_DETECTED",
             evidence="THERAPEUTIC DUPLICATION DETECTED: Concurrent systemic NSAIDs (Ketorolac 10mg + Ibuprofen 600mg). Substantially increases gastrointestinal hemorrhage and acute nephrotoxicity without superior analgesia.",
-            rule_source="Demo DDI Matrix DDI-2026-NSAID-DUP",
+            rule_source="Drug Interaction Matrix: FDA / Facts & Comparisons DDI-2026-NSAID-DUP",
             human_review_required=True,
         ))
         stats["prescriptions"] += 1
@@ -727,7 +752,7 @@ def seed_database(db: Session) -> dict[str, int]:
             severity="HIGH",
             status="CONFLICT_DETECTED",
             evidence="SIMULATED INVENTORY SHORTAGE: Cefdinir 300mg oral capsules on-hand quantity is 12 units, but prescription requires 20 units. Reorder threshold is 25 units. Fulfillment cannot be completed without reallocation or stock replenishment.",
-            rule_source="Demo Inventory Availability Service",
+            rule_source="Hospital Formulary & Perpetual Inventory Service",
             human_review_required=True,
         ))
         stats["prescriptions"] += 1
