@@ -19,6 +19,7 @@ Hospital pharmacies process hundreds of complex prescriptions daily under severe
 1. **Authoritative Deterministic Engine:** Hard clinical safety rules (IgE allergy cross-reactivity, pharmacokinetic drug interactions, daily dosage limits, therapeutic duplication, and real-time inventory shortage) are evaluated strictly deterministically with zero LLM dependence.
 2. **Non-Authoritative AI Clinical Synthesis:** Meta's **Muse Spark Open** frontier model (hosted via Baseten inference) interprets structured clinical alert codes into natural-language clinical context, mechanistic rationales, clinical uncertainties, and review considerations for the human pharmacist.
 3. **Licensed Pharmacist Primacy:** AI is strictly prohibited from approving prescriptions, authorizing dispensing, or altering finding severities. Pharmacist override of high-severity alerts requires mandatory written rationale, committed to an append-only immutable audit ledger.
+4. **Patient Confidentiality & Zero-PHI Pipeline (HIPAA Safe):** To protect patient confidentiality, patient names, medical record numbers (MRNs), dates of birth, and direct personal identifiers are strictly excluded and redacted from all AI payloads. Meta Muse Spark Open receives only de-identified clinical parameters (age in years, weight, active allergies, condition codes, and prescribed medications). The AI never receives, processes, or outputs patient names.
 
 ---
 

@@ -391,3 +391,27 @@ def test_ai_explanation_endpoint_unauthenticated(client, db_session: Session):
     rx = db_session.query(Prescription).first()
     res = client.post(f"/api/v1/prescriptions/{rx.id}/ai-explanation")
     assert res.status_code == 401
+
+
+def test_baseten_zero_phi_patient_deidentification(db_session: Session, sample_findings):
+    """Verify that patient name, MRN, and personal identifiers are strictly excluded from AI payload."""
+    service = BasetenService(api_key="mock-key")
+    rx = db_session.query(Prescription).first()
+    # Add clinical notes containing the patient's name
+    first_name = rx.patient.first_name
+    last_name = rx.patient.last_name
+    rx.clinical_notes = f"Patient {first_name} {last_name} was seen today for consultation."
+
+    context = service._extract_minimal_context(rx, sample_findings)
+
+    # 1. Names and MRN are strictly excluded from the patient dictionary
+    assert "first_name" not in context["patient"]
+    assert "last_name" not in context["patient"]
+    assert "name" not in context["patient"]
+    assert "mrn" not in context["patient"]
+    assert "date_of_birth" not in context["patient"]
+
+    # 2. Clinical notes have patient name redacted to [PATIENT]
+    assert first_name not in context["clinical_notes"]
+    assert last_name not in context["clinical_notes"]
+    assert "[PATIENT]" in context["clinical_notes"]

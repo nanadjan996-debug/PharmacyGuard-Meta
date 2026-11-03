@@ -11,6 +11,7 @@ import {
   Info,
   RefreshCw,
   ListChecks,
+  Lock,
 } from 'lucide-react';
 import { AIExplanationResponse } from '../../types/api';
 import { Button } from '../common/Button';
@@ -143,6 +144,21 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
               {explanation?.disclaimer ||
                 'Meta Muse Spark Open interprets deterministic safety findings into clinical explanations. It has no authority to approve prescriptions, authorize dispensing, or alter rule severities.'}
             </p>
+          </div>
+        </div>
+
+        {/* Patient Confidentiality & Zero-PHI Privacy Guardrail */}
+        <div
+          role="note"
+          aria-label="Patient Privacy & Zero-PHI Guardrail"
+          className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 text-[11px] text-emerald-900 dark:text-emerald-300 flex items-start space-x-2"
+        >
+          <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-0.5">
+            <span className="font-semibold">Patient Confidentiality Guardrail:</span>{' '}
+            <span className="text-[10.5px] text-emerald-800 dark:text-emerald-400">
+              Zero-PHI payload. Patient names, MRNs, and direct identifiers are strictly excluded from AI inference. Meta Muse Spark Open receives only de-identified clinical parameters.
+            </span>
           </div>
         </div>
 

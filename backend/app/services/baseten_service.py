@@ -222,6 +222,19 @@ class BasetenService:
                 "evidence": getattr(f, "evidence", getattr(f, "message", "")),
             })
 
+        # Patient Confidentiality Guardrail:
+        # Sanitize clinical notes to redact any incidental mention of patient names
+        raw_notes = getattr(prescription, "clinical_notes", None) or "None provided."
+        sanitized_notes = raw_notes
+        if patient:
+            first_name = str(getattr(patient, "first_name", "") or "").strip()
+            last_name = str(getattr(patient, "last_name", "") or "").strip()
+            if len(first_name) > 1:
+                sanitized_notes = re.sub(rf"\b{re.escape(first_name)}\b", "[PATIENT]", sanitized_notes, flags=re.IGNORECASE)
+            if len(last_name) > 1:
+                sanitized_notes = re.sub(rf"\b{re.escape(last_name)}\b", "[PATIENT]", sanitized_notes, flags=re.IGNORECASE)
+
+        # Zero-PHI Payload: patient name, MRN, date_of_birth, and contact info are NEVER included.
         return {
             "patient": {
                 "age": age_str,
@@ -230,7 +243,7 @@ class BasetenService:
                 "allergies": allergies_list,
                 "conditions": conditions_list,
             },
-            "clinical_notes": getattr(prescription, "clinical_notes", None) or "None provided.",
+            "clinical_notes": sanitized_notes,
             "prescribed_medications": medications_list,
             "deterministic_findings": findings_list,
         }
@@ -254,7 +267,11 @@ class BasetenService:
             "IgE-mediated cross-reactivity, duplicate cyclooxygenase inhibition), and patient context.\n"
             "5. UNCERTAINTIES & MISSING DATA: Identify missing clinical parameters, such as unmonitored lab values "
             "(e.g., eGFR, INR, electrolytes) or unclear clinical indications.\n"
-            "6. JSON OUTPUT FORMAT: Output ONLY a single, valid, complete JSON object matching this schema exactly:\n"
+            "6. PATIENT PRIVACY & DE-IDENTIFICATION: The payload you receive is strictly de-identified (containing "
+            "only clinical parameters: age, gender, weight, allergies, conditions, medications). Patient names and "
+            "direct identifiers are strictly excluded. You must NEVER request, infer, or output patient names or "
+            "personal identifiers in any field of your response.\n"
+            "7. JSON OUTPUT FORMAT: Output ONLY a single, valid, complete JSON object matching this schema exactly:\n"
             "{\n"
             '  "summary": "Concise 2-sentence clinical synthesis for the human pharmacist.",\n'
             '  "finding_explanations": [\n'
