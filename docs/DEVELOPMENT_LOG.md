@@ -924,6 +924,43 @@ Future clinical releases of PharmacyGuard will implement a four-pillar safety ar
    - If a treatment recommendation conflicts with population-specific guidelines, the deterministic safety engine immediately triggers a **HIGH SEVERITY POPULATION PHARMACOTHERAPY ALERT** and flags the prescription for mandatory human pharmacist review.
 4. **Reference Document**: Detailed implementation specification published in `docs/CLINICAL_POPULATION_GUIDANCE_SPEC.md`.
 
+---
+
+## Milestone 11: Alert-Prioritized Cognitive Ergonomics & Alert Fatigue Mitigation in AI Panel
+
+- **Date**: 2026-11-04  
+- **Commit**: `247aa11` — *"feat(ui): prioritize actionable clinical alerts and collapse clean findings in AI panel to eliminate cognitive clutter"*  
+- **Objective**: Mitigate hospital pharmacist alert fatigue and eliminate visual duplication between deterministic checklist findings and Meta Muse Spark Open AI synthesis.
+
+### Clinical & Ergonomic Rationale
+In high-volume hospital pharmacy verification workflows, incoming orders routinely have several rules that evaluate as completely clean (e.g., single-agent orders with no drug-drug interaction, no therapeutic duplication, standard indication match, dose within normal bounds, and sufficient pharmacy stock).
+
+Previously, the AI Explanation panel mirrored every single deterministic rule sequentially under `Finding Interpretations (6)`. This created two clinical problems:
+1. **Cognitive Redundancy**: The right-column AI card repeated the exact same 5 clean checks that were already clearly displayed in the left-column deterministic table.
+2. **Alert Displacement**: The 5 redundant clean cards occupied excessive vertical space, pushing critical actionable recommendations (e.g., the review considerations suggesting Azithromycin as a non-beta-lactam alternative) below the browser fold, forcing clinicians to scroll past non-actionable data.
+
+### Architectural & UI Implementation
+In [`frontend/src/components/prescriptions/AIExplanationSection.tsx`](../frontend/src/components/prescriptions/AIExplanationSection.tsx):
+1. **Dynamic Finding Segmentation**:
+   - `alertFindings`: Extracted all findings with `HIGH`, `WARNING`, or `MEDIUM` severity requiring pharmacist intervention.
+   - `cleanFindings`: Extracted all routine `INFO` and `LOW` findings that passed without clinical conflict.
+2. **Prominent Alert Presentation**:
+   - Active clinical alerts (e.g., `RULE-ALG-PEN-01` for Penicillin/Amoxicillin cross-reactivity) are rendered immediately at the top with distinct severity badges and high-visibility borders under an actionable header: *`Actionable Clinical Alerts (N) — Pharmacist Review Required`*.
+3. **Collapsible Clean Summary Bar**:
+   - Routine clean checks are grouped into a compact, single-line bar:  
+     *`✓ N Routine Safety Checks Verified Clean (No Conflicts) [Show Details / Hide]`*.
+   - When toggled, clean findings smoothly expand with an emerald accent indicator, preserving complete auditability without cluttering the primary review surface.
+4. **Immediate Visibility of Actionable Recommendations**:
+   - The *Clinical Uncertainties & Missing Data* and *Review Considerations for Pharmacist* cards now sit directly below the active alert, allowing pharmacists to immediately see recommended therapeutic alternatives without vertical scrolling.
+
+### Automated Test & Build Verification
+- **Backend Pytest Suite**: 114 passed, 0 failed in 135.38s.
+- **Frontend Vitest Suite**: 115 passed, 0 failed across all 9 test suites in 65.11s.
+- **Total Passing Tests**: 229 passing tests with 0 failures.
+- **Production Build**: Clean compilation (`tsc -b && vite build`) in 31.52s.
+- **Live Deployment**: Live on Render (`pharmacyguard-meta.onrender.com`).
+
+
 
 
 

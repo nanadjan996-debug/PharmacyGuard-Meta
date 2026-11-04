@@ -86,6 +86,7 @@ PharmacyGuard features an institutional, hospital-grade EHR interface specifical
    * **Left Column (7/12 width):** Prescribed medication order line items table + Deterministic safety verification findings with severity badges + Immutable audit history.
    * **Right Column (5/12 width):** Sticky **Meta Muse Spark Open** AI Copilot consultation card.
    * **Ergonomic Benefit:** Pharmacists can review orders and findings side-by-side with the AI's clinical explanations without vertical scrolling fatigue.
+   * **Alert-Prioritized Cognitive Ergonomics:** The AI panel prioritizes active clinical alerts (e.g., high-risk allergy cross-reactivity) with prominent severity cards while collapsing routine clean findings into a compact bar (`✓ N Routine Safety Checks Verified Clean (No Conflicts) [Show Details]`). This directly mitigates alert fatigue and keeps actionable clinical recommendations (e.g., non-beta-lactam alternatives) above the fold.
    * **Zero Hidden Data:** Patient demographics (Name, MRN, DOB, Gender, Weight, Height) and Prescriber context (Doctor, Clinic, Indication notes) remain 100% visible in a consolidated header strip.
 2. **Chief Pharmacist Executive Workstation:**
    * Softened medical cards tracking real-time inventory valuation ($2,414.40), stock deficits, pending escalations, and staff override records.
@@ -157,10 +158,10 @@ The database includes 5 realistic clinical scenarios demonstrating rule coverage
 
 PharmacyGuard includes comprehensive unit, integration, and regression test suites with 100% pass rate:
 
-- **Backend Pytest Suite:** **113 passed, 0 failed** (FastAPI, SQLAlchemy, verification engine, Baseten client, RBAC, audit immutability).
-- **Frontend Vitest Suite:** **114 passed, 0 failed** across 9 test files (React 19, workspace shells, queue filters, review modals, AI explanation states).
-- **Total Tests:** **227 passing tests**.
-- **Production Build:** `npm run build` cleanly compiled (`tsc -b && vite build`, 0 errors in 32s).
+- **Backend Pytest Suite:** **114 passed, 0 failed** (FastAPI, SQLAlchemy, verification engine, Baseten client, RBAC, audit immutability).
+- **Frontend Vitest Suite:** **115 passed, 0 failed** across 9 test files (React 19, workspace shells, queue filters, review modals, AI explanation states).
+- **Total Tests:** **229 passing tests**.
+- **Production Build:** `npm run build` cleanly compiled (`tsc -b && vite build`, 0 errors in 31.5s).
 
 ---
 
