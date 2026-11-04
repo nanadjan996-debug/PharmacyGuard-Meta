@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Sparkles,
   Bot,
@@ -12,6 +12,8 @@ import {
   RefreshCw,
   ListChecks,
   Lock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { AIExplanationResponse } from '../../types/api';
 import { Button } from '../common/Button';
@@ -31,6 +33,17 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
   disabled = false,
 }) => {
   const status = explanation?.ai_status;
+  const [showCleanFindings, setShowCleanFindings] = useState(false);
+
+  const alertFindings =
+    explanation?.finding_explanations.filter(
+      (fe) => fe.severity === 'HIGH' || fe.severity === 'WARNING' || fe.severity === 'MEDIUM'
+    ) || [];
+
+  const cleanFindings =
+    explanation?.finding_explanations.filter(
+      (fe) => fe.severity !== 'HIGH' && fe.severity !== 'WARNING' && fe.severity !== 'MEDIUM'
+    ) || [];
 
   return (
     <div
@@ -272,35 +285,90 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
             </div>
           )}
 
-          {/* Finding-by-Finding Breakdown */}
+          {/* Finding-by-Finding Breakdown (Prioritized to combat Alert Fatigue) */}
           {explanation.finding_explanations.length > 0 && (
-            <div className="space-y-2.5">
-              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                Finding Interpretations ({explanation.finding_explanations.length})
-              </h4>
-              <div className="space-y-2">
-                {explanation.finding_explanations.map((fe) => (
-                  <div
-                    key={fe.rule_identifier}
-                    className="p-3.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-1.5"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <SeverityBadge severity={fe.severity as any} size="sm" />
-                      <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
-                        {fe.rule_identifier}
-                      </span>
-                      {fe.category && (
-                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                          {fe.category}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                      {fe.clinical_explanation}
-                    </p>
+            <div className="space-y-3">
+              {/* Active Clinical Alert Findings (HIGH / WARNING) */}
+              {alertFindings.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Actionable Clinical Alerts ({alertFindings.length})</span>
+                    </h4>
+                    <span className="text-[11px] text-slate-500 font-medium">Pharmacist Review Required</span>
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2">
+                    {alertFindings.map((fe) => (
+                      <div
+                        key={fe.rule_identifier}
+                        className="p-3.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/30 dark:bg-rose-950/20 shadow-2xs space-y-1.5"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <SeverityBadge severity={fe.severity as any} size="sm" />
+                          <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+                            {fe.rule_identifier}
+                          </span>
+                          {fe.category && (
+                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                              {fe.category}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed">
+                          {fe.clinical_explanation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Clean Routine Checks (Grouped / Collapsed to eliminate cognitive clutter) */}
+              {cleanFindings.length > 0 && (
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowCleanFindings(!showCleanFindings)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/70 text-xs text-slate-700 dark:text-slate-300 font-medium transition cursor-pointer shadow-2xs"
+                  >
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>{cleanFindings.length} Routine Safety Checks Verified Clean (No Conflicts)</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                      {showCleanFindings ? 'Hide' : 'Show Details'}
+                      {showCleanFindings ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </span>
+                  </button>
+
+                  {showCleanFindings && (
+                    <div className="mt-2 space-y-2 pl-3 border-l-2 border-emerald-500/40">
+                      {cleanFindings.map((fe) => (
+                        <div
+                          key={fe.rule_identifier}
+                          className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs space-y-1"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <SeverityBadge severity={fe.severity as any} size="sm" />
+                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white">
+                              {fe.rule_identifier}
+                            </span>
+                            {fe.category && (
+                              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                {fe.category}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                            {fe.clinical_explanation}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
