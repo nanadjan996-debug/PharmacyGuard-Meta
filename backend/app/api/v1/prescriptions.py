@@ -20,7 +20,7 @@ from app.schemas.review import (
 )
 from app.services.verification import VerificationEngine, VerificationResponse
 from app.schemas.ai import AIExplanationResponse
-from app.services.baseten_service import baseten_service
+from app.services import get_ai_service
 
 router = APIRouter(prefix="/prescriptions", tags=["Prescriptions & Verification Queue"])
 
@@ -425,10 +425,11 @@ async def verify_prescription(
             detail=f"Verification engine failure: {str(exc)}",
         )
 
-    # Step 2: Generate non-authoritative clinical explanation via Meta Muse Spark Open on Baseten
+    # Step 2: Generate non-authoritative clinical explanation via configured AI provider (Bedrock or Baseten)
     ai_explanation: AIExplanationResponse | None = None
+    ai_provider = get_ai_service()
     try:
-        ai_explanation = await baseten_service.generate_explanation(rx, response.findings)
+        ai_explanation = await ai_provider.generate_explanation(rx, response.findings)
     except Exception as ai_exc:
         ai_explanation = AIExplanationResponse(
             summary="AI clinical explanation could not be generated.",
@@ -496,5 +497,6 @@ async def explain_prescription_findings(
         verif_res = engine.verify(rx.id, persist=True)
         unreviewed_findings = verif_res.findings
 
-    return await baseten_service.generate_explanation(rx, unreviewed_findings)
+    ai_provider = get_ai_service()
+    return await ai_provider.generate_explanation(rx, unreviewed_findings)
 

@@ -5,11 +5,15 @@
 @tailwind utilities;
 
 @layer base {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco Pro', 'SF Pro Display', 'SF Pro Text', Roboto, 'Source Sans 3', 'Segoe UI', sans-serif;
   }
 
-  html, body {
+  html,
+  body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'San Francisco Pro', 'SF Pro Display', 'SF Pro Text', Roboto, 'Source Sans 3', 'Segoe UI', sans-serif !important;
     font-size: 15px;
     line-height: 1.5;
@@ -20,8 +24,11 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  code, kbd, samp, pre, .font-mono {
+  code,
+  kbd,
+  samp,
+  pre,
+  .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
   }
 }
-

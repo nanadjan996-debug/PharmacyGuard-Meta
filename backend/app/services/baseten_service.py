@@ -184,16 +184,17 @@ class BasetenService:
         if patient and getattr(patient, "allergies", None):
             for a in patient.allergies:
                 allergies_list.append({
-                    "allergen": getattr(a, "allergen_name", str(a)),
+                    "allergen": getattr(a, "allergen", getattr(a, "allergen_name", "Unknown")),
                     "type": getattr(a, "allergy_type", "Unknown"),
                     "severity": getattr(a, "severity", "Unknown"),
+                    "reaction": getattr(a, "reaction", ""),
                 })
 
         conditions_list = []
         if patient and getattr(patient, "diagnoses", None):
             for d in patient.diagnoses:
                 conditions_list.append({
-                    "condition": getattr(d, "condition_name", str(d)),
+                    "condition": getattr(d, "description", getattr(d, "condition_name", "Unknown")),
                     "icd10": getattr(d, "icd10_code", ""),
                 })
 

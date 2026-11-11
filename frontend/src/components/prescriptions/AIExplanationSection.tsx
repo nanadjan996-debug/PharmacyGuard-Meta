@@ -35,6 +35,15 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
   const status = explanation?.ai_status;
   const [showCleanFindings, setShowCleanFindings] = useState(false);
 
+  const isBedrock =
+    Boolean(
+      explanation?.model_name?.includes('claude') ||
+      explanation?.model_name?.includes('bedrock') ||
+      explanation?.model_name?.includes('anthropic')
+    );
+  const modelDisplayName = isBedrock ? 'Claude 3.5 Sonnet' : (explanation?.model_name || 'Meta Muse Spark Open');
+  const providerDisplayName = isBedrock ? 'Amazon Bedrock' : 'Baseten Inference';
+
   const alertFindings =
     explanation?.finding_explanations.filter(
       (fe) => fe.severity === 'HIGH' || fe.severity === 'WARNING' || fe.severity === 'MEDIUM'
@@ -60,10 +69,10 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
               </div>
               <div className="flex items-center flex-wrap gap-1.5">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                  Meta Muse Spark Open
+                  {modelDisplayName}
                 </h3>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0 whitespace-nowrap">
-                  Baseten Inference
+                  {providerDisplayName}
                 </span>
               </div>
             </div>
@@ -170,7 +179,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
           <div className="flex-1 space-y-0.5">
             <span className="font-semibold">Patient Confidentiality Guardrail:</span>{' '}
             <span className="text-[10.5px] text-emerald-800 dark:text-emerald-400">
-              Zero-PHI payload. Patient names, MRNs, and direct identifiers are strictly excluded from AI inference. Meta Muse Spark Open receives only de-identified clinical parameters.
+              Zero-PHI payload. Patient names, MRNs, and direct identifiers are strictly excluded from AI inference. {providerDisplayName} receives only de-identified clinical parameters.
             </span>
           </div>
         </div>

@@ -24,6 +24,16 @@ class Settings(BaseSettings):
         "Not clinically validated. Not for medication dispensing."
     )
 
+    # AI Provider Selection ("bedrock" or "baseten")
+    AI_PROVIDER: str = "bedrock"
+
+    # Amazon Bedrock Configuration
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
+    AWS_DEFAULT_REGION: str = "us-east-1"
+    BEDROCK_MODEL_ID: str = "us.anthropic.claude-sonnet-4-6"
+    BEDROCK_TIMEOUT_SECONDS: float = 20.0
+
     # Baseten Inference Configuration (Meta Muse Spark Open)
     BASETEN_API_KEY: str | None = None
     BASETEN_MODEL: str = "meta-models/muse-spark-open-1026"
