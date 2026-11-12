@@ -93,7 +93,7 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
 
     expect(screen.getByText(/Community Counter Consultation Studio/i)).toBeInTheDocument();
     expect(screen.getByText(/1\. Walk-In Patient Demographics & Vitals/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\. Ghana Diagnostic & Epistemic Screening/i)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Point-of-Care Diagnostics & Epistemic Screening/i)).toBeInTheDocument();
     expect(screen.getByText(/3\. Presenting Complaints & Red-Flag Triage/i)).toBeInTheDocument();
     expect(screen.getByText(/4\. Patient Allergies & Adverse Drug History/i)).toBeInTheDocument();
     expect(screen.getByText(/5\. Proposed Counter Regimen & Dispensing Items/i)).toBeInTheDocument();
@@ -113,6 +113,18 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
     fireEvent.click(prostrationChip);
     // Becomes active with red-flag highlighting
     expect(prostrationChip).toHaveClass('bg-rose-950');
+  });
+
+  it('renders quick demo test scenario buttons and pre-fills clinical presentation on click', async () => {
+    render(<CounterIntakeStudio />);
+
+    const routineBtn = screen.getByRole('button', { name: /1\. Routine Care/i });
+    const emergencyBtn = screen.getByRole('button', { name: /2\. Emergency Red Flag/i });
+    expect(routineBtn).toBeInTheDocument();
+    expect(emergencyBtn).toBeInTheDocument();
+
+    fireEvent.click(emergencyBtn);
+    expect(screen.getByDisplayValue(/High fever, repeated vomiting/i)).toBeInTheDocument();
   });
 
   it('adds and removes preset medications from the proposed regimen', async () => {
@@ -150,7 +162,7 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
     await waitFor(() => {
       expect(screen.getByText(/EMERGENCY HOSPITAL REFERRAL TRIGGERED/i)).toBeInTheDocument();
       expect(screen.getAllByText(/Severe \/ Complicated Malaria Red Flag/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Pre-referral rectal artesunate: BLOCKED_PENDING_CLINICAL_APPROVAL/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Pre-referral rectal artesunate: BLOCKED_PENDING_CLINICAL_APPROVAL/i).length).toBeGreaterThan(0);
     });
   });
 

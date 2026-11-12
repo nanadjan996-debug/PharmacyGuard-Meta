@@ -1,11 +1,11 @@
 """Deterministic Red-Flag Detection and Referral Triage Engine for Community Pharmacy.
 
-Implements Ghana clinical triage rules:
-- RF-MAL-SEV-01: Severe / Complicated Malaria (GHS NMCP 2020 Guidelines)
-- RF-CVD-HYP-01: Hypertensive Crisis / Emergency (Ghana STG 2017 Ch. 11)
-- RF-ABD-ACU-01: Acute Abdomen / Suspected Surgical Emergency (Ghana STG 2017 Ch. 18)
-- RF-PED-RES-01: Pediatric Severe Pneumonia / Respiratory Distress (IMCI / GHS STG Ch. 24)
-- RF-NEU-MEN-01: Acute Neurological / Suspected Meningitis (Ghana STG 2017 Ch. 20)
+Implements clinical triage rules:
+- RF-MAL-SEV-01: Severe / Complicated Malaria (National Malaria Control Guidelines)
+- RF-CVD-HYP-01: Hypertensive Crisis / Emergency (Clinical Practice Guidelines)
+- RF-ABD-ACU-01: Acute Abdomen / Suspected Surgical Emergency (Clinical Practice Guidelines)
+- RF-PED-RES-01: Pediatric Severe Pneumonia / Respiratory Distress (IMCI Protocols)
+- RF-NEU-MEN-01: Acute Neurological / Suspected Meningitis (Clinical Practice Guidelines)
 
 Binding Safety Invariants:
 1. When severe disease is detected, emergency referral is triggered immediately.
@@ -113,7 +113,7 @@ class RedFlagEngine:
             desc = (
                 f"Patient presents with fever/suspected malaria and clinical signs of severe/complicated malaria: "
                 f"{', '.join(active_sev_mal_symptoms).replace('_', ' ')}. "
-                "Per GHS NMCP 2020 guidelines, complicated malaria requires immediate transfer to a referral hospital."
+                "Per national malaria control guidelines, complicated malaria requires immediate transfer to a referral hospital."
             )
             act_req = (
                 "EMERGENCY REFERRAL: Withhold routine counter treatment. Dispatch patient immediately to hospital. "
@@ -316,7 +316,7 @@ class RedFlagEngine:
             age_str = f"{age_years} yrs" if age_years is not None else (f"{age_months} months" if age_months is not None else "Unknown age")
             referral_note = (
                 f"===========================================================\n"
-                f"GHANA HEALTH SERVICE / COMMUNITY PHARMACY EMERGENCY REFERRAL\n"
+                f"CLINICAL EMERGENCY REFERRAL & TRANSFER NOTE\n"
                 f"===========================================================\n"
                 f"Date/Time: {now_str}\n"
                 f"Patient Age/Gender: {age_str} / {gender or 'Not specified'}\n"

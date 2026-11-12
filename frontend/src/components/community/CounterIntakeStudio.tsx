@@ -12,6 +12,7 @@ import {
   Clock,
   RefreshCw,
   Info,
+  Sparkles,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
 import {
@@ -136,6 +137,139 @@ export const CounterIntakeStudio: React.FC = () => {
     setSelectedSymptoms((prev) =>
       prev.includes(symptomId) ? prev.filter((s) => s !== symptomId) : [...prev, symptomId]
     );
+  };
+
+  // Quick-Test Demo Scenarios (Enables 1-click evaluation without supervision)
+  const applyScenario = (type: 'routine' | 'emergency' | 'allergy') => {
+    setActiveConsultation(null);
+    setErrorMessage(null);
+    if (type === 'routine') {
+      setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
+      setAgeYears(32);
+      setAgeMonths('');
+      setGender('FEMALE');
+      setWeightKg(60.0);
+      setTempC(37.2);
+      setSbp(118);
+      setDbp(78);
+      setHr(72);
+      setRr(16);
+      setSpo2(99);
+      setMrdtStatus('NOT_DONE');
+      setG6pdStatus('REPORTED_UNKNOWN');
+      setChiefComplaint('Mild frontal tension headache and general fatigue after long work hours.');
+      setSelectedSymptoms([]);
+      setAllergies([]);
+      setItems([
+        {
+          drug_name: 'Paracetamol',
+          strength: '500mg',
+          dosage_form: 'Tablet',
+          dose_amount: 1000,
+          dose_unit: 'mg',
+          frequency: 'TID',
+          duration_days: 3,
+          route: 'Oral',
+          legal_category: 'OTC',
+        },
+      ]);
+    } else if (type === 'emergency') {
+      setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
+      setAgeYears(28);
+      setAgeMonths('');
+      setGender('FEMALE');
+      setWeightKg(62.5);
+      setTempC(39.5);
+      setSbp(112);
+      setDbp(72);
+      setHr(110);
+      setRr(24);
+      setSpo2(95);
+      setMrdtStatus('CONFIRMED_POSITIVE');
+      setG6pdStatus('REPORTED_UNKNOWN');
+      setChiefComplaint('High fever, repeated vomiting, severe prostration, and dark urine for 2 days.');
+      setSelectedSymptoms(['fever', 'chills', 'prostration', 'repeated_vomiting', 'dark_urine', 'neck_stiffness']);
+      setAllergies([]);
+      setItems([
+        {
+          drug_name: 'Artemether-Lumefantrine',
+          strength: '20/120mg',
+          dosage_form: 'Tablet',
+          dose_amount: 4,
+          dose_unit: 'tabs',
+          frequency: 'BID',
+          duration_days: 3,
+          route: 'Oral',
+          legal_category: 'P',
+        },
+      ]);
+    } else if (type === 'allergy') {
+      setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
+      setAgeYears(42);
+      setAgeMonths('');
+      setGender('MALE');
+      setWeightKg(75.0);
+      setTempC(38.4);
+      setSbp(126);
+      setDbp(82);
+      setHr(80);
+      setRr(18);
+      setSpo2(98);
+      setMrdtStatus('CONFIRMED_NEGATIVE');
+      setG6pdStatus('CONFIRMED_NORMAL');
+      setChiefComplaint('Sore throat, moderate fever, and productive cough for 3 days.');
+      setSelectedSymptoms(['fever', 'cough']);
+      setAllergies([
+        { allergen: 'Penicillin', state: 'CONFIRMED_OBJECTIVE', reaction: 'Urticaria / Hives' },
+      ]);
+      setItems([
+        {
+          drug_name: 'Amoxicillin',
+          strength: '500mg',
+          dosage_form: 'Capsule',
+          dose_amount: 500,
+          dose_unit: 'mg',
+          frequency: 'TID',
+          duration_days: 5,
+          route: 'Oral',
+          legal_category: 'POM',
+        },
+      ]);
+    }
+  };
+
+  const resetForm = () => {
+    setActiveConsultation(null);
+    setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
+    setAgeYears(28);
+    setAgeMonths('');
+    setGender('FEMALE');
+    setWeightKg(62.5);
+    setTempC(38.2);
+    setSbp(125);
+    setDbp(82);
+    setHr(84);
+    setRr(18);
+    setSpo2(98);
+    setMrdtStatus('CONFIRMED_POSITIVE');
+    setG6pdStatus('REPORTED_UNKNOWN');
+    setChiefComplaint('Patient presents with fever, chills, and headache for 2 days.');
+    setSelectedSymptoms(['fever', 'chills']);
+    setAllergies([{ allergen: 'Penicillin', state: 'CONFIRMED_OBJECTIVE', reaction: 'Urticaria / Hives' }]);
+    setItems([
+      {
+        drug_name: 'Artemether-Lumefantrine',
+        strength: '20/120mg',
+        dosage_form: 'Tablet',
+        dose_amount: 4,
+        dose_unit: 'tabs',
+        frequency: 'BID',
+        duration_days: 3,
+        route: 'Oral',
+        legal_category: 'P',
+      },
+    ]);
+    setErrorMessage(null);
   };
 
   // Add Allergy
@@ -263,8 +397,8 @@ export const CounterIntakeStudio: React.FC = () => {
                 Synthetic Intake Mode
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Structured counter presentation, rapid vitals intake, malaria mRDT triage, and Ghana STG red-flag safety verification.
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Structured walk-in intake, rapid vitals assessment, point-of-care triage, and clinical safety verification.
             </p>
           </div>
         </div>
@@ -272,22 +406,65 @@ export const CounterIntakeStudio: React.FC = () => {
         <div className="flex items-center gap-3">
           {activeConsultation && (
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
-              <span className="text-slate-600 dark:text-slate-300 font-mono">{activeConsultation.consultation_number}</span>
-              <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{activeConsultation.status}</span>
+              <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">{activeConsultation.consultation_number}</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">{activeConsultation.status}</span>
             </div>
           )}
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
-              setActiveConsultation(null);
-              setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
-              setErrorMessage(null);
-            }}
+            onClick={resetForm}
             icon={<Plus className="w-4 h-4" />}
           >
             New Consultation
           </Button>
+        </div>
+      </div>
+
+      {/* Quick Demo Test Scenarios Bar */}
+      <div className="bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded-md bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-300">
+            <Sparkles className="w-4 h-4" />
+          </span>
+          <div>
+            <div className="text-xs font-bold text-sky-950 dark:text-sky-200">Quick Test Scenarios (1-Click Evaluation):</div>
+            <div className="text-[11px] text-sky-800 dark:text-sky-300">Select a pre-configured clinical presentation to test the safety engine immediately without typing.</div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => applyScenario('routine')}
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            1. Routine Care (Normal)
+          </button>
+          <button
+            type="button"
+            onClick={() => applyScenario('emergency')}
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 hover:border-rose-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            2. Emergency Red Flag
+          </button>
+          <button
+            type="button"
+            onClick={() => applyScenario('allergy')}
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-amber-50 hover:border-amber-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            3. Penicillin Allergy Warning
+          </button>
+          <button
+            type="button"
+            onClick={resetForm}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-medium transition-colors"
+            title="Reset Form"
+          >
+            Reset
+          </button>
         </div>
       </div>
 
@@ -432,14 +609,14 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
             </div>
 
-            {/* Card 2: Ghana Diagnostics & Epistemic Screening */}
+            {/* Card 2: Point-of-Care Diagnostics & Epistemic Screening */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  2. Ghana Diagnostic & Epistemic Screening
+                  2. Point-of-Care Diagnostics & Epistemic Screening
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">5-State Clinical Uncertainty Model</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Clinical Epistemic Certainty</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -462,7 +639,7 @@ export const CounterIntakeStudio: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    G6PD Deficiency Status (Ghana STG)
+                    G6PD Deficiency Status (Clinical Screening)
                     <Info className="w-3.5 h-3.5 text-slate-400" />
                   </label>
                   <select
@@ -618,7 +795,7 @@ export const CounterIntakeStudio: React.FC = () => {
 
               {/* Preset quick buttons */}
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold self-center mr-1">Ghana Presets:</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold self-center mr-1">Common Presets:</span>
                 {PRESET_MEDICATIONS.map((preset, idx) => (
                   <button
                     key={idx}
@@ -734,7 +911,7 @@ export const CounterIntakeStudio: React.FC = () => {
                   <div>
                     <h3 className="text-sm font-bold text-emerald-950 dark:text-white">No Critical Red Flags Detected</h3>
                     <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
-                      Presentation is suitable for community pharmacist care under Ghana STG guidelines.
+                      Presentation is suitable for community pharmacist care under standard clinical guidelines.
                     </p>
                   </div>
                 </div>
@@ -815,7 +992,7 @@ export const CounterIntakeStudio: React.FC = () => {
                           </Button>
                           {activeConsultation.referral_urgency === 'EMERGENCY' ? (
                             <div className="p-2.5 rounded bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200 text-xs text-center font-medium">
-                              Safety Invariant: Emergency referral cannot be overridden. Mandatory hospital transfer required under Ghana STG.
+                              Safety Invariant: Emergency referral cannot be overridden. Mandatory hospital transfer required.
                             </div>
                           ) : (
                             <Button
@@ -884,8 +1061,8 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">No Active Consultation</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  Complete the counter intake fields on the left and click "Execute Red-Flag Triage" to run Ghana clinical rules.
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+                  Complete the intake fields on the left or select a 1-click test scenario above, then click "Execute Red-Flag Triage".
                 </p>
               </div>
             </div>
@@ -948,7 +1125,7 @@ export const CounterIntakeStudio: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
                 <AlertTriangle className="w-5 h-5" />
-                <span>Ghana Health Service — Emergency Referral Protocol Note</span>
+                <span>Clinical Emergency Referral & Transfer Note</span>
               </div>
               <button
                 type="button"
@@ -959,8 +1136,96 @@ export const CounterIntakeStudio: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-slate-950 p-4 rounded-lg font-mono text-xs text-slate-200 whitespace-pre-wrap max-h-96 overflow-y-auto border border-slate-800">
-              {activeConsultation.referral_notes}
+            {/* Document Body with High Contrast & Print Id */}
+            <div id="printable-referral-note" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-5 space-y-4 text-xs text-slate-900 dark:text-slate-100 max-h-[70vh] overflow-y-auto">
+              <div className="border-b-2 border-slate-900 dark:border-slate-300 pb-3 flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-extrabold tracking-tight uppercase text-slate-950 dark:text-white">
+                    Clinical Emergency Referral & Transfer Note
+                  </h2>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                    Community Pharmacy Walk-In Encounter & Safety Assessment
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-700 font-bold text-[10px] uppercase tracking-wider">
+                    Emergency Transfer
+                  </span>
+                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                    Ref: {activeConsultation.consultation_number}
+                  </div>
+                </div>
+              </div>
+
+              {/* Patient Vitals Summary */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-md border border-slate-200 dark:border-slate-700 text-xs">
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Patient Code</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{activeConsultation.patient_identifier}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Age / Gender</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {activeConsultation.age_years ? `${activeConsultation.age_years}y` : `${activeConsultation.age_months}m`} / {activeConsultation.gender || 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Weight</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">{activeConsultation.weight_kg ? `${activeConsultation.weight_kg} kg` : 'Unmeasured'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Vitals</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {activeConsultation.temperature_c ?? 'N/A'}°C • {activeConsultation.sbp_mmhg ?? 'N/A'}/{activeConsultation.dbp_mmhg ?? 'N/A'} mmHg
+                  </span>
+                </div>
+              </div>
+
+              {/* Primary Clinical Reason */}
+              <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs space-y-1">
+                <div className="font-bold text-rose-900 dark:text-rose-200 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
+                  Primary Clinical Reason for Hospital Referral:
+                </div>
+                <div className="text-rose-950 dark:text-rose-100 font-semibold pl-5">
+                  {activeConsultation.referral_reason}
+                </div>
+              </div>
+
+              {/* Clinical Summary & Mandated Actions */}
+              <div className="space-y-2">
+                <div className="font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-1 text-[11px]">
+                  Clinical Findings & Mandatory Transfer Directives:
+                </div>
+                <div className="space-y-2">
+                  {activeConsultation.findings.filter((f) => f.requires_referral).map((f) => (
+                    <div key={f.id} className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
+                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-100 text-rose-800 font-bold">
+                          {f.rule_identifier}
+                        </span>
+                        <span>{f.title}</span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">{f.description}</p>
+                      <div className="text-rose-800 dark:text-rose-300 font-semibold text-xs mt-1">
+                        Mandated Action: {f.action_required}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Disposition & Clinician Signature Line */}
+              <div className="border-t border-slate-200 dark:border-slate-700 pt-3 flex flex-wrap justify-between items-end gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                <div>
+                  <div><strong>Disposition:</strong> Immediate transfer to nearest emergency center.</div>
+                  <div className="text-slate-500">PharmacyGuard Clinical Decision Support</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-slate-700 dark:text-slate-300">{new Date(activeConsultation.created_at).toUTCString()}</div>
+                  <div className="text-slate-500">Electronic Clinician Record</div>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">

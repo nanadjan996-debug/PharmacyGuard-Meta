@@ -20,37 +20,37 @@ import { Button } from '../common/Button';
 // Synthetic sample prescriptions for immediate testing
 const SAMPLE_PRESCRIPTIONS = [
   {
-    name: 'Ridge Hospital OPD Slip (Bacterial Infection)',
+    name: 'Hospital OPD Slip (Bacterial Infection)',
     rawText:
-      'Ridge Regional Hospital — OPD Consultation Slip\n' +
+      'Regional Hospital — OPD Consultation Slip\n' +
       'Patient: PT-SYN-001 | Age: 34y | Gender: Female\n' +
       'Rx: Amoxicillin/Clavulanic Acid 625mg tabs\n' +
       'Sig: 1 tab orally BID for 7 days\n' +
       'Rx: Paracetamol 500mg tablets\n' +
       'Sig: 2 tabs TID for 3 days as needed for pain\n' +
-      'Dr. K. Mensah, MBChB, FWACP',
+      'Dr. K. Mensah, Prescriber',
   },
   {
-    name: 'Korle Bu PolyClinic Slip (Syndromic GI/RTI)',
+    name: 'PolyClinic Slip (Syndromic GI/RTI)',
     rawText:
-      'Korle Bu Teaching Hospital — PolyClinic OPD\n' +
+      'Community PolyClinic — Outpatient Department\n' +
       'Patient: PT-SYN-002 | Age: 42y | Gender: Male\n' +
       'Rx: Ciprofloxacin 500mg tablets\n' +
       'Sig: 1 tab po BID for 5 days\n' +
       'Rx: Metronidazole 400mg tablets\n' +
       'Sig: 1 tab TID for 5 days with meals\n' +
-      'Dr. A. Osei-Tutu, MBChB',
+      'Dr. A. Osei-Tutu, Prescriber',
   },
   {
-    name: 'LEKMA Hospital (Uncomplicated Malaria)',
+    name: 'District Clinic Slip (Uncomplicated Malaria)',
     rawText:
-      'LEKMA Hospital OPD Slip\n' +
+      'District Clinic Outpatient Slip\n' +
       'Patient: PT-SYN-003 | Age: 26y | Gender: Female | mRDT: Positive\n' +
       'Rx: Artemether/Lumefantrine 20/120mg tabs\n' +
       'Sig: 4 tabs BID for 3 days with milk\n' +
       'Rx: Oral Rehydration Salts 20.5g sachet\n' +
       'Sig: 1 sachet daily in 1L water for 2 days\n' +
-      'Dr. E. Addo, MBChB',
+      'Dr. E. Addo, Prescriber',
   },
 ];
 
@@ -152,7 +152,7 @@ export const PrescriptionScannerStudio: React.FC = () => {
       const scan = await api.community.uploadPrescription({
         filename: `${sample.name.split(' ')[0].toLowerCase()}_slip.jpg`,
         content_type: 'image/jpeg',
-        image_base64: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#0f172a"/><text x="20" y="40" fill="#38bdf8" font-size="16">GHANA HEALTH SERVICE PRESCRIPTION SLIP</text></svg>',
+        image_base64: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect width="600" height="400" fill="#f8fafc"/><rect x="10" y="10" width="580" height="380" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/><text x="30" y="50" fill="#0f172a" font-size="18" font-family="sans-serif" font-weight="bold">CLINICAL OUTPATIENT PRESCRIPTION SLIP</text><line x1="30" y1="65" x2="570" y2="65" stroke="#0f172a" stroke-width="1.5"/><text x="30" y="100" fill="#334155" font-size="14" font-family="sans-serif">Date: 2026-11-12 | Ref: RX-2026-0849</text><text x="30" y="130" fill="#334155" font-size="14" font-family="sans-serif">Patient: PT-SYN-001 | Age: 34y | Gender: Female</text><text x="30" y="180" fill="#0f172a" font-size="15" font-family="sans-serif" font-weight="bold">Rx 1: Amoxicillin/Clavulanic Acid 625mg tabs</text><text x="60" y="210" fill="#475569" font-size="13" font-family="sans-serif">Sig: 1 tab orally BID for 7 days (Oral)</text><text x="30" y="250" fill="#0f172a" font-size="15" font-family="sans-serif" font-weight="bold">Rx 2: Paracetamol 500mg tablets</text><text x="60" y="280" fill="#475569" font-size="13" font-family="sans-serif">Sig: 2 tabs TID for 3 days as needed for pain (Oral)</text><text x="30" y="340" fill="#64748b" font-size="13" font-family="sans-serif">Prescriber: Licensed Medical Practitioner</text></svg>',
         patient_identifier: 'PT-SYN-' + Math.floor(1000 + Math.random() * 9000),
         raw_text_override: sample.rawText,
       });
@@ -271,7 +271,7 @@ export const PrescriptionScannerStudio: React.FC = () => {
 
         {/* Quick Sample Presets */}
         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-600 dark:text-slate-400 font-semibold">Quick Ghana Samples:</span>
+          <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Sample Prescriptions:</span>
           {SAMPLE_PRESCRIPTIONS.map((sample, idx) => (
             <button
               key={idx}
@@ -389,7 +389,7 @@ export const PrescriptionScannerStudio: React.FC = () => {
                   className="max-w-full max-h-[380px] p-4 bg-white dark:bg-slate-900 rounded border border-slate-300 dark:border-slate-700 shadow-md font-mono text-xs text-slate-800 dark:text-slate-200 select-text"
                 >
                   <div className="border-b border-slate-200 dark:border-slate-700 pb-2 mb-2 flex items-center justify-between text-[11px] text-sky-700 dark:text-sky-400 font-bold">
-                    <span>GHANA HEALTH SERVICE PRESCRIPTION</span>
+                    <span>OUTPATIENT CLINICAL PRESCRIPTION</span>
                     <span>{activeScan.scan_number}</span>
                   </div>
                   <pre className="whitespace-pre-wrap font-sans text-xs text-slate-800 dark:text-slate-300 leading-relaxed">
@@ -681,8 +681,8 @@ export const PrescriptionScannerStudio: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-12 text-center space-y-4 shadow-xs">
           <FileText className="w-12 h-12 text-slate-400 dark:text-slate-500 mx-auto" />
           <h3 className="text-base font-bold text-slate-900 dark:text-white">No Prescription Scans Selected</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Upload a prescription image or select a Ghana sample preset above to activate the OCR extraction
+          <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+            Upload a prescription image or select a sample preset above to activate the OCR extraction
             and 7-Field Human Confirmation Gate.
           </p>
         </div>

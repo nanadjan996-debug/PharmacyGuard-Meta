@@ -152,10 +152,10 @@ describe('PharmacyGuard Workflow B: PrescriptionScannerStudio', () => {
     });
   });
 
-  it('loads sample Ghana prescription preset when button clicked', async () => {
+  it('loads sample prescription preset when button clicked', async () => {
     render(<PrescriptionScannerStudio />);
 
-    const sampleBtn = screen.getByRole('button', { name: /\+ Ridge Hospital/i });
+    const sampleBtn = screen.getByRole('button', { name: /\+ Hospital OPD Slip/i });
     fireEvent.click(sampleBtn);
 
     await waitFor(() => {
