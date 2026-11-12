@@ -71,9 +71,11 @@ export const CounterIntakeStudio: React.FC = () => {
   const [rr, setRr] = useState<number | ''>(18);
   const [spo2, setSpo2] = useState<number | ''>(98);
 
-  // Diagnostic screening
+  // Diagnostic screening (On-Demand)
+  const [hasDiagnosticTests, setHasDiagnosticTests] = useState<boolean>(true);
   const [mrdtStatus, setMrdtStatus] = useState<MRDTStatus>('CONFIRMED_POSITIVE');
   const [g6pdStatus, setG6pdStatus] = useState<G6PDEpistemicStatus>('REPORTED_UNKNOWN');
+  const [pocBloodSugar, setPocBloodSugar] = useState<'NOT_DONE' | 'NORMAL' | 'ELEVATED' | 'HYPOGLYCEMIC'>('NOT_DONE');
 
   // Symptoms & Chief Complaint
   const [chiefComplaint, setChiefComplaint] = useState('Patient presents with fever, chills, and headache for 2 days.');
@@ -139,8 +141,8 @@ export const CounterIntakeStudio: React.FC = () => {
     );
   };
 
-  // Quick-Test Demo Scenarios (Enables 1-click evaluation without supervision)
-  const applyScenario = (type: 'routine' | 'emergency' | 'allergy') => {
+  // Quick-Test Demo Scenarios (Enables 1-click evaluation without supervision across multiple specialties)
+  const applyScenario = (type: 'routine' | 'emergency' | 'allergy' | 'hypertension') => {
     setActiveConsultation(null);
     setErrorMessage(null);
     if (type === 'routine') {
@@ -149,15 +151,17 @@ export const CounterIntakeStudio: React.FC = () => {
       setAgeMonths('');
       setGender('FEMALE');
       setWeightKg(60.0);
-      setTempC(37.2);
+      setTempC(37.0);
       setSbp(118);
-      setDbp(78);
+      setDbp(76);
       setHr(72);
       setRr(16);
       setSpo2(99);
+      setHasDiagnosticTests(false);
       setMrdtStatus('NOT_DONE');
       setG6pdStatus('REPORTED_UNKNOWN');
-      setChiefComplaint('Mild frontal tension headache and general fatigue after long work hours.');
+      setPocBloodSugar('NOT_DONE');
+      setChiefComplaint('Mild frontal tension headache and general fatigue after long work hours. No nausea or visual disturbances.');
       setSelectedSymptoms([]);
       setAllergies([]);
       setItems([
@@ -185,8 +189,10 @@ export const CounterIntakeStudio: React.FC = () => {
       setHr(110);
       setRr(24);
       setSpo2(95);
+      setHasDiagnosticTests(true);
       setMrdtStatus('CONFIRMED_POSITIVE');
       setG6pdStatus('REPORTED_UNKNOWN');
+      setPocBloodSugar('NOT_DONE');
       setChiefComplaint('High fever, repeated vomiting, severe prostration, and dark urine for 2 days.');
       setSelectedSymptoms(['fever', 'chills', 'prostration', 'repeated_vomiting', 'dark_urine', 'neck_stiffness']);
       setAllergies([]);
@@ -215,8 +221,10 @@ export const CounterIntakeStudio: React.FC = () => {
       setHr(80);
       setRr(18);
       setSpo2(98);
+      setHasDiagnosticTests(false);
       setMrdtStatus('CONFIRMED_NEGATIVE');
       setG6pdStatus('CONFIRMED_NORMAL');
+      setPocBloodSugar('NOT_DONE');
       setChiefComplaint('Sore throat, moderate fever, and productive cough for 3 days.');
       setSelectedSymptoms(['fever', 'cough']);
       setAllergies([
@@ -235,6 +243,38 @@ export const CounterIntakeStudio: React.FC = () => {
           legal_category: 'POM',
         },
       ]);
+    } else if (type === 'hypertension') {
+      setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
+      setAgeYears(58);
+      setAgeMonths('');
+      setGender('MALE');
+      setWeightKg(82.0);
+      setTempC(36.8);
+      setSbp(195);
+      setDbp(124);
+      setHr(92);
+      setRr(20);
+      setSpo2(97);
+      setHasDiagnosticTests(false);
+      setMrdtStatus('NOT_DONE');
+      setG6pdStatus('REPORTED_UNKNOWN');
+      setPocBloodSugar('NOT_DONE');
+      setChiefComplaint('Severe throbbing occipital headache, acute blurred vision, and dizziness for several hours.');
+      setSelectedSymptoms(['severe_headache', 'blurred_vision']);
+      setAllergies([]);
+      setItems([
+        {
+          drug_name: 'Paracetamol',
+          strength: '500mg',
+          dosage_form: 'Tablet',
+          dose_amount: 1000,
+          dose_unit: 'mg',
+          frequency: 'TID',
+          duration_days: 2,
+          route: 'Oral',
+          legal_category: 'OTC',
+        },
+      ]);
     }
   };
 
@@ -251,8 +291,10 @@ export const CounterIntakeStudio: React.FC = () => {
     setHr(84);
     setRr(18);
     setSpo2(98);
+    setHasDiagnosticTests(true);
     setMrdtStatus('CONFIRMED_POSITIVE');
     setG6pdStatus('REPORTED_UNKNOWN');
+    setPocBloodSugar('NOT_DONE');
     setChiefComplaint('Patient presents with fever, chills, and headache for 2 days.');
     setSelectedSymptoms(['fever', 'chills']);
     setAllergies([{ allergen: 'Penicillin', state: 'CONFIRMED_OBJECTIVE', reaction: 'Urticaria / Hives' }]);
@@ -328,8 +370,8 @@ export const CounterIntakeStudio: React.FC = () => {
       heart_rate_bpm: hr === '' ? null : Number(hr),
       respiratory_rate_bpm: rr === '' ? null : Number(rr),
       spo2_percent: spo2 === '' ? null : Number(spo2),
-      mrdt_status: mrdtStatus,
-      g6pd_status: g6pdStatus,
+      mrdt_status: hasDiagnosticTests ? mrdtStatus : 'NOT_DONE',
+      g6pd_status: hasDiagnosticTests ? g6pdStatus : 'REPORTED_UNKNOWN',
       chief_complaint: chiefComplaint,
       symptoms: selectedSymptoms,
       allergies,
@@ -429,14 +471,14 @@ export const CounterIntakeStudio: React.FC = () => {
           </span>
           <div>
             <div className="text-xs font-bold text-sky-950 dark:text-sky-200">Quick Test Scenarios (1-Click Evaluation):</div>
-            <div className="text-[11px] text-sky-800 dark:text-sky-300">Select a pre-configured clinical presentation to test the safety engine immediately without typing.</div>
+            <div className="text-[11px] text-sky-800 dark:text-sky-300 font-medium">Select a pre-configured clinical presentation to test the safety engine across specialties without manual typing.</div>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => applyScenario('routine')}
-            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-emerald-50 hover:border-emerald-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             1. Routine Care (Normal)
@@ -444,7 +486,7 @@ export const CounterIntakeStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => applyScenario('emergency')}
-            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 hover:border-rose-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-rose-50 hover:border-rose-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
             2. Emergency Red Flag
@@ -452,15 +494,23 @@ export const CounterIntakeStudio: React.FC = () => {
           <button
             type="button"
             onClick={() => applyScenario('allergy')}
-            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-amber-50 hover:border-amber-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-amber-50 hover:border-amber-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
             3. Penicillin Allergy Warning
           </button>
           <button
             type="button"
+            onClick={() => applyScenario('hypertension')}
+            className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-purple-50 hover:border-purple-300 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+          >
+            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+            4. Hypertensive Urgency
+          </button>
+          <button
+            type="button"
             onClick={resetForm}
-            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-medium transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold transition-colors"
             title="Reset Form"
           >
             Reset
@@ -609,77 +659,39 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
             </div>
 
-            {/* Card 2: Point-of-Care Diagnostics & Epistemic Screening */}
+            {/* Card 2: Presenting Complaints & Clinical Picture */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  2. Point-of-Care Diagnostics & Epistemic Screening
+                  2. Presenting Complaints & Clinical Picture
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Clinical Epistemic Certainty</span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    Malaria Rapid Diagnostic Test (mRDT)
-                    <Info className="w-3.5 h-3.5 text-slate-400" />
-                  </label>
-                  <select
-                    value={mrdtStatus}
-                    onChange={(e) => setMrdtStatus(e.target.value as MRDTStatus)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="CONFIRMED_POSITIVE">Confirmed Positive (Pf / Pan-specific)</option>
-                    <option value="CONFIRMED_NEGATIVE">Confirmed Negative</option>
-                    <option value="TESTING_UNAVAILABLE">Testing Unavailable (Stock-Out / Defective)</option>
-                    <option value="NOT_DONE">Not Done</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    G6PD Deficiency Status (Clinical Screening)
-                    <Info className="w-3.5 h-3.5 text-slate-400" />
-                  </label>
-                  <select
-                    value={g6pdStatus}
-                    onChange={(e) => setG6pdStatus(e.target.value as G6PDEpistemicStatus)}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="REPORTED_UNKNOWN">REPORTED_UNKNOWN (Patient Unaware)</option>
-                    <option value="NOT_COLLECTED">NOT_COLLECTED (Not Inquired)</option>
-                    <option value="CONFIRMED_NORMAL">CONFIRMED_NORMAL (Official Lab Record)</option>
-                    <option value="CONFIRMED_DEFICIENT">CONFIRMED_DEFICIENT (High Hemolysis Risk)</option>
-                    <option value="NOT_TESTED">NOT_TESTED (Never Tested)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: Symptoms & Red-Flag Checklist */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
-              <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  3. Presenting Complaints & Red-Flag Triage
-                </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Quick-Select Clinical Presentation</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Free-Form Patient Intake</span>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Chief Complaint & Encounter Description</label>
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                  Chief Complaint & Encounter Narrative *
+                </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={chiefComplaint}
                   onChange={(e) => setChiefComplaint(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  placeholder="Summarize the presenting clinical complaint..."
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                  placeholder="Record patient complaints, symptom onset, severity, and clinical history (e.g., headache, fever, cough, chest tightness, abdominal pain)..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Select Active Presenting Symptoms & Warning Signs:</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Clinical Warning Signs & System Review (Checklist):
+                  </label>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {selectedSymptoms.length} selected
+                  </span>
+                </div>
+
                 <div className="flex flex-wrap gap-1.5">
                   {COMMON_SYMPTOMS.map((sym) => {
                     const isSelected = selectedSymptoms.includes(sym.id);
@@ -693,8 +705,8 @@ export const CounterIntakeStudio: React.FC = () => {
                           isSelected
                             ? isSevere
                               ? 'bg-rose-950 text-white border-rose-600 ring-2 ring-rose-400 shadow-xs'
-                              : 'bg-emerald-900 text-white border-emerald-600 ring-2 ring-emerald-400 shadow-xs'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700'
+                              : 'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400 shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700'
                         }`}
                       >
                         {sym.label}
@@ -703,6 +715,142 @@ export const CounterIntakeStudio: React.FC = () => {
                   })}
                 </div>
               </div>
+            </div>
+
+            {/* Card 3: Point-of-Care Diagnostics & Rapid Tests */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  3. Point-of-Care Diagnostics & Rapid Tests
+                </h2>
+                <div className="flex items-center gap-2">
+                  {hasDiagnosticTests ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHasDiagnosticTests(false);
+                        setMrdtStatus('NOT_DONE');
+                        setG6pdStatus('REPORTED_UNKNOWN');
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline font-medium"
+                    >
+                      No Tests Indicated
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setHasDiagnosticTests(true)}
+                      className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Record Tests
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {!hasDiagnosticTests ? (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white">
+                        No Point-of-Care Tests Conducted / Indicated
+                      </div>
+                      <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                        Routine presentation. If rapid malaria mRDT, blood glucose, or G6PD tests were performed at the counter, click to record clinical results.
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setHasDiagnosticTests(true)}
+                    icon={<Plus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                    className="shrink-0 font-semibold"
+                  >
+                    Record Rapid Test
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-lg border border-sky-200 dark:border-sky-800 text-[11px] text-sky-900 dark:text-sky-300 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-4 h-4 text-sky-600 shrink-0" />
+                      <span>Point-of-care rapid testing panel active. Differentiates verified lab records from unverified patient recall.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHasDiagnosticTests(false);
+                        setMrdtStatus('NOT_DONE');
+                        setG6pdStatus('REPORTED_UNKNOWN');
+                      }}
+                      className="text-xs font-semibold text-sky-800 dark:text-sky-200 hover:underline shrink-0 ml-2"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                        Malaria Rapid Diagnostic Test (mRDT)
+                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                      </label>
+                      <select
+                        value={mrdtStatus}
+                        onChange={(e) => setMrdtStatus(e.target.value as MRDTStatus)}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                      >
+                        <option value="CONFIRMED_POSITIVE">Confirmed Positive (Pf / Pan-specific)</option>
+                        <option value="CONFIRMED_NEGATIVE">Confirmed Negative</option>
+                        <option value="TESTING_UNAVAILABLE">Testing Unavailable (Stock-Out / Defective)</option>
+                        <option value="NOT_DONE">Not Done</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                        G6PD Deficiency Status (Clinical Screening)
+                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                      </label>
+                      <select
+                        value={g6pdStatus}
+                        onChange={(e) => setG6pdStatus(e.target.value as G6PDEpistemicStatus)}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                      >
+                        <option value="REPORTED_UNKNOWN">REPORTED_UNKNOWN (Patient Unaware)</option>
+                        <option value="NOT_COLLECTED">NOT_COLLECTED (Not Inquired)</option>
+                        <option value="CONFIRMED_NORMAL">CONFIRMED_NORMAL (Official Lab Record)</option>
+                        <option value="CONFIRMED_DEFICIENT">CONFIRMED_DEFICIENT (High Hemolysis Risk)</option>
+                        <option value="NOT_TESTED">NOT_TESTED (Never Tested)</option>
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                        Rapid Blood Glucose (POC RBS / Glycemia)
+                        <span className="text-[10px] text-slate-400 font-normal">(Optional Screening)</span>
+                      </label>
+                      <select
+                        value={pocBloodSugar}
+                        onChange={(e) => setPocBloodSugar(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                      >
+                        <option value="NOT_DONE">Not Measured / Routine Encounter</option>
+                        <option value="NORMAL">Normal Glycemia (4.0 - 7.8 mmol/L / 70 - 140 mg/dL)</option>
+                        <option value="ELEVATED">Hyperglycemia / Marked Elevation (&gt;11.1 mmol/L / &gt;200 mg/dL)</option>
+                        <option value="HYPOGLYCEMIC">Acute Hypoglycemia (&lt;3.9 mmol/L / &lt;70 mg/dL)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Card 4: Allergy Profile (5-State Model) */}

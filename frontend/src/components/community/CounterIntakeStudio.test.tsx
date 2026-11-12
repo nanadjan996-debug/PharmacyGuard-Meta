@@ -88,13 +88,13 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
     });
   });
 
-  it('renders Counter Intake Studio with title, demographics, and diagnostic screening inputs', async () => {
+  it('renders Counter Intake Studio with title, demographics, complaints, and diagnostic screening inputs', async () => {
     render(<CounterIntakeStudio />);
 
     expect(screen.getByText(/Community Counter Consultation Studio/i)).toBeInTheDocument();
     expect(screen.getByText(/1\. Walk-In Patient Demographics & Vitals/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\. Point-of-Care Diagnostics & Epistemic Screening/i)).toBeInTheDocument();
-    expect(screen.getByText(/3\. Presenting Complaints & Red-Flag Triage/i)).toBeInTheDocument();
+    expect(screen.getByText(/2\. Presenting Complaints & Clinical Picture/i)).toBeInTheDocument();
+    expect(screen.getByText(/3\. Point-of-Care Diagnostics & Rapid Tests/i)).toBeInTheDocument();
     expect(screen.getByText(/4\. Patient Allergies & Adverse Drug History/i)).toBeInTheDocument();
     expect(screen.getByText(/5\. Proposed Counter Regimen & Dispensing Items/i)).toBeInTheDocument();
 
@@ -120,11 +120,16 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
 
     const routineBtn = screen.getByRole('button', { name: /1\. Routine Care/i });
     const emergencyBtn = screen.getByRole('button', { name: /2\. Emergency Red Flag/i });
+    const hypBtn = screen.getByRole('button', { name: /4\. Hypertensive Urgency/i });
     expect(routineBtn).toBeInTheDocument();
     expect(emergencyBtn).toBeInTheDocument();
+    expect(hypBtn).toBeInTheDocument();
 
     fireEvent.click(emergencyBtn);
     expect(screen.getByDisplayValue(/High fever, repeated vomiting/i)).toBeInTheDocument();
+
+    fireEvent.click(hypBtn);
+    expect(screen.getByDisplayValue(/Severe throbbing occipital headache/i)).toBeInTheDocument();
   });
 
   it('adds and removes preset medications from the proposed regimen', async () => {

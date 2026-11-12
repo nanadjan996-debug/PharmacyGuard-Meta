@@ -119,7 +119,7 @@ describe('Stage 6: AIExplanationSection Component', () => {
       />
     );
 
-    expect(screen.getAllByText(/Meta Muse Spark Open/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Clinical AI Assistant/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/No AI explanation requested yet for this prescription/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Explain with AI/i })).toBeInTheDocument();
 
@@ -137,7 +137,7 @@ describe('Stage 6: AIExplanationSection Component', () => {
     );
 
     expect(screen.getByText(/AI Processing \(14s max\)\.\.\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Contacting Baseten inference service/i)).toBeInTheDocument();
+    expect(screen.getByText(/Contacting AI clinical service/i)).toBeInTheDocument();
   });
 
   it('renders fully populated clinical explanation when available', () => {

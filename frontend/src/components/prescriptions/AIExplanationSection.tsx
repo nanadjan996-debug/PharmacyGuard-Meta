@@ -41,8 +41,8 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
       explanation?.model_name?.includes('bedrock') ||
       explanation?.model_name?.includes('anthropic')
     );
-  const modelDisplayName = isBedrock ? 'Claude Sonnet 4.6' : (explanation?.model_name || 'Meta Muse Spark Open');
-  const providerDisplayName = isBedrock ? 'Amazon Bedrock' : 'Baseten Inference';
+  const modelDisplayName = isBedrock ? 'Claude Sonnet 4.6' : (explanation?.model_name || 'Clinical AI Assistant');
+  const providerDisplayName = isBedrock ? 'Amazon Bedrock' : 'Clinical AI Service';
 
   const alertFindings =
     explanation?.finding_explanations.filter(
@@ -164,7 +164,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
             <p className="font-semibold">Non-Authoritative Clinical Decision Support</p>
             <p className="text-[10px] text-sky-800 dark:text-sky-400 leading-relaxed">
               {explanation?.disclaimer ||
-                'Meta Muse Spark Open interprets deterministic safety findings into clinical explanations. It has no authority to approve prescriptions, authorize dispensing, or alter rule severities.'}
+                'Clinical AI Assistant interprets deterministic safety findings into clinical explanations. It has no authority to approve prescriptions, authorize dispensing, or alter rule severities.'}
             </p>
           </div>
         </div>
@@ -189,7 +189,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
         <div className="py-8 text-center space-y-2">
           <RefreshCw className="w-6 h-6 animate-spin text-indigo-600 mx-auto" />
           <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-            Contacting Baseten inference service (meta-models/muse-spark-open)...
+            Contacting AI clinical service...
           </p>
           <p className="text-[10px] text-slate-400 font-mono">
             Deterministic findings remain authoritative. Timeout capped at 14.0 seconds.
@@ -202,7 +202,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
           </div>
           <div className="max-w-md mx-auto space-y-1">
             <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-              Meta Muse Spark Open Ready
+              Clinical AI Assistant Ready
             </h4>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
               No AI explanation requested yet for this prescription. Click{' '}
@@ -274,7 +274,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
                 <span>Executive Clinical Synthesis</span>
               </span>
               <span className="text-[10px] font-mono text-slate-400">
-                Model: {explanation.model_name || 'meta-models/muse-spark-open'}
+                Model: {explanation.model_name || 'clinical-decision-support'}
               </span>
             </div>
             <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-sans">
