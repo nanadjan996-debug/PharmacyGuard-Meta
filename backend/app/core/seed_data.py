@@ -20,6 +20,12 @@ from app.models.inventory import InventoryItem, InventoryTransaction
 from app.models.review import PharmacistReview, ReviewFinding
 from app.models.audit import AuditEvent
 from app.models.education import EducationalCase
+from app.models.community import (
+    ClinicalRuleMeta,
+    CommunityConsultation,
+    CommunityConsultationItem,
+    CommunityFinding,
+)
 
 
 def seed_database(db: Session) -> dict[str, int]:
@@ -828,5 +834,73 @@ def seed_database(db: Session) -> dict[str, int]:
         ))
         stats["audit_events"] += 1
         db.commit()
+
+    # -------------------------------------------------------------
+    # 9. CLINICAL RULES META SEEDING (Specification v3.1.1-MASTER)
+    # Rules remain BLOCKED_PENDING_FACULTY_APPROVAL until faculty validation
+    # -------------------------------------------------------------
+    rules_meta = [
+        {
+            "id": "RF-MAL-SEV-01",
+            "name": "Severe / Complicated Malaria Red Flag",
+            "category": "RED_FLAG",
+            "version": "1.0.0",
+            "source_reference": "NMCP Guidelines for Case Management of Malaria in Ghana (2020), Section 4.2–4.3, pp. 24–30",
+            "clinical_trigger": "Fever + Suspected/Confirmed Malaria + ANY severe sign (prostration, lethargy, coma, repeated vomiting, convulsions, blackwater)",
+            "approval_status": "BLOCKED_PENDING_FACULTY_APPROVAL",
+            "is_active": False,
+        },
+        {
+            "id": "RF-CVD-HYP-01",
+            "name": "Hypertensive Crisis / Emergency Red Flag",
+            "category": "RED_FLAG",
+            "version": "1.0.0",
+            "source_reference": "Ghana STG 2017, Chapter 11 (Hypertension in Adults), pp. 112–118",
+            "clinical_trigger": "SBP >= 180 mmHg or DBP >= 120 mmHg WITH acute end-organ symptoms (severe headache, blurred vision, chest pain, dyspnea)",
+            "approval_status": "BLOCKED_PENDING_FACULTY_APPROVAL",
+            "is_active": False,
+        },
+        {
+            "id": "RF-ABD-ACU-01",
+            "name": "Acute Abdomen / Suspected Surgical Emergency Red Flag",
+            "category": "RED_FLAG",
+            "version": "1.0.0",
+            "source_reference": "Ghana STG 2017, Chapter 18 (Gastrointestinal Conditions), pp. 245–250",
+            "clinical_trigger": "Acute abdominal pain (<72h) + guarding, rigidity, rebound tenderness, bilious vomiting, or shock",
+            "approval_status": "BLOCKED_PENDING_FACULTY_APPROVAL",
+            "is_active": False,
+        },
+        {
+            "id": "RF-PED-RES-01",
+            "name": "Pediatric Severe Pneumonia / Respiratory Distress",
+            "category": "RED_FLAG",
+            "version": "1.0.0",
+            "source_reference": "Ghana IMCI Guidelines (GHS 2018); Ghana STG 2017, Chapter 24",
+            "clinical_trigger": "Child < 5y with cough/dyspnea + chest indrawing, stridor in calm child, grunting, or fast breathing (>=50 bpm for <1y, >=40 bpm for 1-5y)",
+            "approval_status": "BLOCKED_PENDING_FACULTY_APPROVAL",
+            "is_active": False,
+        },
+        {
+            "id": "RF-NEU-MEN-01",
+            "name": "Acute Neurological / Suspected Meningitis Red Flag",
+            "category": "RED_FLAG",
+            "version": "1.0.0",
+            "source_reference": "Ghana STG 2017, Chapter 20 (CNS Infections), pp. 280–285",
+            "clinical_trigger": "Fever + neck stiffness, photophobia, altered mental state, or non-blanching petechial/purpuric rash",
+            "approval_status": "BLOCKED_PENDING_FACULTY_APPROVAL",
+            "is_active": False,
+        },
+    ]
+
+    for rm in rules_meta:
+        existing_rm = db.query(ClinicalRuleMeta).filter_by(id=rm["id"]).first()
+        if not existing_rm:
+            db.add(ClinicalRuleMeta(**rm))
+        else:
+            existing_rm.approval_status = rm["approval_status"]
+            existing_rm.is_active = rm["is_active"]
+            existing_rm.source_reference = rm["source_reference"]
+            existing_rm.clinical_trigger = rm["clinical_trigger"]
+    db.commit()
 
     return stats

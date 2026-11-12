@@ -13,6 +13,12 @@ from app.models.inventory import InventoryItem, InventoryTransaction
 from app.models.review import PharmacistReview, ReviewFinding, EscalationResolution
 from app.models.audit import AuditEvent
 from app.models.education import EducationalCase, StudentSubmission
+from app.models.community import (
+    CommunityConsultation,
+    CommunityConsultationItem,
+    CommunityFinding,
+    ClinicalRuleMeta,
+)
 
 __all__ = [
     "User",
@@ -36,4 +42,8 @@ __all__ = [
     "AuditEvent",
     "EducationalCase",
     "StudentSubmission",
+    "CommunityConsultation",
+    "CommunityConsultationItem",
+    "CommunityFinding",
+    "ClinicalRuleMeta",
 ]

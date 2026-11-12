@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str | None = None
     AWS_DEFAULT_REGION: str = "us-east-1"
     BEDROCK_MODEL_ID: str = "us.anthropic.claude-sonnet-4-6"
+    BEDROCK_MODEL_DISPLAY_NAME: str = "Claude Sonnet 4.6 (AWS Bedrock)"
     BEDROCK_TIMEOUT_SECONDS: float = 20.0
 
     # Baseten Inference Configuration (Meta Muse Spark Open)

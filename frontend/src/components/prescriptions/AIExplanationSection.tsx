@@ -41,7 +41,7 @@ export const AIExplanationSection: React.FC<AIExplanationSectionProps> = ({
       explanation?.model_name?.includes('bedrock') ||
       explanation?.model_name?.includes('anthropic')
     );
-  const modelDisplayName = isBedrock ? 'Claude 3.5 Sonnet' : (explanation?.model_name || 'Meta Muse Spark Open');
+  const modelDisplayName = isBedrock ? 'Claude Sonnet 4.6' : (explanation?.model_name || 'Meta Muse Spark Open');
   const providerDisplayName = isBedrock ? 'Amazon Bedrock' : 'Baseten Inference';
 
   const alertFindings =

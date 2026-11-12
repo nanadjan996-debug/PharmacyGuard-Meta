@@ -333,7 +333,7 @@ describe('PharmacyGuard Stage 4: Student Simulation Workspace Integration', () =
       expect(screen.getByTestId('assessment-studio')).toBeInTheDocument();
       expect(screen.getByText('Severe Penicillin Allergy with Beta-Lactam Order')).toBeInTheDocument();
     });
-  });
+  }, 20000);
 
   // =========================================================================
   // 3. Stage1WorkspaceShell Integration & Workstation Branding

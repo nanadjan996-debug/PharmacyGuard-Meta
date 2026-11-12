@@ -7,6 +7,7 @@ from app.api.v1.prescriptions import router as prescriptions_router
 from app.api.v1.oversight import router as oversight_router
 from app.api.v1.education import router as education_router
 from app.api.v1.inventory import router as inventory_router
+from app.api.v1.community import router as community_router
 
 api_router = APIRouter()
 
@@ -28,3 +29,4 @@ api_router.include_router(prescriptions_router)
 api_router.include_router(oversight_router)
 api_router.include_router(education_router)
 api_router.include_router(inventory_router)
+api_router.include_router(community_router)

@@ -431,6 +431,45 @@ class ApiClient {
       return this.request<StudentSubmissionResponse>(`/education/submissions/${id}`);
     },
   };
+
+  // -------------------------------------------------------------------------
+  // Community Counter Consultation Endpoints (Community Edition)
+  // -------------------------------------------------------------------------
+  public community = {
+    createConsultation: async (
+      payload: import('../types/community').ConsultationCreatePayload
+    ): Promise<import('../types/community').CommunityConsultation> => {
+      return this.request<import('../types/community').CommunityConsultation>('/community/consultations', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    listConsultations: async (): Promise<import('../types/community').CommunityConsultation[]> => {
+      return this.request<import('../types/community').CommunityConsultation[]>('/community/consultations');
+    },
+
+    getConsultation: async (id: string): Promise<import('../types/community').CommunityConsultation> => {
+      return this.request<import('../types/community').CommunityConsultation>(`/community/consultations/${id}`);
+    },
+
+    transitionConsultation: async (
+      id: string,
+      payload: import('../types/community').ConsultationTransitionPayload
+    ): Promise<import('../types/community').CommunityConsultation> => {
+      return this.request<import('../types/community').CommunityConsultation>(
+        `/community/consultations/${id}/transition`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }
+      );
+    },
+
+    listRules: async (): Promise<import('../types/community').ClinicalRuleMetadata[]> => {
+      return this.request<import('../types/community').ClinicalRuleMetadata[]>('/community/rules');
+    },
+  };
 }
 
 export const api = new ApiClient();

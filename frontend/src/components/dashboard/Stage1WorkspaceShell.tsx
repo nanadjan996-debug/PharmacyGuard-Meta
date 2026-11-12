@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   Award,
   GraduationCap,
+  Store,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
 import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWorkspace';
 import { ChiefOversightWorkspace } from '../oversight/ChiefOversightWorkspace';
 import { StudentSimulationWorkspace } from '../education/StudentSimulationWorkspace';
+import { CounterIntakeStudio } from '../community/CounterIntakeStudio';
 
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
@@ -17,6 +20,7 @@ export interface Stage1WorkspaceShellProps {
 
 export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
   const { user } = useAuth();
+  const [staffMode, setStaffMode] = useState<'inpatient' | 'community'>('inpatient');
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',
@@ -68,17 +72,52 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
             <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">Deterministic Active</span>
           </div>
           <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-50/80 dark:bg-sky-950/50 border border-sky-200/70 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 text-[11px]">
-            <span className="text-sky-600 dark:text-sky-400 font-medium">Meta AI:</span>
-            <span className="font-semibold font-mono">Muse Spark Open</span>
+            <span className="text-sky-600 dark:text-sky-400 font-medium">Bedrock AI:</span>
+            <span className="font-semibold font-mono">Claude Sonnet 4.6</span>
           </div>
         </div>
       </div>
 
+      {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community) */}
+      {primaryRole === 'staff_pharmacist' && (
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+            <button
+              type="button"
+              onClick={() => setStaffMode('inpatient')}
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                staffMode === 'inpatient'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-sky-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Hospital Inpatient Queue</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStaffMode('community')}
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                staffMode === 'community'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Store className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Walk-In Counter Studio (Community Edition)</span>
+            </button>
+          </div>
+          <span className="text-xs text-slate-400 hidden sm:inline">
+            Active Mode: <strong className="text-slate-300 font-medium">{staffMode === 'inpatient' ? 'Prescription Queue' : 'Community Counter Intake'}</strong>
+          </span>
+        </div>
+      )}
+
       {/* Main Clinical Workstation */}
       <div className="space-y-6">
-        {/* Staff Pharmacist Live Prescription Workflow */}
+        {/* Staff Pharmacist Workspaces */}
         {primaryRole === 'staff_pharmacist' && (
-          <StaffPrescriptionWorkspace />
+          staffMode === 'inpatient' ? <StaffPrescriptionWorkspace /> : <CounterIntakeStudio />
         )}
 
         {/* Chief Pharmacist Live Oversight & Inventory Workstation */}
