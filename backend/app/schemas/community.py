@@ -126,3 +126,94 @@ class CommunityConsultationResponse(BaseModel):
     items: list[ConsultationItemResponse]
     findings: list[CommunityFindingResponse]
 
+
+# -----------------------------------------------------------------------------
+# Workflow B: Prescription Scanner & 7-Field Human Confirmation Gate Schemas
+# -----------------------------------------------------------------------------
+
+class PrescriptionScanItemResponse(BaseModel):
+    id: str
+    scan_id: str
+    item_index: int
+    
+    # OCR Extracted Values
+    ocr_drug_name: str
+    ocr_strength: str | None
+    ocr_dosage_form: str | None
+    ocr_dose_amount: float | None
+    ocr_dose_unit: str | None
+    ocr_route: str | None
+    ocr_frequency: str | None
+    ocr_duration_days: int | None
+    
+    # Field Confidence Scores
+    confidence_drug_name: float
+    confidence_strength: float
+    confidence_dosage_form: float
+    confidence_dose: float
+    confidence_route: float
+    confidence_frequency: float
+    confidence_duration: float
+    
+    # Confirmed 7 Core Fields
+    confirmed_drug_name: str | None
+    confirmed_strength: str | None
+    confirmed_dosage_form: str | None
+    confirmed_dose_amount: float | None
+    confirmed_dose_unit: str | None
+    confirmed_route: str | None
+    confirmed_frequency: str | None
+    confirmed_duration_days: int | None
+    confirmed_instructions: str | None
+    legal_category: str
+    is_pharmacist_confirmed: bool
+
+
+class PrescriptionScanResponse(BaseModel):
+    id: str
+    scan_number: str
+    patient_identifier: str
+    original_filename: str
+    content_type: str
+    file_size_bytes: int
+    image_data_base64: str | None
+    extracted_raw_text: str | None
+    overall_confidence: float
+    low_confidence_flag: bool
+    status: str
+    pharmacist_confirmed_by: str | None
+    pharmacist_confirmed_at: datetime | None
+    pharmacist_review_notes: str | None
+    is_synthetic: bool
+    created_at: datetime
+    updated_at: datetime
+    items: list[PrescriptionScanItemResponse]
+
+
+class ItemConfirmPayload(BaseModel):
+    item_id: str
+    confirmed_drug_name: str = Field(..., min_length=2, description="1. Core Field: Drug Name")
+    confirmed_strength: str = Field(..., min_length=1, description="2. Core Field: Strength")
+    confirmed_dosage_form: str = Field(..., min_length=2, description="3. Core Field: Formulation")
+    confirmed_dose_amount: float = Field(..., gt=0, description="4. Core Field: Dose Amount")
+    confirmed_dose_unit: str = Field(default="mg")
+    confirmed_route: str = Field(default="Oral", min_length=2, description="5. Core Field: Route")
+    confirmed_frequency: str = Field(..., min_length=1, description="6. Core Field: Frequency")
+    confirmed_duration_days: int = Field(..., gt=0, description="7. Core Field: Duration")
+    confirmed_instructions: str | None = None
+    legal_category: str = "POM"
+
+
+class PrescriptionConfirmGateRequest(BaseModel):
+    items: list[ItemConfirmPayload]
+    pharmacist_review_notes: str | None = None
+
+
+class PrescriptionUploadRequest(BaseModel):
+    filename: str = "prescription_slip.jpg"
+    content_type: str = "image/jpeg"
+    image_base64: str
+    patient_identifier: str = "PT-COMM-RX"
+    raw_text_override: str | None = None
+
+

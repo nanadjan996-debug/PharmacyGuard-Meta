@@ -136,3 +136,88 @@ export interface ClinicalRuleMetadata {
   is_active: boolean;
 }
 
+// -----------------------------------------------------------------------------
+// Workflow B: Prescription Scanner & 7-Field Human Confirmation Gate Types
+// -----------------------------------------------------------------------------
+
+export interface CommunityPrescriptionScanItem {
+  id: string;
+  scan_id: string;
+  item_index: number;
+  ocr_drug_name: string;
+  ocr_strength?: string | null;
+  ocr_dosage_form?: string | null;
+  ocr_dose_amount?: number | null;
+  ocr_dose_unit?: string | null;
+  ocr_route?: string | null;
+  ocr_frequency?: string | null;
+  ocr_duration_days?: number | null;
+  confidence_drug_name: number;
+  confidence_strength: number;
+  confidence_dosage_form: number;
+  confidence_dose: number;
+  confidence_route: number;
+  confidence_frequency: number;
+  confidence_duration: number;
+  confirmed_drug_name?: string | null;
+  confirmed_strength?: string | null;
+  confirmed_dosage_form?: string | null;
+  confirmed_dose_amount?: number | null;
+  confirmed_dose_unit?: string | null;
+  confirmed_route?: string | null;
+  confirmed_frequency?: string | null;
+  confirmed_duration_days?: number | null;
+  confirmed_instructions?: string | null;
+  legal_category: 'POM' | 'P' | 'OTC' | 'RESTRICTED';
+  is_pharmacist_confirmed: boolean;
+}
+
+export interface CommunityPrescriptionScan {
+  id: string;
+  scan_number: string;
+  patient_identifier: string;
+  original_filename: string;
+  content_type: string;
+  file_size_bytes: number;
+  image_data_base64?: string | null;
+  extracted_raw_text?: string | null;
+  overall_confidence: number;
+  low_confidence_flag: boolean;
+  status: 'PENDING_REVIEW' | 'HUMAN_CONFIRMED' | 'VERIFICATION_COMPLETED' | 'DISPENSED' | 'REJECTED';
+  pharmacist_confirmed_by?: string | null;
+  pharmacist_confirmed_at?: string | null;
+  pharmacist_review_notes?: string | null;
+  is_synthetic: boolean;
+  created_at: string;
+  updated_at: string;
+  items: CommunityPrescriptionScanItem[];
+}
+
+export interface ItemConfirmPayload {
+  item_id: string;
+  confirmed_drug_name: string;
+  confirmed_strength: string;
+  confirmed_dosage_form: string;
+  confirmed_dose_amount: number;
+  confirmed_dose_unit: string;
+  confirmed_route: string;
+  confirmed_frequency: string;
+  confirmed_duration_days: number;
+  confirmed_instructions?: string | null;
+  legal_category: 'POM' | 'P' | 'OTC' | 'RESTRICTED';
+}
+
+export interface PrescriptionConfirmPayload {
+  items: ItemConfirmPayload[];
+  pharmacist_review_notes?: string | null;
+}
+
+export interface PrescriptionUploadPayload {
+  filename: string;
+  content_type: string;
+  image_base64: string;
+  patient_identifier?: string;
+  raw_text_override?: string;
+}
+
+

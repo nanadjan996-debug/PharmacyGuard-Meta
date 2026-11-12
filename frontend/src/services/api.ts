@@ -469,6 +469,45 @@ class ApiClient {
     listRules: async (): Promise<import('../types/community').ClinicalRuleMetadata[]> => {
       return this.request<import('../types/community').ClinicalRuleMetadata[]>('/community/rules');
     },
+
+    uploadPrescription: async (
+      payload: import('../types/community').PrescriptionUploadPayload
+    ): Promise<import('../types/community').CommunityPrescriptionScan> => {
+      return this.request<import('../types/community').CommunityPrescriptionScan>('/community/prescriptions/upload', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    listPrescriptions: async (limit: number = 50): Promise<import('../types/community').CommunityPrescriptionScan[]> => {
+      return this.request<import('../types/community').CommunityPrescriptionScan[]>(`/community/prescriptions?limit=${limit}`);
+    },
+
+    getPrescription: async (id: string): Promise<import('../types/community').CommunityPrescriptionScan> => {
+      return this.request<import('../types/community').CommunityPrescriptionScan>(`/community/prescriptions/${id}`);
+    },
+
+    confirmPrescriptionGate: async (
+      id: string,
+      payload: import('../types/community').PrescriptionConfirmPayload
+    ): Promise<import('../types/community').CommunityPrescriptionScan> => {
+      return this.request<import('../types/community').CommunityPrescriptionScan>(
+        `/community/prescriptions/${id}/confirm-gate`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }
+      );
+    },
+
+    dispensePrescription: async (id: string): Promise<import('../types/community').CommunityPrescriptionScan> => {
+      return this.request<import('../types/community').CommunityPrescriptionScan>(
+        `/community/prescriptions/${id}/dispense`,
+        {
+          method: 'POST',
+        }
+      );
+    },
   };
 }
 

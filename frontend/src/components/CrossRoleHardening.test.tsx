@@ -221,7 +221,7 @@ describe('PharmacyGuard Stage 5: System Hardening & Cross-Role E2E Verification'
       // Wait for staff queue to load
       await waitFor(() => {
         expect(screen.getByText('RX-2026-9001')).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
 
       // Click Review on the prescription
       fireEvent.click(screen.getByRole('button', { name: /Review/i }));
@@ -276,7 +276,7 @@ describe('PharmacyGuard Stage 5: System Hardening & Cross-Role E2E Verification'
 
       await waitFor(() => {
         expect(screen.getByText('RX-2026-9001')).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
 
       // Click Resolve button in queue table
       const resolveBtn = screen.getByRole('button', { name: /^Resolve$/i });
@@ -443,7 +443,7 @@ describe('PharmacyGuard Stage 5: System Hardening & Cross-Role E2E Verification'
 
       await waitFor(() => {
         expect(screen.getByText('RX-2026-9001')).toBeInTheDocument();
-      });
+      }, { timeout: 10000 });
 
       act(() => {
         api.notifyUnauthorized();

@@ -12,6 +12,8 @@ from app.models.community import (
     CommunityConsultationItem,
     CommunityFinding,
     ClinicalRuleMeta,
+    CommunityPrescriptionScan,
+    CommunityPrescriptionScanItem,
 )
 from app.models.audit import AuditEvent
 from app.schemas.community import (
@@ -20,8 +22,13 @@ from app.schemas.community import (
     CommunityConsultationResponse,
     ConsultationItemResponse,
     CommunityFindingResponse,
+    PrescriptionScanResponse,
+    PrescriptionScanItemResponse,
+    PrescriptionUploadRequest,
+    PrescriptionConfirmGateRequest,
 )
 from app.services.verification.red_flag_engine import RedFlagEngine
+from app.services.ocr.prescription_ocr_engine import PrescriptionOCREngine
 
 router = APIRouter(prefix="/community", tags=["Community Pharmacy Counter Consultation"])
 
@@ -376,3 +383,308 @@ def list_clinical_rules_meta(
         }
         for r in rules
     ]
+
+
+def _serialize_scan(s: CommunityPrescriptionScan) -> PrescriptionScanResponse:
+    items = [
+        PrescriptionScanItemResponse(
+            id=it.id,
+            scan_id=it.scan_id,
+            item_index=it.item_index,
+            ocr_drug_name=it.ocr_drug_name,
+            ocr_strength=it.ocr_strength,
+            ocr_dosage_form=it.ocr_dosage_form,
+            ocr_dose_amount=it.ocr_dose_amount,
+            ocr_dose_unit=it.ocr_dose_unit,
+            ocr_route=it.ocr_route,
+            ocr_frequency=it.ocr_frequency,
+            ocr_duration_days=it.ocr_duration_days,
+            confidence_drug_name=it.confidence_drug_name,
+            confidence_strength=it.confidence_strength,
+            confidence_dosage_form=it.confidence_dosage_form,
+            confidence_dose=it.confidence_dose,
+            confidence_route=it.confidence_route,
+            confidence_frequency=it.confidence_frequency,
+            confidence_duration=it.confidence_duration,
+            confirmed_drug_name=it.confirmed_drug_name,
+            confirmed_strength=it.confirmed_strength,
+            confirmed_dosage_form=it.confirmed_dosage_form,
+            confirmed_dose_amount=it.confirmed_dose_amount,
+            confirmed_dose_unit=it.confirmed_dose_unit,
+            confirmed_route=it.confirmed_route,
+            confirmed_frequency=it.confirmed_frequency,
+            confirmed_duration_days=it.confirmed_duration_days,
+            confirmed_instructions=it.confirmed_instructions,
+            legal_category=it.legal_category,
+            is_pharmacist_confirmed=it.is_pharmacist_confirmed,
+        )
+        for it in s.items
+    ]
+    return PrescriptionScanResponse(
+        id=s.id,
+        scan_number=s.scan_number,
+        patient_identifier=s.patient_identifier,
+        original_filename=s.original_filename,
+        content_type=s.content_type,
+        file_size_bytes=s.file_size_bytes,
+        image_data_base64=s.image_data_base64,
+        extracted_raw_text=s.extracted_raw_text,
+        overall_confidence=s.overall_confidence,
+        low_confidence_flag=s.low_confidence_flag,
+        status=s.status,
+        pharmacist_confirmed_by=s.pharmacist_confirmed_by,
+        pharmacist_confirmed_at=s.pharmacist_confirmed_at,
+        pharmacist_review_notes=s.pharmacist_review_notes,
+        is_synthetic=s.is_synthetic,
+        created_at=s.created_at,
+        updated_at=s.updated_at,
+        items=items,
+    )
+
+
+# =============================================================================
+# WORKFLOW B: PRESCRIPTION SCANNER & 7-FIELD HUMAN CONFIRMATION GATE
+# =============================================================================
+
+@router.post("/prescriptions/upload", response_model=PrescriptionScanResponse, status_code=status.HTTP_201_CREATED)
+def upload_community_prescription(
+    payload: PrescriptionUploadRequest,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> PrescriptionScanResponse:
+    """Uploads prescription slip image, triggers OCR extraction, and creates unconfirmed review encounter.
+    
+    Data Minimality (Act 843): Image processed as synthetic / transient record without raw PII.
+    """
+    now = datetime.now(timezone.utc)
+    short_uuid = str(uuid.uuid4())[:8].upper()
+    scan_num = f"CRX-{now.strftime('%Y%m%d')}-{short_uuid}"
+    scan_id = str(uuid.uuid4())
+
+    raw_text = payload.raw_text_override or "Amoxicillin/Clavulanic Acid 625mg tabs 1 tab BID for 7 days"
+    ocr_result = PrescriptionOCREngine.extract_from_text(raw_text)
+
+    scan = CommunityPrescriptionScan(
+        id=scan_id,
+        scan_number=scan_num,
+        patient_identifier=payload.patient_identifier,
+        original_filename=payload.filename,
+        content_type=payload.content_type,
+        file_size_bytes=len(payload.image_base64.encode("utf-8")),
+        image_data_base64=payload.image_base64,
+        extracted_raw_text=ocr_result.raw_text,
+        overall_confidence=ocr_result.overall_confidence,
+        low_confidence_flag=ocr_result.low_confidence_flag,
+        status="PENDING_REVIEW",
+        is_synthetic=True,
+    )
+    db.add(scan)
+
+    for it in ocr_result.items:
+        scan_item = CommunityPrescriptionScanItem(
+            id=str(uuid.uuid4()),
+            scan_id=scan_id,
+            item_index=it.item_index,
+            ocr_drug_name=it.drug_name,
+            ocr_strength=it.strength,
+            ocr_dosage_form=it.dosage_form,
+            ocr_dose_amount=it.dose_amount,
+            ocr_dose_unit=it.dose_unit,
+            ocr_route=it.route,
+            ocr_frequency=it.frequency,
+            ocr_duration_days=it.duration_days,
+            confidence_drug_name=it.confidence_drug_name,
+            confidence_strength=it.confidence_strength,
+            confidence_dosage_form=it.confidence_dosage_form,
+            confidence_dose=it.confidence_dose,
+            confidence_route=it.confidence_route,
+            confidence_frequency=it.confidence_frequency,
+            confidence_duration=it.confidence_duration,
+            confirmed_drug_name=it.drug_name,
+            confirmed_strength=it.strength,
+            confirmed_dosage_form=it.dosage_form,
+            confirmed_dose_amount=it.dose_amount,
+            confirmed_dose_unit=it.dose_unit,
+            confirmed_route=it.route,
+            confirmed_frequency=it.frequency,
+            confirmed_duration_days=it.duration_days,
+            confirmed_instructions=it.instructions,
+            legal_category=it.legal_category,
+            is_pharmacist_confirmed=False,  # Human Gate: Must be explicitly locked by pharmacist
+        )
+        db.add(scan_item)
+
+    actor_role = ",".join([r.role_id for r in current_user.roles]) if current_user.roles else "pharmacist"
+    audit = AuditEvent(
+        id=str(uuid.uuid4()),
+        actor_username=current_user.username,
+        actor_role=actor_role,
+        action="COMMUNITY_PRESCRIPTION_UPLOADED",
+        entity_type="CommunityPrescriptionScan",
+        entity_id=scan_id,
+        details=json.dumps({
+            "scan_number": scan_num,
+            "item_count": len(ocr_result.items),
+            "overall_confidence": ocr_result.overall_confidence,
+            "low_confidence_flag": ocr_result.low_confidence_flag,
+        }),
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(scan)
+    return _serialize_scan(scan)
+
+
+@router.get("/prescriptions", response_model=list[PrescriptionScanResponse])
+def list_community_prescriptions(
+    limit: int = 50,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> list[PrescriptionScanResponse]:
+    """Lists community prescription scans."""
+    scans = (
+        db.query(CommunityPrescriptionScan)
+        .order_by(CommunityPrescriptionScan.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_scan(s) for s in scans]
+
+
+@router.get("/prescriptions/{id}", response_model=PrescriptionScanResponse)
+def get_community_prescription(
+    id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> PrescriptionScanResponse:
+    """Retrieves single prescription scan with items."""
+    scan = db.query(CommunityPrescriptionScan).filter_by(id=id).first()
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription scan not found")
+    return _serialize_scan(scan)
+
+
+@router.post("/prescriptions/{id}/confirm-gate", response_model=PrescriptionScanResponse)
+def confirm_prescription_human_gate(
+    id: str,
+    payload: PrescriptionConfirmGateRequest,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> PrescriptionScanResponse:
+    """Enforces the 7-Field Mandatory Human Confirmation Gate.
+    
+    Safety Invariant: Confidence < 0.85 requires pharmacist inspection.
+    Every medication item must have all 7 core fields confirmed and locked before
+    dispensing or downstream verification can execute.
+    """
+    scan = db.query(CommunityPrescriptionScan).filter_by(id=id).first()
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription scan not found")
+
+    if not payload.items:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="At least one item must be confirmed.")
+
+    # Match and confirm each item
+    item_map = {it.id: it for it in scan.items}
+    validation_records = []
+
+    for confirmed in payload.items:
+        db_item = item_map.get(confirmed.item_id)
+        if not db_item:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Item ID {confirmed.item_id} does not belong to scan {id}.",
+            )
+        
+        db_item.confirmed_drug_name = confirmed.confirmed_drug_name.strip()
+        db_item.confirmed_strength = confirmed.confirmed_strength.strip()
+        db_item.confirmed_dosage_form = confirmed.confirmed_dosage_form.strip()
+        db_item.confirmed_dose_amount = confirmed.confirmed_dose_amount
+        db_item.confirmed_dose_unit = confirmed.confirmed_dose_unit.strip()
+        db_item.confirmed_route = confirmed.confirmed_route.strip()
+        db_item.confirmed_frequency = confirmed.confirmed_frequency.strip()
+        db_item.confirmed_duration_days = confirmed.confirmed_duration_days
+        db_item.confirmed_instructions = confirmed.confirmed_instructions
+        db_item.legal_category = confirmed.legal_category
+        db_item.is_pharmacist_confirmed = True
+
+        validation_records.append({
+            "is_pharmacist_confirmed": True,
+            "confirmed_drug_name": db_item.confirmed_drug_name,
+            "confirmed_strength": db_item.confirmed_strength,
+            "confirmed_dosage_form": db_item.confirmed_dosage_form,
+            "confirmed_dose_amount": db_item.confirmed_dose_amount,
+            "confirmed_route": db_item.confirmed_route,
+            "confirmed_frequency": db_item.confirmed_frequency,
+            "confirmed_duration_days": db_item.confirmed_duration_days,
+        })
+
+    # Validate complete 7-Field Human Gate
+    is_valid, reason = PrescriptionOCREngine.validate_human_gate_confirmation(validation_records)
+    if not is_valid:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=reason)
+
+    now = datetime.now(timezone.utc)
+    scan.status = "HUMAN_CONFIRMED"
+    scan.pharmacist_confirmed_by = current_user.username
+    scan.pharmacist_confirmed_at = now
+    if payload.pharmacist_review_notes:
+        scan.pharmacist_review_notes = payload.pharmacist_review_notes
+
+    actor_role = ",".join([r.role_id for r in current_user.roles]) if current_user.roles else "pharmacist"
+    audit = AuditEvent(
+        id=str(uuid.uuid4()),
+        actor_username=current_user.username,
+        actor_role=actor_role,
+        action="COMMUNITY_PRESCRIPTION_HUMAN_GATE_LOCKED",
+        entity_type="CommunityPrescriptionScan",
+        entity_id=scan.id,
+        details=json.dumps({
+            "scan_number": scan.scan_number,
+            "confirmed_item_count": len(payload.items),
+            "gate_status": "HUMAN_CONFIRMED",
+        }),
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(scan)
+    return _serialize_scan(scan)
+
+
+@router.post("/prescriptions/{id}/dispense", response_model=PrescriptionScanResponse)
+def dispense_community_prescription(
+    id: str,
+    current_user: User = Depends(require_any_pharmacist),
+    db: Session = Depends(get_db),
+) -> PrescriptionScanResponse:
+    """Dispenses confirmed prescription items after human gate validation."""
+    scan = db.query(CommunityPrescriptionScan).filter_by(id=id).first()
+    if not scan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prescription scan not found")
+
+    if scan.status != "HUMAN_CONFIRMED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dispensing Invariant Blocked: Prescription must be in HUMAN_CONFIRMED state (currently {scan.status}). "
+                   f"The reviewing pharmacist must confirm all 7 core fields before dispensing.",
+        )
+
+    scan.status = "DISPENSED"
+    actor_role = ",".join([r.role_id for r in current_user.roles]) if current_user.roles else "pharmacist"
+    audit = AuditEvent(
+        id=str(uuid.uuid4()),
+        actor_username=current_user.username,
+        actor_role=actor_role,
+        action="COMMUNITY_PRESCRIPTION_DISPENSED",
+        entity_type="CommunityPrescriptionScan",
+        entity_id=scan.id,
+        details=json.dumps({
+            "scan_number": scan.scan_number,
+            "final_status": "DISPENSED",
+        }),
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(scan)
+    return _serialize_scan(scan)
+

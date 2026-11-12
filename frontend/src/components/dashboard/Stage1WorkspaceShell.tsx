@@ -5,6 +5,7 @@ import {
   GraduationCap,
   Store,
   Layers,
+  ScanLine,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types/api';
@@ -12,6 +13,7 @@ import { StaffPrescriptionWorkspace } from '../prescriptions/StaffPrescriptionWo
 import { ChiefOversightWorkspace } from '../oversight/ChiefOversightWorkspace';
 import { StudentSimulationWorkspace } from '../education/StudentSimulationWorkspace';
 import { CounterIntakeStudio } from '../community/CounterIntakeStudio';
+import { PrescriptionScannerStudio } from '../community/PrescriptionScannerStudio';
 
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
@@ -20,7 +22,7 @@ export interface Stage1WorkspaceShellProps {
 
 export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
   const { user } = useAuth();
-  const [staffMode, setStaffMode] = useState<'inpatient' | 'community'>('inpatient');
+  const [staffMode, setStaffMode] = useState<'inpatient' | 'counter' | 'scanner'>('inpatient');
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',
@@ -78,7 +80,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
         </div>
       </div>
 
-      {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community) */}
+      {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community Walk-In vs Prescription Scanner) */}
       {primaryRole === 'staff_pharmacist' && (
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
           <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
@@ -92,23 +94,42 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Hospital Inpatient Queue</span>
+              <span>Hospital Queue</span>
             </button>
             <button
               type="button"
-              onClick={() => setStaffMode('community')}
+              onClick={() => setStaffMode('counter')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                staffMode === 'community'
+                staffMode === 'counter'
                   ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               <Store className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Walk-In Counter Studio (Community Edition)</span>
+              <span>Counter Studio (Workflow A)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStaffMode('scanner')}
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                staffMode === 'scanner'
+                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <ScanLine className="w-3.5 h-3.5 text-sky-400" />
+              <span>Prescription Scanner (Workflow B)</span>
             </button>
           </div>
           <span className="text-xs text-slate-400 hidden sm:inline">
-            Active Mode: <strong className="text-slate-300 font-medium">{staffMode === 'inpatient' ? 'Prescription Queue' : 'Community Counter Intake'}</strong>
+            Active Mode:{' '}
+            <strong className="text-slate-300 font-medium">
+              {staffMode === 'inpatient'
+                ? 'Prescription Queue'
+                : staffMode === 'counter'
+                ? 'Counter Consultation Intake'
+                : 'Prescription OCR & 7-Field Human Gate'}
+            </strong>
           </span>
         </div>
       )}
@@ -117,7 +138,13 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
       <div className="space-y-6">
         {/* Staff Pharmacist Workspaces */}
         {primaryRole === 'staff_pharmacist' && (
-          staffMode === 'inpatient' ? <StaffPrescriptionWorkspace /> : <CounterIntakeStudio />
+          staffMode === 'inpatient' ? (
+            <StaffPrescriptionWorkspace />
+          ) : staffMode === 'counter' ? (
+            <CounterIntakeStudio />
+          ) : (
+            <PrescriptionScannerStudio />
+          )
         )}
 
         {/* Chief Pharmacist Live Oversight & Inventory Workstation */}

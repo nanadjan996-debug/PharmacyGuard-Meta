@@ -151,3 +151,96 @@ class ClinicalRuleMeta(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
+
+class CommunityPrescriptionScan(Base):
+    """Workflow B: Community Prescription OCR scan & human confirmation record."""
+    __tablename__ = "community_prescription_scans"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scan_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    patient_identifier: Mapped[str] = mapped_column(String(50), default="PT-RX-SCAN", nullable=False)
+    
+    # Image metadata (Act 843 data minimality)
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(50), default="image/jpeg", nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    image_data_base64: Mapped[str | None] = mapped_column(Text, nullable=True)  # Transient preview representation
+    
+    # OCR Extraction outcomes
+    extracted_raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    overall_confidence: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    low_confidence_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Mandatory 7-Field Human Confirmation Gate:
+    # PENDING_REVIEW, HUMAN_CONFIRMED, VERIFICATION_COMPLETED, DISPENSED, REJECTED
+    status: Mapped[str] = mapped_column(String(40), default="PENDING_REVIEW", index=True, nullable=False)
+    pharmacist_confirmed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    pharmacist_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    pharmacist_review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    items: Mapped[list["CommunityPrescriptionScanItem"]] = relationship(
+        "CommunityPrescriptionScanItem", back_populates="scan", cascade="all, delete-orphan"
+    )
+
+
+class CommunityPrescriptionScanItem(Base):
+    """Prescription item extracted by OCR and confirmed through the 7-Field Human Gate."""
+    __tablename__ = "community_prescription_scan_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    scan_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("community_prescription_scans.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    item_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # 1. OCR Extracted candidate values
+    ocr_drug_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    ocr_strength: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ocr_dosage_form: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ocr_dose_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ocr_dose_unit: Mapped[str | None] = mapped_column(String(20), default="mg", nullable=True)
+    ocr_route: Mapped[str | None] = mapped_column(String(30), default="Oral", nullable=True)
+    ocr_frequency: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ocr_duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # OCR Confidence scores per field (0.0 to 1.0)
+    confidence_drug_name: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_strength: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_dosage_form: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_dose: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_route: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_frequency: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    confidence_duration: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+
+    # 2. Mandatory 7-Field Human Gate Confirmed values (Entered / Confirmed by Pharmacist)
+    confirmed_drug_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    confirmed_strength: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    confirmed_dosage_form: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    confirmed_dose_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confirmed_dose_unit: Mapped[str | None] = mapped_column(String(20), default="mg", nullable=True)
+    confirmed_route: Mapped[str | None] = mapped_column(String(30), default="Oral", nullable=True)
+    confirmed_frequency: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    confirmed_duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confirmed_instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    # Statutory categorization under Act 857
+    legal_category: Mapped[str] = mapped_column(String(20), default="POM", nullable=False)
+    
+    # Human gate lock status
+    is_pharmacist_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    scan: Mapped["CommunityPrescriptionScan"] = relationship(
+        "CommunityPrescriptionScan", back_populates="items"
+    )
+

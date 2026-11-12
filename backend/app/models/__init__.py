@@ -18,6 +18,8 @@ from app.models.community import (
     CommunityConsultationItem,
     CommunityFinding,
     ClinicalRuleMeta,
+    CommunityPrescriptionScan,
+    CommunityPrescriptionScanItem,
 )
 
 __all__ = [
@@ -46,4 +48,6 @@ __all__ = [
     "CommunityConsultationItem",
     "CommunityFinding",
     "ClinicalRuleMeta",
+    "CommunityPrescriptionScan",
+    "CommunityPrescriptionScanItem",
 ]
