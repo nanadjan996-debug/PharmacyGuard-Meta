@@ -1,0 +1,11 @@
+{
+  "name": "pharmacyguard-meta",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PharmacyGuard - AI Clinical Verification Agent for Community & Hospital Practice",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix frontend test"
+  }
+}
