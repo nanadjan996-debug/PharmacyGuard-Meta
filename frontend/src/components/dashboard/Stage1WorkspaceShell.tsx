@@ -121,9 +121,9 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               <span>Prescription Scanner (Workflow B)</span>
             </button>
           </div>
-          <span className="text-xs text-slate-400 hidden sm:inline">
+          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
             Active Mode:{' '}
-            <strong className="text-slate-300 font-medium">
+            <strong className="text-slate-700 dark:text-slate-200 font-semibold">
               {staffMode === 'inpatient'
                 ? 'Prescription Queue'
                 : staffMode === 'counter'
