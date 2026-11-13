@@ -170,6 +170,15 @@ export interface CommunityPrescriptionScanItem {
   confirmed_instructions?: string | null;
   legal_category: 'POM' | 'P' | 'OTC' | 'RESTRICTED';
   is_pharmacist_confirmed: boolean;
+  is_drug_name_confirmed?: boolean;
+  is_strength_confirmed?: boolean;
+  is_dosage_form_confirmed?: boolean;
+  is_dose_confirmed?: boolean;
+  is_route_confirmed?: boolean;
+  is_frequency_confirmed?: boolean;
+  is_duration_confirmed?: boolean;
+  confirmed_by?: string | null;
+  confirmed_at?: string | null;
 }
 
 export interface CommunityPrescriptionScan {
@@ -199,13 +208,20 @@ export interface CommunityPrescriptionScan {
 export interface ItemConfirmPayload {
   item_id: string;
   confirmed_drug_name: string;
+  confirm_drug_name: boolean;
   confirmed_strength: string;
+  confirm_strength: boolean;
   confirmed_dosage_form: string;
+  confirm_dosage_form: boolean;
   confirmed_dose_amount: number;
+  confirm_dose: boolean;
   confirmed_dose_unit: string;
   confirmed_route: string;
+  confirm_route: boolean;
   confirmed_frequency: string;
+  confirm_frequency: boolean;
   confirmed_duration_days: number;
+  confirm_duration: boolean;
   confirmed_instructions?: string | null;
   legal_category: 'POM' | 'P' | 'OTC' | 'RESTRICTED';
 }

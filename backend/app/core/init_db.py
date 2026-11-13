@@ -28,6 +28,25 @@ def _ensure_schema_columns():
             if "prescription_date" not in scan_cols:
                 conn.execute(text("ALTER TABLE community_prescription_scans ADD COLUMN prescription_date VARCHAR(50)"))
 
+    if insp.has_table("community_prescription_scan_items"):
+        item_cols = [c["name"] for c in insp.get_columns("community_prescription_scan_items")]
+        with engine.begin() as conn:
+            for bool_col in [
+                "is_drug_name_confirmed",
+                "is_strength_confirmed",
+                "is_dosage_form_confirmed",
+                "is_dose_confirmed",
+                "is_route_confirmed",
+                "is_frequency_confirmed",
+                "is_duration_confirmed",
+            ]:
+                if bool_col not in item_cols:
+                    conn.execute(text(f"ALTER TABLE community_prescription_scan_items ADD COLUMN {bool_col} BOOLEAN DEFAULT 0 NOT NULL"))
+            if "confirmed_by" not in item_cols:
+                conn.execute(text("ALTER TABLE community_prescription_scan_items ADD COLUMN confirmed_by VARCHAR(100)"))
+            if "confirmed_at" not in item_cols:
+                conn.execute(text("ALTER TABLE community_prescription_scan_items ADD COLUMN confirmed_at TIMESTAMP"))
+
 
 def init_database() -> dict[str, int]:
     """Create all tables and seed initial synthetic benchmark data idempotently."""

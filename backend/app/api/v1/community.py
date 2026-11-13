@@ -417,6 +417,15 @@ def _serialize_scan(s: CommunityPrescriptionScan) -> PrescriptionScanResponse:
             confirmed_instructions=it.confirmed_instructions,
             legal_category=it.legal_category,
             is_pharmacist_confirmed=it.is_pharmacist_confirmed,
+            is_drug_name_confirmed=getattr(it, "is_drug_name_confirmed", False),
+            is_strength_confirmed=getattr(it, "is_strength_confirmed", False),
+            is_dosage_form_confirmed=getattr(it, "is_dosage_form_confirmed", False),
+            is_dose_confirmed=getattr(it, "is_dose_confirmed", False),
+            is_route_confirmed=getattr(it, "is_route_confirmed", False),
+            is_frequency_confirmed=getattr(it, "is_frequency_confirmed", False),
+            is_duration_confirmed=getattr(it, "is_duration_confirmed", False),
+            confirmed_by=getattr(it, "confirmed_by", None),
+            confirmed_at=getattr(it, "confirmed_at", None),
         )
         for it in s.items
     ]
@@ -604,6 +613,7 @@ def confirm_prescription_human_gate(
                 detail=f"Item ID {confirmed.item_id} does not belong to scan {id}.",
             )
         
+        now = datetime.now(timezone.utc)
         db_item.confirmed_drug_name = confirmed.confirmed_drug_name.strip()
         db_item.confirmed_strength = confirmed.confirmed_strength.strip()
         db_item.confirmed_dosage_form = confirmed.confirmed_dosage_form.strip()
@@ -614,16 +624,34 @@ def confirm_prescription_human_gate(
         db_item.confirmed_duration_days = confirmed.confirmed_duration_days
         db_item.confirmed_instructions = confirmed.confirmed_instructions
         db_item.legal_category = confirmed.legal_category
+
+        # Explicit per-field affirmative confirmation tracking and pharmacist attribution
+        db_item.is_drug_name_confirmed = confirmed.confirm_drug_name
+        db_item.is_strength_confirmed = confirmed.confirm_strength
+        db_item.is_dosage_form_confirmed = confirmed.confirm_dosage_form
+        db_item.is_dose_confirmed = confirmed.confirm_dose
+        db_item.is_route_confirmed = confirmed.confirm_route
+        db_item.is_frequency_confirmed = confirmed.confirm_frequency
+        db_item.is_duration_confirmed = confirmed.confirm_duration
+        db_item.confirmed_by = current_user.username
+        db_item.confirmed_at = now
         db_item.is_pharmacist_confirmed = True
 
         validation_records.append({
             "is_pharmacist_confirmed": True,
+            "confirm_drug_name": confirmed.confirm_drug_name,
             "confirmed_drug_name": db_item.confirmed_drug_name,
+            "confirm_strength": confirmed.confirm_strength,
             "confirmed_strength": db_item.confirmed_strength,
+            "confirm_dosage_form": confirmed.confirm_dosage_form,
             "confirmed_dosage_form": db_item.confirmed_dosage_form,
+            "confirm_dose": confirmed.confirm_dose,
             "confirmed_dose_amount": db_item.confirmed_dose_amount,
+            "confirm_route": confirmed.confirm_route,
             "confirmed_route": db_item.confirmed_route,
+            "confirm_frequency": confirmed.confirm_frequency,
             "confirmed_frequency": db_item.confirmed_frequency,
+            "confirm_duration": confirmed.confirm_duration,
             "confirmed_duration_days": db_item.confirmed_duration_days,
         })
 

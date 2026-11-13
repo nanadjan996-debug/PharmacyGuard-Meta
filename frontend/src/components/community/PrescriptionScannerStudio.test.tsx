@@ -114,7 +114,12 @@ describe('PharmacyGuard Workflow B: PrescriptionScannerStudio', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Confirm & Lock 7-Field Gate/i)).toBeInTheDocument();
+      expect(screen.getByText(/Confirm All 7 Fields/i)).toBeInTheDocument();
     });
+
+    // Pharmacist explicitly confirms all 7 fields
+    const confirmAllBtn = screen.getByRole('button', { name: /Confirm All 7 Fields/i });
+    fireEvent.click(confirmAllBtn);
 
     const lockBtn = screen.getByRole('button', { name: /Confirm & Lock 7-Field Gate/i });
     fireEvent.click(lockBtn);
@@ -125,6 +130,24 @@ describe('PharmacyGuard Workflow B: PrescriptionScannerStudio', () => {
         screen.getByText(/7-Field Human Confirmation Gate locked successfully/i)
       ).toBeInTheDocument();
       expect(screen.getByText(/Record Dispensing & Complete/i)).toBeInTheDocument();
+    });
+  });
+
+  it('blocks confirmation if any of the 7 fields has not been affirmatively confirmed', async () => {
+    render(<PrescriptionScannerStudio />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Confirm & Lock 7-Field Gate/i)).toBeInTheDocument();
+    });
+
+    // Attempt to lock gate without affirmative confirmation
+    const lockBtn = screen.getByRole('button', { name: /Confirm & Lock 7-Field Gate/i });
+    fireEvent.click(lockBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Validation Gate Blocked: Medication Item #1/i)).toBeInTheDocument();
+      expect(screen.getByText(/has unconfirmed fields/i)).toBeInTheDocument();
+      expect(api.community.confirmPrescriptionGate).not.toHaveBeenCalled();
     });
   });
 

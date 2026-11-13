@@ -167,6 +167,15 @@ class PrescriptionScanItemResponse(BaseModel):
     confirmed_instructions: str | None
     legal_category: str
     is_pharmacist_confirmed: bool
+    is_drug_name_confirmed: bool = False
+    is_strength_confirmed: bool = False
+    is_dosage_form_confirmed: bool = False
+    is_dose_confirmed: bool = False
+    is_route_confirmed: bool = False
+    is_frequency_confirmed: bool = False
+    is_duration_confirmed: bool = False
+    confirmed_by: str | None = None
+    confirmed_at: datetime | None = None
 
 
 class PrescriptionScanResponse(BaseModel):
@@ -195,14 +204,35 @@ class PrescriptionScanResponse(BaseModel):
 
 class ItemConfirmPayload(BaseModel):
     item_id: str
+    # 1. Drug Name
     confirmed_drug_name: str = Field(..., min_length=2, description="1. Core Clinical Field: Drug Name")
+    confirm_drug_name: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Drug Name")
+
+    # 2. Strength
     confirmed_strength: str = Field(..., min_length=1, description="2. Core Clinical Field: Strength")
+    confirm_strength: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Strength")
+
+    # 3. Formulation
     confirmed_dosage_form: str = Field(..., min_length=2, description="3. Core Clinical Field: Formulation")
+    confirm_dosage_form: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Formulation")
+
+    # 4. Dose Amount
     confirmed_dose_amount: float = Field(..., gt=0, description="4. Core Clinical Field: Dose Amount")
+    confirm_dose: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Dose")
     confirmed_dose_unit: str = Field(default="mg")
+
+    # 5. Route
     confirmed_route: str = Field(default="Oral", min_length=2, description="5. Core Clinical Field: Route")
+    confirm_route: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Route")
+
+    # 6. Frequency
     confirmed_frequency: str = Field(..., min_length=1, description="6. Core Clinical Field: Frequency")
+    confirm_frequency: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Frequency")
+
+    # 7. Duration
     confirmed_duration_days: int = Field(..., ge=1, description="7. Core Clinical Field: Duration")
+    confirm_duration: bool = Field(default=False, description="Explicit affirmative pharmacist confirmation for Duration")
+
     confirmed_instructions: str | None = None
     legal_category: str = "POM"
 

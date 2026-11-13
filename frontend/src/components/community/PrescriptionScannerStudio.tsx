@@ -100,45 +100,62 @@ export const PrescriptionScannerStudio: React.FC = () => {
     // Initialize 7-field confirmation state from OCR extractions:
     // Safety Invariant: Low-confidence (<0.85) or missing OCR values do NOT count as confirmed.
     // Missing dose or duration are NOT inferred; pharmacist must manually enter them.
+    // Explicit Confirmation Invariant: Even high-confidence OCR extractions start with confirm_* = false;
+    // every field requires explicit affirmative pharmacist confirmation before the gate can be locked.
     const initialConfirmed: Record<string, any> = {};
     scan.items.forEach((item) => {
       if (item.is_pharmacist_confirmed) {
         initialConfirmed[item.id] = {
           item_id: item.id,
           confirmed_drug_name: item.confirmed_drug_name || '',
+          confirm_drug_name: item.is_drug_name_confirmed ?? true,
           confirmed_strength: item.confirmed_strength || '',
+          confirm_strength: item.is_strength_confirmed ?? true,
           confirmed_dosage_form: item.confirmed_dosage_form || 'Tablet',
+          confirm_dosage_form: item.is_dosage_form_confirmed ?? true,
           confirmed_dose_amount: item.confirmed_dose_amount ?? '',
+          confirm_dose: item.is_dose_confirmed ?? true,
           confirmed_dose_unit: item.confirmed_dose_unit || 'mg',
           confirmed_route: item.confirmed_route || 'Oral',
+          confirm_route: item.is_route_confirmed ?? true,
           confirmed_frequency: item.confirmed_frequency || '',
+          confirm_frequency: item.is_frequency_confirmed ?? true,
           confirmed_duration_days: item.confirmed_duration_days ?? '',
+          confirm_duration: item.is_duration_confirmed ?? true,
           confirmed_instructions: item.confirmed_instructions || '',
           legal_category: item.legal_category || 'POM',
         };
       } else {
-        // High confidence (>=0.85) extractions populate candidates; missing or low confidence fields remain blank
+        // High confidence (>=0.85) extractions populate candidates; missing or low confidence fields remain blank.
+        // All confirm_* flags start as FALSE requiring affirmative confirmation.
         initialConfirmed[item.id] = {
           item_id: item.id,
           confirmed_drug_name:
             item.confidence_drug_name >= 0.85 && item.ocr_drug_name ? item.ocr_drug_name : (item.confirmed_drug_name || ''),
+          confirm_drug_name: false,
           confirmed_strength:
             item.confidence_strength >= 0.85 && item.ocr_strength ? item.ocr_strength : (item.confirmed_strength || ''),
+          confirm_strength: false,
           confirmed_dosage_form:
             item.confidence_dosage_form >= 0.85 && item.ocr_dosage_form ? item.ocr_dosage_form : (item.confirmed_dosage_form || 'Tablet'),
+          confirm_dosage_form: false,
           confirmed_dose_amount:
             item.confidence_dose >= 0.85 && item.ocr_dose_amount !== null && item.ocr_dose_amount !== undefined
               ? item.ocr_dose_amount
               : (item.confirmed_dose_amount ?? ''),
+          confirm_dose: false,
           confirmed_dose_unit: item.ocr_dose_unit || 'mg',
           confirmed_route:
             item.confidence_route >= 0.85 && item.ocr_route ? item.ocr_route : (item.confirmed_route || 'Oral'),
+          confirm_route: false,
           confirmed_frequency:
             item.confidence_frequency >= 0.85 && item.ocr_frequency ? item.ocr_frequency : (item.confirmed_frequency || ''),
+          confirm_frequency: false,
           confirmed_duration_days:
             item.confidence_duration >= 0.85 && item.ocr_duration_days !== null && item.ocr_duration_days !== undefined
               ? item.ocr_duration_days
               : (item.confirmed_duration_days ?? ''),
+          confirm_duration: false,
           confirmed_instructions: item.confirmed_instructions || '',
           legal_category: item.legal_category || 'POM',
         };
@@ -260,6 +277,24 @@ export const PrescriptionScannerStudio: React.FC = () => {
         setIsProcessing(false);
         return;
       }
+
+      // Explicit Affirmative Confirmation Check: Every field must be confirmed (confirm_* === true)
+      const unconfirmed: string[] = [];
+      if (!form.confirm_drug_name) unconfirmed.push('1. Drug Name');
+      if (!form.confirm_strength) unconfirmed.push('2. Strength');
+      if (!form.confirm_dosage_form) unconfirmed.push('3. Formulation');
+      if (!form.confirm_dose) unconfirmed.push('4. Dose Amount');
+      if (!form.confirm_route) unconfirmed.push('5. Route');
+      if (!form.confirm_frequency) unconfirmed.push('6. Frequency');
+      if (!form.confirm_duration) unconfirmed.push('7. Duration');
+
+      if (unconfirmed.length > 0) {
+        setErrorMessage(
+          `Validation Gate Blocked: Medication Item #${i + 1} (${form.confirmed_drug_name || 'Unnamed'}) has unconfirmed fields: ${unconfirmed.join(', ')}. The reviewing pharmacist must affirmatively confirm each of the 7 clinical fields.`
+        );
+        setIsProcessing(false);
+        return;
+      }
     }
 
     try {
@@ -268,19 +303,26 @@ export const PrescriptionScannerStudio: React.FC = () => {
         return {
           item_id: item.id,
           confirmed_drug_name: form.confirmed_drug_name.trim(),
+          confirm_drug_name: !!form.confirm_drug_name,
           confirmed_strength: form.confirmed_strength.trim(),
+          confirm_strength: !!form.confirm_strength,
           confirmed_dosage_form: form.confirmed_dosage_form.trim(),
+          confirm_dosage_form: !!form.confirm_dosage_form,
           confirmed_dose_amount:
             typeof form.confirmed_dose_amount === 'number'
               ? form.confirmed_dose_amount
               : parseFloat(form.confirmed_dose_amount),
+          confirm_dose: !!form.confirm_dose,
           confirmed_dose_unit: form.confirmed_dose_unit || 'mg',
           confirmed_route: form.confirmed_route.trim(),
+          confirm_route: !!form.confirm_route,
           confirmed_frequency: form.confirmed_frequency.trim(),
+          confirm_frequency: !!form.confirm_frequency,
           confirmed_duration_days:
             typeof form.confirmed_duration_days === 'number'
               ? form.confirmed_duration_days
               : parseInt(form.confirmed_duration_days, 10),
+          confirm_duration: !!form.confirm_duration,
           confirmed_instructions: form.confirmed_instructions || '',
           legal_category: form.legal_category || 'POM',
         };
@@ -332,6 +374,28 @@ export const PrescriptionScannerStudio: React.FC = () => {
       </span>
     );
   };
+
+  const renderFieldConfirmToggle = (
+    itemId: string,
+    fieldKey: keyof ItemConfirmPayload,
+    isConfirmed: boolean,
+    label: string
+  ) => (
+    <button
+      type="button"
+      onClick={() => updateField(itemId, fieldKey, !isConfirmed)}
+      disabled={activeScan?.status === 'DISPENSED'}
+      className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1 border transition-colors cursor-pointer ${
+        isConfirmed
+          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-600'
+          : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
+      }`}
+      title={isConfirmed ? `Confirmed by Pharmacist (click to unconfirm ${label})` : `Click to explicitly confirm ${label}`}
+    >
+      {isConfirmed ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" /> : null}
+      {isConfirmed ? 'Confirmed' : 'Confirm'}
+    </button>
+  );
 
   return (
     <div className="space-y-6">
@@ -604,15 +668,39 @@ export const PrescriptionScannerStudio: React.FC = () => {
                       key={item.id}
                       className="bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-750 pb-2">
-                        <span className="text-xs font-bold text-sky-700 dark:text-sky-400">
-                          Medication Item #{idx + 1}
-                        </span>
+                      <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-slate-750 pb-2 gap-2">
                         <div className="flex items-center gap-2">
-                          {renderConfidenceBadge(item.confidence_drug_name)}
+                          <span className="text-xs font-bold text-sky-700 dark:text-sky-400">
+                            Medication Item #{idx + 1}
+                          </span>
                           <span className="text-xs px-2 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono font-medium">
                             Act 857: {form.legal_category}
                           </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmedItems((prev) => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  confirm_drug_name: true,
+                                  confirm_strength: true,
+                                  confirm_dosage_form: true,
+                                  confirm_dose: true,
+                                  confirm_route: true,
+                                  confirm_frequency: true,
+                                  confirm_duration: true,
+                                },
+                              }));
+                            }}
+                            disabled={activeScan.status === 'DISPENSED'}
+                            className="text-[11px] px-2.5 py-1 rounded bg-sky-50 text-sky-800 hover:bg-sky-100 dark:bg-sky-950 dark:text-sky-300 dark:hover:bg-sky-900 border border-sky-300 dark:border-sky-700 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                            Confirm All 7 Fields
+                          </button>
                         </div>
                       </div>
 
@@ -622,7 +710,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="sm:col-span-2 space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>1. Drug Name *</span>
-                            {renderConfidenceBadge(item.confidence_drug_name)}
+                            <div className="flex items-center gap-1.5">
+                              {renderConfidenceBadge(item.confidence_drug_name)}
+                              {renderFieldConfirmToggle(item.id, 'confirm_drug_name', !!form.confirm_drug_name, 'Drug Name')}
+                            </div>
                           </label>
                           <input
                             type="text"
@@ -640,7 +731,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>2. Strength *</span>
-                            {renderConfidenceBadge(item.confidence_strength)}
+                            <div className="flex items-center gap-1.5">
+                              {renderConfidenceBadge(item.confidence_strength)}
+                              {renderFieldConfirmToggle(item.id, 'confirm_strength', !!form.confirm_strength, 'Strength')}
+                            </div>
                           </label>
                           <input
                             type="text"
@@ -658,7 +752,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>3. Formulation *</span>
-                            {renderConfidenceBadge(item.confidence_dosage_form)}
+                            <div className="flex items-center gap-1.5">
+                              {renderConfidenceBadge(item.confidence_dosage_form)}
+                              {renderFieldConfirmToggle(item.id, 'confirm_dosage_form', !!form.confirm_dosage_form, 'Formulation')}
+                            </div>
                           </label>
                           <select
                             value={form.confirmed_dosage_form}
@@ -682,13 +779,16 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>4. Dose *</span>
-                            {item.confidence_dose < 0.85 || !form.confirmed_dose_amount ? (
-                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
-                              </span>
-                            ) : (
-                              renderConfidenceBadge(item.confidence_dose)
-                            )}
+                            <div className="flex items-center gap-1.5">
+                              {item.confidence_dose < 0.85 || !form.confirmed_dose_amount ? (
+                                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                                </span>
+                              ) : (
+                                renderConfidenceBadge(item.confidence_dose)
+                              )}
+                              {renderFieldConfirmToggle(item.id, 'confirm_dose', !!form.confirm_dose, 'Dose Amount')}
+                            </div>
                           </label>
                           <input
                             type="number"
@@ -710,7 +810,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>5. Route *</span>
-                            {renderConfidenceBadge(item.confidence_route)}
+                            <div className="flex items-center gap-1.5">
+                              {renderConfidenceBadge(item.confidence_route)}
+                              {renderFieldConfirmToggle(item.id, 'confirm_route', !!form.confirm_route, 'Route')}
+                            </div>
                           </label>
                           <select
                             value={form.confirmed_route}
@@ -730,13 +833,16 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>6. Frequency *</span>
-                            {item.confidence_frequency < 0.85 || !form.confirmed_frequency ? (
-                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
-                              </span>
-                            ) : (
-                              renderConfidenceBadge(item.confidence_frequency)
-                            )}
+                            <div className="flex items-center gap-1.5">
+                              {item.confidence_frequency < 0.85 || !form.confirmed_frequency ? (
+                                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                                </span>
+                              ) : (
+                                renderConfidenceBadge(item.confidence_frequency)
+                              )}
+                              {renderFieldConfirmToggle(item.id, 'confirm_frequency', !!form.confirm_frequency, 'Frequency')}
+                            </div>
                           </label>
                           <select
                             value={form.confirmed_frequency || ''}
@@ -759,13 +865,16 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>7. Duration (Days) *</span>
-                            {item.confidence_duration < 0.85 || !form.confirmed_duration_days ? (
-                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
-                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
-                              </span>
-                            ) : (
-                              renderConfidenceBadge(item.confidence_duration)
-                            )}
+                            <div className="flex items-center gap-1.5">
+                              {item.confidence_duration < 0.85 || !form.confirmed_duration_days ? (
+                                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                  <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                                </span>
+                              ) : (
+                                renderConfidenceBadge(item.confidence_duration)
+                              )}
+                              {renderFieldConfirmToggle(item.id, 'confirm_duration', !!form.confirm_duration, 'Duration')}
+                            </div>
                           </label>
                           <input
                             type="number"

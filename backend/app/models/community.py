@@ -240,8 +240,17 @@ class CommunityPrescriptionScanItem(Base):
     # Statutory categorization under Act 857
     legal_category: Mapped[str] = mapped_column(String(20), default="POM", nullable=False)
     
-    # Human gate lock status
+    # Human gate lock status & explicit per-field affirmative confirmation flags
+    is_drug_name_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_strength_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_dosage_form_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_dose_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_route_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_frequency_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_duration_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_pharmacist_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    confirmed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     scan: Mapped["CommunityPrescriptionScan"] = relationship(
         "CommunityPrescriptionScan", back_populates="items"

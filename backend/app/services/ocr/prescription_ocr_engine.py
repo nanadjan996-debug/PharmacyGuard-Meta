@@ -360,7 +360,11 @@ class PrescriptionOCREngine:
 
     @classmethod
     def validate_human_gate_confirmation(cls, items: list[dict[str, Any]]) -> tuple[bool, str]:
-        """Human Gate Invariant: All 7 core fields must be confirmed for every medication item."""
+        """Human Gate Invariant: All 7 core fields must be explicitly confirmed for every medication item.
+        
+        Merely containing non-empty values does NOT satisfy the clinical verification requirement.
+        Every field requires affirmative pharmacist verification (confirm_* == True).
+        """
         if not items:
             return False, "Validation Gate Blocked: At least one medication item must be confirmed."
 
@@ -368,17 +372,29 @@ class PrescriptionOCREngine:
             if not it.get("is_pharmacist_confirmed"):
                 return False, f"Validation Gate Blocked: Item #{idx} ({it.get('confirmed_drug_name') or 'Unnamed'}) has not been confirmed by pharmacist."
             
-            # Check 7 core clinical fields:
+            # Check affirmative confirmation AND validity for all 7 core clinical fields:
+            
             # 1. Drug Name
+            if not it.get("confirm_drug_name"):
+                return False, f"Validation Gate Blocked: Item #{idx} Drug Name has not been explicitly confirmed by pharmacist."
             if not it.get("confirmed_drug_name") or len(str(it["confirmed_drug_name"]).strip()) < 2:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Drug Name."
+
             # 2. Strength
+            if not it.get("confirm_strength"):
+                return False, f"Validation Gate Blocked: Item #{idx} Strength has not been explicitly confirmed by pharmacist."
             if not it.get("confirmed_strength") or len(str(it["confirmed_strength"]).strip()) < 1:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Strength."
+
             # 3. Formulation / Dosage Form
+            if not it.get("confirm_dosage_form"):
+                return False, f"Validation Gate Blocked: Item #{idx} Formulation / Dosage Form has not been explicitly confirmed by pharmacist."
             if not it.get("confirmed_dosage_form") or len(str(it["confirmed_dosage_form"]).strip()) < 2:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Formulation / Dosage Form."
+
             # 4. Dose Amount
+            if not it.get("confirm_dose"):
+                return False, f"Validation Gate Blocked: Item #{idx} Dose Amount has not been explicitly confirmed by pharmacist."
             if it.get("confirmed_dose_amount") is None or str(it["confirmed_dose_amount"]).strip() == "":
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Dose Amount."
             try:
@@ -387,13 +403,22 @@ class PrescriptionOCREngine:
                     return False, f"Validation Gate Blocked: Item #{idx} has invalid Dose Amount (must be > 0)."
             except (ValueError, TypeError):
                 return False, f"Validation Gate Blocked: Item #{idx} has invalid Dose Amount."
+
             # 5. Route
+            if not it.get("confirm_route"):
+                return False, f"Validation Gate Blocked: Item #{idx} Route has not been explicitly confirmed by pharmacist."
             if not it.get("confirmed_route") or len(str(it["confirmed_route"]).strip()) < 2:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Route."
+
             # 6. Frequency
+            if not it.get("confirm_frequency"):
+                return False, f"Validation Gate Blocked: Item #{idx} Frequency has not been explicitly confirmed by pharmacist."
             if not it.get("confirmed_frequency") or len(str(it["confirmed_frequency"]).strip()) < 1:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Frequency."
+
             # 7. Duration
+            if not it.get("confirm_duration"):
+                return False, f"Validation Gate Blocked: Item #{idx} Duration has not been explicitly confirmed by pharmacist."
             if it.get("confirmed_duration_days") is None or str(it["confirmed_duration_days"]).strip() == "":
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Duration."
             try:
