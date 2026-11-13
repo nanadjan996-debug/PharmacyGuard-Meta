@@ -159,6 +159,9 @@ class CommunityPrescriptionScan(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     scan_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     patient_identifier: Mapped[str] = mapped_column(String(50), default="PT-RX-SCAN", nullable=False)
+    patient_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    patient_age: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    prescription_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
     
     # Image metadata (Act 843 data minimality)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)

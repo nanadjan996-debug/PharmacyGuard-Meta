@@ -9,6 +9,7 @@ import {
   RotateCw,
   ShieldCheck,
   Lock,
+  User,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import {
@@ -96,22 +97,52 @@ export const PrescriptionScannerStudio: React.FC = () => {
     setSuccessMessage(null);
     setPharmacistNotes(scan.pharmacist_review_notes || '');
 
-    // Initialize 7-field confirmation state from OCR extractions
-    const initialConfirmed: Record<string, ItemConfirmPayload> = {};
+    // Initialize 7-field confirmation state from OCR extractions:
+    // Safety Invariant: Low-confidence (<0.85) or missing OCR values do NOT count as confirmed.
+    // Missing dose or duration are NOT inferred; pharmacist must manually enter them.
+    const initialConfirmed: Record<string, any> = {};
     scan.items.forEach((item) => {
-      initialConfirmed[item.id] = {
-        item_id: item.id,
-        confirmed_drug_name: item.confirmed_drug_name || item.ocr_drug_name,
-        confirmed_strength: item.confirmed_strength || item.ocr_strength || '500mg',
-        confirmed_dosage_form: item.confirmed_dosage_form || item.ocr_dosage_form || 'Tablet',
-        confirmed_dose_amount: item.confirmed_dose_amount || item.ocr_dose_amount || 1.0,
-        confirmed_dose_unit: item.confirmed_dose_unit || item.ocr_dose_unit || 'mg',
-        confirmed_route: item.confirmed_route || item.ocr_route || 'Oral',
-        confirmed_frequency: item.confirmed_frequency || item.ocr_frequency || 'BID',
-        confirmed_duration_days: item.confirmed_duration_days || item.ocr_duration_days || 5,
-        confirmed_instructions: item.confirmed_instructions || '',
-        legal_category: item.legal_category || 'POM',
-      };
+      if (item.is_pharmacist_confirmed) {
+        initialConfirmed[item.id] = {
+          item_id: item.id,
+          confirmed_drug_name: item.confirmed_drug_name || '',
+          confirmed_strength: item.confirmed_strength || '',
+          confirmed_dosage_form: item.confirmed_dosage_form || 'Tablet',
+          confirmed_dose_amount: item.confirmed_dose_amount ?? '',
+          confirmed_dose_unit: item.confirmed_dose_unit || 'mg',
+          confirmed_route: item.confirmed_route || 'Oral',
+          confirmed_frequency: item.confirmed_frequency || '',
+          confirmed_duration_days: item.confirmed_duration_days ?? '',
+          confirmed_instructions: item.confirmed_instructions || '',
+          legal_category: item.legal_category || 'POM',
+        };
+      } else {
+        // High confidence (>=0.85) extractions populate candidates; missing or low confidence fields remain blank
+        initialConfirmed[item.id] = {
+          item_id: item.id,
+          confirmed_drug_name:
+            item.confidence_drug_name >= 0.85 && item.ocr_drug_name ? item.ocr_drug_name : (item.confirmed_drug_name || ''),
+          confirmed_strength:
+            item.confidence_strength >= 0.85 && item.ocr_strength ? item.ocr_strength : (item.confirmed_strength || ''),
+          confirmed_dosage_form:
+            item.confidence_dosage_form >= 0.85 && item.ocr_dosage_form ? item.ocr_dosage_form : (item.confirmed_dosage_form || 'Tablet'),
+          confirmed_dose_amount:
+            item.confidence_dose >= 0.85 && item.ocr_dose_amount !== null && item.ocr_dose_amount !== undefined
+              ? item.ocr_dose_amount
+              : (item.confirmed_dose_amount ?? ''),
+          confirmed_dose_unit: item.ocr_dose_unit || 'mg',
+          confirmed_route:
+            item.confidence_route >= 0.85 && item.ocr_route ? item.ocr_route : (item.confirmed_route || 'Oral'),
+          confirmed_frequency:
+            item.confidence_frequency >= 0.85 && item.ocr_frequency ? item.ocr_frequency : (item.confirmed_frequency || ''),
+          confirmed_duration_days:
+            item.confidence_duration >= 0.85 && item.ocr_duration_days !== null && item.ocr_duration_days !== undefined
+              ? item.ocr_duration_days
+              : (item.confirmed_duration_days ?? ''),
+          confirmed_instructions: item.confirmed_instructions || '',
+          legal_category: item.legal_category || 'POM',
+        };
+      }
     });
     setConfirmedItems(initialConfirmed);
   };
@@ -180,8 +211,81 @@ export const PrescriptionScannerStudio: React.FC = () => {
     if (!activeScan) return;
     setIsProcessing(true);
     setErrorMessage(null);
+
+    // Strict validation: Verify all 7 core clinical fields for every item
+    for (let i = 0; i < activeScan.items.length; i++) {
+      const item = activeScan.items[i];
+      const form = confirmedItems[item.id];
+      if (!form) {
+        setErrorMessage(`Medication Item #${i + 1} has not been filled out.`);
+        setIsProcessing(false);
+        return;
+      }
+
+      const missing: string[] = [];
+      if (!form.confirmed_drug_name || form.confirmed_drug_name.trim().length < 2) {
+        missing.push('1. Drug Name');
+      }
+      if (!form.confirmed_strength || form.confirmed_strength.trim().length < 1) {
+        missing.push('2. Strength');
+      }
+      if (!form.confirmed_dosage_form || form.confirmed_dosage_form.trim().length < 2) {
+        missing.push('3. Formulation');
+      }
+      const doseNum =
+        typeof form.confirmed_dose_amount === 'number'
+          ? form.confirmed_dose_amount
+          : parseFloat(form.confirmed_dose_amount);
+      if (isNaN(doseNum) || doseNum <= 0) {
+        missing.push('4. Dose Amount (must be > 0)');
+      }
+      if (!form.confirmed_route || form.confirmed_route.trim().length < 2) {
+        missing.push('5. Route');
+      }
+      if (!form.confirmed_frequency || form.confirmed_frequency.trim().length < 1) {
+        missing.push('6. Frequency');
+      }
+      const durNum =
+        typeof form.confirmed_duration_days === 'number'
+          ? form.confirmed_duration_days
+          : parseInt(form.confirmed_duration_days, 10);
+      if (isNaN(durNum) || durNum <= 0) {
+        missing.push('7. Duration (must be >= 1 day)');
+      }
+
+      if (missing.length > 0) {
+        setErrorMessage(
+          `Validation Gate Blocked: Medication Item #${i + 1} (${form.confirmed_drug_name || 'Unnamed'}) is missing required clinical fields: ${missing.join(', ')}. All 7 core clinical fields must be explicitly supplied and confirmed by the pharmacist.`
+        );
+        setIsProcessing(false);
+        return;
+      }
+    }
+
     try {
-      const itemsPayload = Object.values(confirmedItems);
+      const itemsPayload: ItemConfirmPayload[] = activeScan.items.map((item) => {
+        const form = confirmedItems[item.id];
+        return {
+          item_id: item.id,
+          confirmed_drug_name: form.confirmed_drug_name.trim(),
+          confirmed_strength: form.confirmed_strength.trim(),
+          confirmed_dosage_form: form.confirmed_dosage_form.trim(),
+          confirmed_dose_amount:
+            typeof form.confirmed_dose_amount === 'number'
+              ? form.confirmed_dose_amount
+              : parseFloat(form.confirmed_dose_amount),
+          confirmed_dose_unit: form.confirmed_dose_unit || 'mg',
+          confirmed_route: form.confirmed_route.trim(),
+          confirmed_frequency: form.confirmed_frequency.trim(),
+          confirmed_duration_days:
+            typeof form.confirmed_duration_days === 'number'
+              ? form.confirmed_duration_days
+              : parseInt(form.confirmed_duration_days, 10),
+          confirmed_instructions: form.confirmed_instructions || '',
+          legal_category: form.legal_category || 'POM',
+        };
+      });
+
       const updatedScan = await api.community.confirmPrescriptionGate(activeScan.id, {
         items: itemsPayload,
         pharmacist_review_notes: pharmacistNotes,
@@ -431,7 +535,7 @@ export const PrescriptionScannerStudio: React.FC = () => {
                     Mandatory 7-Field Human Confirmation Gate
                   </h2>
                   <span className="text-xs text-slate-500 dark:text-slate-400">
-                    Reviewing Pharmacist must explicitly confirm all 7 core fields for each item
+                    Reviewing Pharmacist must explicitly confirm all 7 core clinical fields for each item
                   </span>
                 </div>
 
@@ -448,19 +552,50 @@ export const PrescriptionScannerStudio: React.FC = () => {
                 </span>
               </div>
 
+              {/* Patient & Prescription Header Context (Auxiliary Context - Distinct from the 7 Clinical Verification Fields) */}
+              <div className="p-3.5 rounded-lg bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-sky-900 dark:text-sky-200">
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                    Prescription Header Information (Patient & Date Context)
+                  </span>
+                  <span className="text-[11px] font-normal text-sky-700 dark:text-sky-300">
+                    Additional metadata — does not replace the 7 clinical verification fields
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Identifier</span>
+                    <span className="font-mono font-medium text-slate-900 dark:text-white">{activeScan.patient_identifier || 'PT-RX-SCAN'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Patient Name</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{activeScan.patient_name || 'Not documented on slip'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Age</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{activeScan.patient_age || 'Not specified'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">Date</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{activeScan.prescription_date || 'Not specified'}</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Items List */}
               <div className="space-y-4">
                 {activeScan.items.map((item, idx) => {
                   const form = confirmedItems[item.id] || {
                     item_id: item.id,
-                    confirmed_drug_name: item.ocr_drug_name,
-                    confirmed_strength: item.ocr_strength || '500mg',
-                    confirmed_dosage_form: item.ocr_dosage_form || 'Tablet',
-                    confirmed_dose_amount: item.ocr_dose_amount || 1.0,
+                    confirmed_drug_name: item.confirmed_drug_name || (item.confidence_drug_name >= 0.85 ? item.ocr_drug_name : ''),
+                    confirmed_strength: item.confirmed_strength || (item.confidence_strength >= 0.85 ? item.ocr_strength || '' : ''),
+                    confirmed_dosage_form: item.confirmed_dosage_form || (item.confidence_dosage_form >= 0.85 ? item.ocr_dosage_form || 'Tablet' : 'Tablet'),
+                    confirmed_dose_amount: item.confirmed_dose_amount ?? (item.confidence_dose >= 0.85 ? item.ocr_dose_amount ?? '' : ''),
                     confirmed_dose_unit: item.ocr_dose_unit || 'mg',
-                    confirmed_route: item.ocr_route || 'Oral',
-                    confirmed_frequency: item.ocr_frequency || 'BID',
-                    confirmed_duration_days: item.ocr_duration_days || 5,
+                    confirmed_route: item.confirmed_route || (item.confidence_route >= 0.85 ? item.ocr_route || 'Oral' : 'Oral'),
+                    confirmed_frequency: item.confirmed_frequency || (item.confidence_frequency >= 0.85 ? item.ocr_frequency || '' : ''),
+                    confirmed_duration_days: item.confirmed_duration_days ?? (item.confidence_duration >= 0.85 ? item.ocr_duration_days ?? '' : ''),
                     legal_category: item.legal_category || 'POM',
                   };
 
@@ -494,7 +629,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                             value={form.confirmed_drug_name}
                             onChange={(e) => updateField(item.id, 'confirmed_drug_name', e.target.value)}
                             disabled={activeScan.status === 'DISPENSED'}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="Drug Name (Required)"
+                            className={`w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 ${
+                              !form.confirmed_drug_name ? 'border-amber-400 dark:border-amber-600' : 'border-slate-300 dark:border-slate-700'
+                            }`}
                           />
                         </div>
 
@@ -509,7 +647,10 @@ export const PrescriptionScannerStudio: React.FC = () => {
                             value={form.confirmed_strength}
                             onChange={(e) => updateField(item.id, 'confirmed_strength', e.target.value)}
                             disabled={activeScan.status === 'DISPENSED'}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="e.g. 500mg (Required)"
+                            className={`w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 ${
+                              !form.confirmed_strength ? 'border-amber-400 dark:border-amber-600' : 'border-slate-300 dark:border-slate-700'
+                            }`}
                           />
                         </div>
 
@@ -532,6 +673,8 @@ export const PrescriptionScannerStudio: React.FC = () => {
                             <option value="Sachet">Sachet</option>
                             <option value="Injection">Injection</option>
                             <option value="Ointment">Ointment</option>
+                            <option value="Drops">Drops</option>
+                            <option value="Inhalation">Inhalation</option>
                           </select>
                         </div>
 
@@ -539,15 +682,27 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>4. Dose *</span>
-                            {renderConfidenceBadge(item.confidence_dose)}
+                            {item.confidence_dose < 0.85 || !form.confirmed_dose_amount ? (
+                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                              </span>
+                            ) : (
+                              renderConfidenceBadge(item.confidence_dose)
+                            )}
                           </label>
                           <input
                             type="number"
                             step="0.5"
-                            value={form.confirmed_dose_amount}
-                            onChange={(e) => updateField(item.id, 'confirmed_dose_amount', parseFloat(e.target.value) || 1)}
+                            min="0.1"
+                            value={form.confirmed_dose_amount ?? ''}
+                            onChange={(e) => updateField(item.id, 'confirmed_dose_amount', e.target.value === '' ? '' : parseFloat(e.target.value))}
                             disabled={activeScan.status === 'DISPENSED'}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="e.g. 1 (Required)"
+                            className={`w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 ${
+                              !form.confirmed_dose_amount || Number(form.confirmed_dose_amount) <= 0
+                                ? 'border-amber-400 dark:border-amber-600'
+                                : 'border-slate-300 dark:border-slate-700'
+                            }`}
                           />
                         </div>
 
@@ -575,14 +730,23 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>6. Frequency *</span>
-                            {renderConfidenceBadge(item.confidence_frequency)}
+                            {item.confidence_frequency < 0.85 || !form.confirmed_frequency ? (
+                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                              </span>
+                            ) : (
+                              renderConfidenceBadge(item.confidence_frequency)
+                            )}
                           </label>
                           <select
-                            value={form.confirmed_frequency}
+                            value={form.confirmed_frequency || ''}
                             onChange={(e) => updateField(item.id, 'confirmed_frequency', e.target.value)}
                             disabled={activeScan.status === 'DISPENSED'}
-                            className="w-full px-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                            className={`w-full px-2 py-1.5 bg-white dark:bg-slate-900 border rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 ${
+                              !form.confirmed_frequency ? 'border-amber-400 dark:border-amber-600' : 'border-slate-300 dark:border-slate-700'
+                            }`}
                           >
+                            <option value="">-- Select Frequency --</option>
                             <option value="Daily">Daily (Once daily)</option>
                             <option value="BID">BID (Twice daily)</option>
                             <option value="TID">TID (Three times daily)</option>
@@ -595,15 +759,26 @@ export const PrescriptionScannerStudio: React.FC = () => {
                         <div className="space-y-1">
                           <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                             <span>7. Duration (Days) *</span>
-                            {renderConfidenceBadge(item.confidence_duration)}
+                            {item.confidence_duration < 0.85 || !form.confirmed_duration_days ? (
+                              <span className="text-[10px] text-amber-700 dark:text-amber-400 font-semibold flex items-center gap-0.5">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Entry Req.
+                              </span>
+                            ) : (
+                              renderConfidenceBadge(item.confidence_duration)
+                            )}
                           </label>
                           <input
                             type="number"
                             min="1"
-                            value={form.confirmed_duration_days}
-                            onChange={(e) => updateField(item.id, 'confirmed_duration_days', parseInt(e.target.value) || 1)}
+                            value={form.confirmed_duration_days ?? ''}
+                            onChange={(e) => updateField(item.id, 'confirmed_duration_days', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
                             disabled={activeScan.status === 'DISPENSED'}
-                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                            placeholder="e.g. 5 (Required)"
+                            className={`w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border rounded text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 ${
+                              !form.confirmed_duration_days || Number(form.confirmed_duration_days) <= 0
+                                ? 'border-amber-400 dark:border-amber-600'
+                                : 'border-slate-300 dark:border-slate-700'
+                            }`}
                           />
                         </div>
                       </div>

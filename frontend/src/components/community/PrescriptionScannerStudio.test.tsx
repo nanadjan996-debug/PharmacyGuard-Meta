@@ -162,5 +162,55 @@ describe('PharmacyGuard Workflow B: PrescriptionScannerStudio', () => {
       expect(api.community.uploadPrescription).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('renders patient metadata banner distinctly from the 7 clinical fields', async () => {
+    vi.spyOn(api.community, 'listPrescriptions').mockResolvedValueOnce([
+      {
+        ...mockScan,
+        patient_name: 'Ama Mensah',
+        patient_age: '32y',
+        prescription_date: '2026-11-13',
+      },
+    ]);
+
+    render(<PrescriptionScannerStudio />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Prescription Header Information \(Patient & Date Context\)/i)).toBeInTheDocument();
+      expect(screen.getByText('Ama Mensah')).toBeInTheDocument();
+      expect(screen.getByText('32y')).toBeInTheDocument();
+      expect(screen.getByText('2026-11-13')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks 7-field confirmation when dose amount is missing and requires manual entry', async () => {
+    const unconfirmedScanWithMissingDose: CommunityPrescriptionScan = {
+      ...mockScan,
+      items: [
+        {
+          ...mockScan.items[0],
+          ocr_dose_amount: null,
+          confidence_dose: 0.0,
+          confirmed_dose_amount: null,
+        },
+      ],
+    };
+    vi.spyOn(api.community, 'listPrescriptions').mockResolvedValueOnce([unconfirmedScanWithMissingDose]);
+
+    render(<PrescriptionScannerStudio />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Confirm & Lock 7-Field Gate/i)).toBeInTheDocument();
+    });
+
+    const lockBtn = screen.getByRole('button', { name: /Confirm & Lock 7-Field Gate/i });
+    fireEvent.click(lockBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Validation Gate Blocked: Medication Item #1/i)).toBeInTheDocument();
+      expect(screen.getByText(/missing required clinical fields: 4\. Dose Amount/i)).toBeInTheDocument();
+      expect(api.community.confirmPrescriptionGate).not.toHaveBeenCalled();
+    });
+  });
 });
 

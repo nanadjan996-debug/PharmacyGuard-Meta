@@ -176,6 +176,9 @@ export interface CommunityPrescriptionScan {
   id: string;
   scan_number: string;
   patient_identifier: string;
+  patient_name?: string | null;
+  patient_age?: string | null;
+  prescription_date?: string | null;
   original_filename: string;
   content_type: string;
   file_size_bytes: number;

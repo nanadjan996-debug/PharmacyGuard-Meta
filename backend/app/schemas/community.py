@@ -173,6 +173,9 @@ class PrescriptionScanResponse(BaseModel):
     id: str
     scan_number: str
     patient_identifier: str
+    patient_name: str | None = None
+    patient_age: str | None = None
+    prescription_date: str | None = None
     original_filename: str
     content_type: str
     file_size_bytes: int
@@ -192,14 +195,14 @@ class PrescriptionScanResponse(BaseModel):
 
 class ItemConfirmPayload(BaseModel):
     item_id: str
-    confirmed_drug_name: str = Field(..., min_length=2, description="1. Core Field: Drug Name")
-    confirmed_strength: str = Field(..., min_length=1, description="2. Core Field: Strength")
-    confirmed_dosage_form: str = Field(..., min_length=2, description="3. Core Field: Formulation")
-    confirmed_dose_amount: float = Field(..., gt=0, description="4. Core Field: Dose Amount")
+    confirmed_drug_name: str = Field(..., min_length=2, description="1. Core Clinical Field: Drug Name")
+    confirmed_strength: str = Field(..., min_length=1, description="2. Core Clinical Field: Strength")
+    confirmed_dosage_form: str = Field(..., min_length=2, description="3. Core Clinical Field: Formulation")
+    confirmed_dose_amount: float = Field(..., gt=0, description="4. Core Clinical Field: Dose Amount")
     confirmed_dose_unit: str = Field(default="mg")
-    confirmed_route: str = Field(default="Oral", min_length=2, description="5. Core Field: Route")
-    confirmed_frequency: str = Field(..., min_length=1, description="6. Core Field: Frequency")
-    confirmed_duration_days: int = Field(..., gt=0, description="7. Core Field: Duration")
+    confirmed_route: str = Field(default="Oral", min_length=2, description="5. Core Clinical Field: Route")
+    confirmed_frequency: str = Field(..., min_length=1, description="6. Core Clinical Field: Frequency")
+    confirmed_duration_days: int = Field(..., ge=1, description="7. Core Clinical Field: Duration")
     confirmed_instructions: str | None = None
     legal_category: str = "POM"
 

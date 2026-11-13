@@ -24,24 +24,24 @@ from typing import Any
 class OCRExtractedItem:
     item_index: int
     drug_name: str
-    strength: str
-    dosage_form: str
-    dose_amount: float
+    strength: str | None = None
+    dosage_form: str | None = None
+    dose_amount: float | None = None
     dose_unit: str = "mg"
-    route: str = "Oral"
-    frequency: str = "TID"
-    duration_days: int = 5
+    route: str | None = None
+    frequency: str | None = None
+    duration_days: int | None = None
     instructions: str = ""
     legal_category: str = "POM"
     
     # Confidence metrics (0.0 to 1.0)
-    confidence_drug_name: float = 0.95
-    confidence_strength: float = 0.90
-    confidence_dosage_form: float = 0.92
-    confidence_dose: float = 0.88
-    confidence_route: float = 0.94
-    confidence_frequency: float = 0.89
-    confidence_duration: float = 0.87
+    confidence_drug_name: float = 0.0
+    confidence_strength: float = 0.0
+    confidence_dosage_form: float = 0.0
+    confidence_dose: float = 0.0
+    confidence_route: float = 0.0
+    confidence_frequency: float = 0.0
+    confidence_duration: float = 0.0
 
     @property
     def min_confidence(self) -> float:
@@ -57,6 +57,17 @@ class OCRExtractedItem:
 
     @property
     def requires_review(self) -> bool:
+        # Mandatory review if any of the 7 clinical fields is missing or confidence < 0.85
+        if (
+            not self.drug_name
+            or not self.strength
+            or not self.dosage_form
+            or self.dose_amount is None
+            or not self.route
+            or not self.frequency
+            or self.duration_days is None
+        ):
+            return True
         return self.min_confidence < 0.85
 
 
@@ -67,6 +78,9 @@ class OCRScanResult:
     overall_confidence: float = 0.90
     low_confidence_flag: bool = False
     provider: str = "DETERMINISTIC_PARSER"
+    patient_name: str | None = None
+    patient_age: str | None = None
+    prescription_date: str | None = None
 
 
 class PrescriptionOCREngine:
@@ -97,7 +111,28 @@ class PrescriptionOCREngine:
 
     @classmethod
     def extract_from_text(cls, text: str) -> OCRScanResult:
-        """Parses raw OCR extracted text into structured 7-field clinical items."""
+        """Parses raw OCR extracted text into structured 7-field clinical items.
+        
+        Also extracts patient name, age, and prescription date as metadata,
+        without replacing any of the 7 core clinical fields.
+        """
+        # Extract patient metadata (separate from the 7 clinical fields)
+        patient_name = None
+        patient_age = None
+        prescription_date = None
+
+        pt_match = re.search(r"\b(?:patient(?:\s*name)?|pt(?:\s*name)?)\s*[:=]\s*([^\n\r,|;]+)", text, re.IGNORECASE)
+        if pt_match:
+            patient_name = pt_match.group(1).strip()
+
+        age_match = re.search(r"\b(?:age)\s*[:=]\s*([^\n\r,|;]+)", text, re.IGNORECASE)
+        if age_match:
+            patient_age = age_match.group(1).strip()
+
+        date_match = re.search(r"\b(?:date)\s*[:=]\s*([^\n\r|;]+)", text, re.IGNORECASE)
+        if date_match:
+            prescription_date = date_match.group(1).strip()
+
         # 1. Clean and normalize lines
         raw_lines = [line.strip() for line in text.split("\n") if line.strip()]
         
@@ -162,58 +197,87 @@ class PrescriptionOCREngine:
             if matched_med:
                 item_idx += 1
 
-                # Extract Strength
+                # 1. Extract Strength
                 strength_match = re.search(r"(\d+(?:\.\d+)?\s*(?:mg|g|mcg|ml|/|\d+mg)+)", block, re.IGNORECASE)
-                strength = strength_match.group(1).replace(" ", "") if strength_match else matched_med["strength"]
-                conf_strength = 0.92 if strength_match else 0.70
+                if strength_match:
+                    strength = strength_match.group(1).replace(" ", "")
+                    conf_strength = 0.92
+                elif matched_med and matched_med.get("strength"):
+                    strength = matched_med["strength"]
+                    conf_strength = 0.70  # Low confidence: not directly in text
+                else:
+                    strength = None
+                    conf_strength = 0.0
 
-                # Extract Dosage Form
-                form = matched_med["form"]
-                conf_form = 0.94
-                for f_term in ["tablet", "tab", "capsule", "cap", "syrup", "suspension", "sachet", "injection", "drops"]:
+                # 2. Extract Formulation / Dosage Form
+                form = None
+                conf_form = 0.0
+                for f_term in ["tablet", "tab", "capsule", "cap", "syrup", "suspension", "sachet", "injection", "drops", "ointment"]:
                     if re.search(rf"\b{f_term}s?\b", block_lower):
                         form = "Tablet" if f_term in ("tab", "tablet") else ("Capsule" if f_term in ("cap", "capsule") else f_term.capitalize())
                         conf_form = 0.96
                         break
+                if not form:
+                    if matched_med and matched_med.get("form"):
+                        form = matched_med["form"]
+                        conf_form = 0.75  # Catalog fallback: low confidence (<0.85 requires review)
+                    else:
+                        form = None
+                        conf_form = 0.0
 
-                # Extract Dose Amount
-                dose_amount = 1.0
+                # 3. Extract Dose Amount (DO NOT INFER MISSING DOSE)
+                dose_amount = None
+                conf_dose = 0.0
                 dose_match = re.search(r"(?:take|give|\b)(\d+(?:\.\d+)?)\s*(?:tab|cap|tabs|caps|sachet)", block, re.IGNORECASE)
                 if dose_match:
                     try:
                         dose_amount = float(dose_match.group(1))
+                        conf_dose = 0.89
                     except ValueError:
-                        dose_amount = 1.0
-                conf_dose = 0.89 if dose_match else 0.74
+                        dose_amount = None
+                        conf_dose = 0.0
 
-                # Extract Route
-                route = matched_med["route"]
+                # 4. Extract Route
+                route = None
+                conf_route = 0.0
                 if re.search(r"\b(?:po|oral|orally|by\s*mouth)\b", block_lower):
                     route = "Oral"
-                elif re.search(r"\b(?:iv|intravenous|im|intramuscular)\b", block_lower):
+                    conf_route = 0.95
+                elif re.search(r"\b(?:iv|intravenous|im|intramuscular|injection)\b", block_lower):
                     route = "Injection"
+                    conf_route = 0.95
                 elif re.search(r"\b(?:pr|rectal|rectally)\b", block_lower):
                     route = "Rectal"
+                    conf_route = 0.95
+                elif re.search(r"\b(?:topical|apply)\b", block_lower):
+                    route = "Topical"
+                    conf_route = 0.95
+                elif matched_med and matched_med.get("route"):
+                    route = matched_med["route"]
+                    conf_route = 0.75
 
-                # Extract Frequency
-                frequency = "TID"
-                conf_freq = 0.90
+                # 5. Extract Frequency
+                frequency = None
+                conf_freq = 0.0
                 if re.search(r"\b(?:bid|bd|12\s*hourly|twice\s*daily)\b", block_lower):
                     frequency = "BID"
+                    conf_freq = 0.90
                 elif re.search(r"\b(?:tid|tds|8\s*hourly|three\s*times\s*daily)\b", block_lower):
                     frequency = "TID"
+                    conf_freq = 0.90
                 elif re.search(r"\b(?:qid|qds|6\s*hourly|four\s*times\s*daily)\b", block_lower):
                     frequency = "QID"
+                    conf_freq = 0.90
                 elif re.search(r"\b(?:daily|nocte|od|once\s*daily)\b", block_lower):
                     frequency = "Daily"
+                    conf_freq = 0.90
                 elif re.search(r"\b(?:prn|as\s*needed)\b", block_lower):
                     frequency = "PRN"
-                else:
-                    conf_freq = 0.68  # Low confidence: ambiguous frequency
+                    conf_freq = 0.90
 
-                # Extract Duration
-                duration_days = 5
-                conf_dur = 0.88
+                # 6. Extract Duration (DO NOT INFER MISSING DURATION)
+                duration_days = None
+                conf_dur = 0.0
                 dur_match = re.search(r"(?:for|x|\b)(\d+)\s*(?:days|d|weeks|w|months)\b", block_lower)
                 if dur_match:
                     try:
@@ -224,12 +288,12 @@ class PrescriptionOCREngine:
                             duration_days = val * 30
                         else:
                             duration_days = val
+                        conf_dur = 0.88
                     except ValueError:
-                        duration_days = 5
-                else:
-                    conf_dur = 0.72  # Low confidence: assumed duration
+                        duration_days = None
+                        conf_dur = 0.0
 
-                # Drug name confidence
+                # 7. Drug name confidence
                 conf_name = 0.96 if matched_med["name"].lower() in block_lower else 0.75
 
                 item = OCRExtractedItem(
@@ -238,7 +302,7 @@ class PrescriptionOCREngine:
                     strength=strength,
                     dosage_form=form,
                     dose_amount=dose_amount,
-                    dose_unit="mg" if "mg" in strength.lower() else "tablet",
+                    dose_unit="mg" if (strength and "mg" in strength.lower()) else "tablet",
                     route=route,
                     frequency=frequency,
                     duration_days=duration_days,
@@ -248,7 +312,7 @@ class PrescriptionOCREngine:
                     confidence_strength=conf_strength,
                     confidence_dosage_form=conf_form,
                     confidence_dose=conf_dose,
-                    confidence_route=0.95,
+                    confidence_route=conf_route,
                     confidence_frequency=conf_freq,
                     confidence_duration=conf_dur,
                 )
@@ -260,27 +324,27 @@ class PrescriptionOCREngine:
             default_item = OCRExtractedItem(
                 item_index=1,
                 drug_name="Amoxicillin/Clavulanic Acid",
-                strength="625mg",
+                strength=None,
                 dosage_form="Tablet",
-                dose_amount=1.0,
+                dose_amount=None,
                 dose_unit="tablet",
                 route="Oral",
-                frequency="BID",
-                duration_days=7,
-                instructions="1 tab BID for 7 days",
+                frequency=None,
+                duration_days=None,
+                instructions=text[:120] if text else "Unparsed prescription text",
                 legal_category="POM",
-                confidence_drug_name=0.72,
-                confidence_strength=0.70,
-                confidence_dosage_form=0.75,
-                confidence_dose=0.68,
-                confidence_route=0.80,
-                confidence_frequency=0.65,
-                confidence_duration=0.60,
+                confidence_drug_name=0.50,
+                confidence_strength=0.0,
+                confidence_dosage_form=0.50,
+                confidence_dose=0.0,
+                confidence_route=0.50,
+                confidence_frequency=0.0,
+                confidence_duration=0.0,
             )
             extracted_items.append(default_item)
-            overall_confs.append(0.68)
+            overall_confs.append(0.0)
 
-        mean_conf = sum(overall_confs) / len(overall_confs) if overall_confs else 0.70
+        mean_conf = sum(overall_confs) / len(overall_confs) if overall_confs else 0.0
         has_low_conf = any(it.requires_review for it in extracted_items) or mean_conf < 0.85
 
         return OCRScanResult(
@@ -289,6 +353,9 @@ class PrescriptionOCREngine:
             overall_confidence=round(mean_conf, 2),
             low_confidence_flag=has_low_conf,
             provider="DETERMINISTIC_PARSER",
+            patient_name=patient_name,
+            patient_age=patient_age,
+            prescription_date=prescription_date,
         )
 
     @classmethod
@@ -301,7 +368,7 @@ class PrescriptionOCREngine:
             if not it.get("is_pharmacist_confirmed"):
                 return False, f"Validation Gate Blocked: Item #{idx} ({it.get('confirmed_drug_name') or 'Unnamed'}) has not been confirmed by pharmacist."
             
-            # Check 7 core fields:
+            # Check 7 core clinical fields:
             # 1. Drug Name
             if not it.get("confirmed_drug_name") or len(str(it["confirmed_drug_name"]).strip()) < 2:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Drug Name."
@@ -312,8 +379,10 @@ class PrescriptionOCREngine:
             if not it.get("confirmed_dosage_form") or len(str(it["confirmed_dosage_form"]).strip()) < 2:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Formulation / Dosage Form."
             # 4. Dose Amount
+            if it.get("confirmed_dose_amount") is None or str(it["confirmed_dose_amount"]).strip() == "":
+                return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Dose Amount."
             try:
-                dose = float(it.get("confirmed_dose_amount", 0))
+                dose = float(it["confirmed_dose_amount"])
                 if dose <= 0:
                     return False, f"Validation Gate Blocked: Item #{idx} has invalid Dose Amount (must be > 0)."
             except (ValueError, TypeError):
@@ -325,8 +394,10 @@ class PrescriptionOCREngine:
             if not it.get("confirmed_frequency") or len(str(it["confirmed_frequency"]).strip()) < 1:
                 return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Frequency."
             # 7. Duration
+            if it.get("confirmed_duration_days") is None or str(it["confirmed_duration_days"]).strip() == "":
+                return False, f"Validation Gate Blocked: Item #{idx} is missing confirmed Duration."
             try:
-                dur = int(it.get("confirmed_duration_days", 0))
+                dur = int(it["confirmed_duration_days"])
                 if dur <= 0:
                     return False, f"Validation Gate Blocked: Item #{idx} has invalid Duration (must be >= 1 day)."
             except (ValueError, TypeError):

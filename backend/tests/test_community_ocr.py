@@ -79,6 +79,81 @@ class TestPrescriptionOCREngine:
         assert is_valid is False
         assert "missing confirmed Strength" in reason
 
+    def test_ocr_extracts_patient_metadata_distinct_from_clinical_fields(self):
+        """Proves patient name, age, date are extracted as encounter metadata without replacing 7 clinical fields."""
+        raw_text = (
+            "Regional Hospital OPD\n"
+            "Patient: Kwame Mensah | Age: 45y | Date: 2026-11-12\n"
+            "Rx: Ciprofloxacin 500mg tablets\n"
+            "Take 1 tab po BID for 5 days\n"
+        )
+        result = PrescriptionOCREngine.extract_from_text(raw_text)
+        assert result.patient_name == "Kwame Mensah"
+        assert result.patient_age == "45y"
+        assert result.prescription_date == "2026-11-12"
+        assert len(result.items) == 1
+        item = result.items[0]
+        # All 7 core clinical fields extracted independently:
+        assert item.drug_name == "Ciprofloxacin"
+        assert item.strength == "500mg"
+        assert item.dosage_form == "Tablet"
+        assert item.dose_amount == 1.0
+        assert item.route == "Oral"
+        assert item.frequency == "BID"
+        assert item.duration_days == 5
+
+    def test_ocr_does_not_infer_missing_dose_or_duration(self):
+        """Invariant: Low-confidence or missing OCR dose/duration are NOT inferred. Pharmacist must manually supply."""
+        raw_text = (
+            "Ridge Hospital OPD\n"
+            "Rx: Metronidazole 400mg tablets\n"
+            "Take po TID\n"
+        )
+        result = PrescriptionOCREngine.extract_from_text(raw_text)
+        assert len(result.items) == 1
+        item = result.items[0]
+        assert item.drug_name == "Metronidazole"
+        assert item.strength == "400mg"
+        assert item.dosage_form == "Tablet"
+        # Dose amount not in text -> None (0.0 confidence)
+        assert item.dose_amount is None
+        assert item.confidence_dose == 0.0
+        # Duration not in text -> None (0.0 confidence)
+        assert item.duration_days is None
+        assert item.confidence_duration == 0.0
+        assert item.requires_review is True
+        assert result.low_confidence_flag is True
+
+    def test_validate_human_gate_rejects_missing_dose_or_duration(self):
+        """Human Gate rejects confirmation if dose or duration is missing or non-positive."""
+        missing_dose = {
+            "is_pharmacist_confirmed": True,
+            "confirmed_drug_name": "Amoxicillin",
+            "confirmed_strength": "500mg",
+            "confirmed_dosage_form": "Capsule",
+            "confirmed_dose_amount": None,
+            "confirmed_route": "Oral",
+            "confirmed_frequency": "TID",
+            "confirmed_duration_days": 5,
+        }
+        is_valid, reason = PrescriptionOCREngine.validate_human_gate_confirmation([missing_dose])
+        assert is_valid is False
+        assert "Dose Amount" in reason
+
+        missing_duration = {
+            "is_pharmacist_confirmed": True,
+            "confirmed_drug_name": "Amoxicillin",
+            "confirmed_strength": "500mg",
+            "confirmed_dosage_form": "Capsule",
+            "confirmed_dose_amount": 1.0,
+            "confirmed_route": "Oral",
+            "confirmed_frequency": "TID",
+            "confirmed_duration_days": None,
+        }
+        is_valid, reason = PrescriptionOCREngine.validate_human_gate_confirmation([missing_duration])
+        assert is_valid is False
+        assert "Duration" in reason
+
 
 class TestCommunityPrescriptionScanAPI:
     def test_upload_community_prescription(self, client: TestClient, auth_headers: dict):
@@ -167,4 +242,72 @@ class TestCommunityPrescriptionScanAPI:
         dispense_resp = client.post(f"/api/v1/community/prescriptions/{scan_id}/dispense", headers=auth_headers)
         assert dispense_resp.status_code == 200
         assert dispense_resp.json()["status"] == "DISPENSED"
+
+    def test_upload_with_missing_dose_requires_manual_pharmacist_entry(self, client: TestClient, auth_headers: dict):
+        """OCR items with missing dose/duration start as None and require manual pharmacist supply."""
+        payload = {
+            "filename": "missing_dose_slip.jpg",
+            "content_type": "image/jpeg",
+            "image_base64": "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
+            "patient_identifier": "SYN-RX-MANUAL",
+            "raw_text_override": (
+                "Patient: Ama Serwaa | Age: 29y | Date: 2026-11-13\n"
+                "Rx: Metronidazole 400mg tablets\n"
+                "Take po TID\n"
+            ),
+        }
+        resp = client.post("/api/v1/community/prescriptions/upload", json=payload, headers=auth_headers)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["patient_name"] == "Ama Serwaa"
+        assert data["patient_age"] == "29y"
+        assert data["prescription_date"] == "2026-11-13"
+        scan_id = data["id"]
+        item = data["items"][0]
+        assert item["ocr_dose_amount"] is None
+        assert item["ocr_duration_days"] is None
+        assert item["confirmed_dose_amount"] is None
+        assert item["confirmed_duration_days"] is None
+
+        # Confirm gate with missing/zero dose fails
+        fail_payload = {
+            "items": [
+                {
+                    "item_id": item["id"],
+                    "confirmed_drug_name": "Metronidazole",
+                    "confirmed_strength": "400mg",
+                    "confirmed_dosage_form": "Tablet",
+                    "confirmed_dose_amount": 0,  # Invalid: must be > 0
+                    "confirmed_route": "Oral",
+                    "confirmed_frequency": "TID",
+                    "confirmed_duration_days": 5,
+                }
+            ]
+        }
+        fail_resp = client.post(f"/api/v1/community/prescriptions/{scan_id}/confirm-gate", json=fail_payload, headers=auth_headers)
+        assert fail_resp.status_code == 422
+
+        # Supply valid dose & duration manually -> Succeeds
+        success_payload = {
+            "items": [
+                {
+                    "item_id": item["id"],
+                    "confirmed_drug_name": "Metronidazole",
+                    "confirmed_strength": "400mg",
+                    "confirmed_dosage_form": "Tablet",
+                    "confirmed_dose_amount": 1.0,
+                    "confirmed_dose_unit": "tablet",
+                    "confirmed_route": "Oral",
+                    "confirmed_frequency": "TID",
+                    "confirmed_duration_days": 5,
+                    "legal_category": "POM",
+                }
+            ],
+            "pharmacist_review_notes": "Dose and duration manually supplied from slip cross-check.",
+        }
+        succ_resp = client.post(f"/api/v1/community/prescriptions/{scan_id}/confirm-gate", json=success_payload, headers=auth_headers)
+        assert succ_resp.status_code == 200
+        assert succ_resp.json()["status"] == "HUMAN_CONFIRMED"
+        assert succ_resp.json()["items"][0]["confirmed_dose_amount"] == 1.0
+        assert succ_resp.json()["items"][0]["confirmed_duration_days"] == 5
 

@@ -18,6 +18,16 @@ def _ensure_schema_columns():
                     text("ALTER TABLE community_findings ADD COLUMN epistemic_status VARCHAR(30) DEFAULT 'CONFIRMED_OBJECTIVE' NOT NULL")
                 )
 
+    if insp.has_table("community_prescription_scans"):
+        scan_cols = [c["name"] for c in insp.get_columns("community_prescription_scans")]
+        with engine.begin() as conn:
+            if "patient_name" not in scan_cols:
+                conn.execute(text("ALTER TABLE community_prescription_scans ADD COLUMN patient_name VARCHAR(100)"))
+            if "patient_age" not in scan_cols:
+                conn.execute(text("ALTER TABLE community_prescription_scans ADD COLUMN patient_age VARCHAR(50)"))
+            if "prescription_date" not in scan_cols:
+                conn.execute(text("ALTER TABLE community_prescription_scans ADD COLUMN prescription_date VARCHAR(50)"))
+
 
 def init_database() -> dict[str, int]:
     """Create all tables and seed initial synthetic benchmark data idempotently."""
