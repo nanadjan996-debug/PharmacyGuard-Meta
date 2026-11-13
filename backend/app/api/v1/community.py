@@ -1,5 +1,6 @@
 """Community Pharmacy Counter Consultation API Endpoints."""
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -31,6 +32,7 @@ from app.services.verification.red_flag_engine import RedFlagEngine
 from app.services.ocr.prescription_ocr_engine import PrescriptionOCREngine
 
 router = APIRouter(prefix="/community", tags=["Community Pharmacy Counter Consultation"])
+logger = logging.getLogger("pharmacyguard.community")
 
 
 VALID_LIFECYCLE_TRANSITIONS = {
@@ -257,6 +259,7 @@ def create_consultation(
         return _serialize_consultation(consultation)
     except Exception as exc:
         db.rollback()
+        logger.error("Failed to create and evaluate clinical consultation: %s", str(exc), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Clinical Consultation Error: {str(exc)}",

@@ -1,5 +1,6 @@
 """Prescription queue and clinical review API endpoints protected by pharmacist role guards."""
 import json
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -23,6 +24,7 @@ from app.schemas.ai import AIExplanationResponse
 from app.services import get_ai_service
 
 router = APIRouter(prefix="/prescriptions", tags=["Prescriptions & Verification Queue"])
+logger = logging.getLogger("pharmacyguard.prescriptions")
 
 
 
@@ -431,6 +433,7 @@ async def verify_prescription(
     try:
         ai_explanation = await ai_provider.generate_explanation(rx, response.findings)
     except Exception as ai_exc:
+        logger.error("AI explanation generation failed during prescription verification %s: %s", prescription_id, str(ai_exc), exc_info=True)
         ai_explanation = AIExplanationResponse(
             summary="AI clinical explanation could not be generated.",
             finding_explanations=[],
@@ -501,6 +504,7 @@ async def explain_prescription_findings(
         ai_provider = get_ai_service()
         return await ai_provider.generate_explanation(rx, unreviewed_findings)
     except Exception as exc:
+        logger.error("AI explanation request failed for prescription %s: %s", prescription_id, str(exc), exc_info=True)
         return AIExplanationResponse(
             summary="AI clinical explanation is temporarily unavailable. Deterministic verification findings remain active.",
             finding_explanations=[],
