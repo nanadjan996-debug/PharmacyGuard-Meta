@@ -1,7 +1,17 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.v1.router import api_router
+from app.core.init_db import _ensure_schema_columns
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure database schema and migrations are verified on server startup."""
+    _ensure_schema_columns()
+    yield
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -12,6 +22,7 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Cross-Origin Request configuration for local Vite development

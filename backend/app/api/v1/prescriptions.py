@@ -497,6 +497,18 @@ async def explain_prescription_findings(
         verif_res = engine.verify(rx.id, persist=True)
         unreviewed_findings = verif_res.findings
 
-    ai_provider = get_ai_service()
-    return await ai_provider.generate_explanation(rx, unreviewed_findings)
+    try:
+        ai_provider = get_ai_service()
+        return await ai_provider.generate_explanation(rx, unreviewed_findings)
+    except Exception as exc:
+        return AIExplanationResponse(
+            summary="AI clinical explanation is temporarily unavailable. Deterministic verification findings remain active.",
+            finding_explanations=[],
+            clinical_context="Prescription evaluated under deterministic rule verification.",
+            uncertainties=["AI inference service exception."],
+            review_considerations=["Review flagged deterministic findings directly."],
+            ai_status="unavailable",
+            status_detail=str(exc),
+            model_name="bedrock",
+        )
 

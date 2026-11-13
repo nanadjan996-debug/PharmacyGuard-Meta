@@ -69,13 +69,13 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
 
         {/* Clinical Engine & Model Status Badges */}
         <div className="flex items-center space-x-2 self-start sm:self-auto text-xs">
-          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 text-[11px]">
-            <span className="text-slate-400 font-medium">Safety Engine:</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono">Deterministic Active</span>
+          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-[11px]">
+            <span className="text-slate-600 dark:text-slate-300 font-semibold">Safety Engine:</span>
+            <span className="font-bold text-emerald-700 dark:text-emerald-400 font-mono">Deterministic Active</span>
           </div>
-          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-50/80 dark:bg-sky-950/50 border border-sky-200/70 dark:border-sky-800/60 text-sky-800 dark:text-sky-300 text-[11px]">
-            <span className="text-sky-600 dark:text-sky-400 font-medium">Bedrock AI:</span>
-            <span className="font-semibold font-mono">Claude Sonnet 4.6</span>
+          <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-sky-50 dark:bg-sky-950/70 border border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200 text-[11px]">
+            <span className="text-sky-700 dark:text-sky-300 font-semibold">Bedrock AI:</span>
+            <span className="font-bold font-mono">Claude Sonnet 4.6</span>
           </div>
         </div>
       </div>
@@ -83,14 +83,14 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
       {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community Walk-In vs Prescription Scanner) */}
       {primaryRole === 'staff_pharmacist' && (
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-          <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80">
+          <div className="flex items-center space-x-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setStaffMode('inpatient')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 staffMode === 'inpatient'
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-sky-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-sky-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -101,11 +101,11 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               onClick={() => setStaffMode('counter')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 staffMode === 'counter'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
               }`}
             >
-              <Store className="w-3.5 h-3.5 text-emerald-500" />
+              <Store className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>Counter Studio (Workflow A)</span>
             </button>
             <button
@@ -113,17 +113,17 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               onClick={() => setStaffMode('scanner')}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 staffMode === 'scanner'
-                  ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs border border-slate-200/60 dark:border-slate-700'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
+                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
               }`}
             >
-              <ScanLine className="w-3.5 h-3.5 text-sky-400" />
+              <ScanLine className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
               <span>Prescription Scanner (Workflow B)</span>
             </button>
           </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+          <span className="text-xs text-slate-600 dark:text-slate-300 hidden sm:inline">
             Active Mode:{' '}
-            <strong className="text-slate-700 dark:text-slate-200 font-semibold">
+            <strong className="text-slate-900 dark:text-slate-100 font-bold">
               {staffMode === 'inpatient'
                 ? 'Prescription Queue'
                 : staffMode === 'counter'

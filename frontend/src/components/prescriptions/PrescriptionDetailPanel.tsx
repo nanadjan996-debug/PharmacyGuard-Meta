@@ -451,7 +451,7 @@ export const PrescriptionDetailPanel: React.FC<PrescriptionDetailPanelProps> = (
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Meta AI Clinical Copilot (5 cols) */}
+          {/* RIGHT COLUMN: Clinical AI Explanation Copilot (5 cols) */}
           <div className="lg:col-span-5 sticky top-4">
             <AIExplanationSection
               explanation={aiExplanation}

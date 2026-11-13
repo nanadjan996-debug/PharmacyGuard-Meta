@@ -256,7 +256,7 @@ class RedFlagEngine:
                         description=(
                             f"Child under 5 years exhibits severe respiratory distress "
                             f"(RR: {respiratory_rate_bpm or 'unrecorded'} bpm; Signs: {', '.join(active_ped_res_signs or ['fast breathing']).replace('_', ' ')}). "
-                            "Per Ghana IMCI and STG 2017 Chapter 24, this constitutes severe pneumonia."
+                            "Per clinical pediatric IMCI protocols and standard treatment guidelines, this constitutes severe pneumonia."
                         ),
                         action_required=(
                             "EMERGENCY REFERRAL: Do not dispense counter oral cough syrups, antihistamines, or sedatives. "
@@ -331,7 +331,7 @@ class RedFlagEngine:
                 referral_note += f"• [{f.rule_identifier}] {f.title}: {f.description}\n  Action: {f.action_required}\n"
             referral_note += (
                 f"\nDISPOSITION: Patient referred to nearest hospital / emergency center.\n"
-                f"Community Pharmacist Decision Support: PharmacyGuard Community Edition v3.1\n"
+                f"Decision Support Reference: PharmacyGuard Clinical Verification Engine\n"
                 f"==========================================================="
             )
 

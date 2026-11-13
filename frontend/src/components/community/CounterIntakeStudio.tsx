@@ -536,44 +536,44 @@ export const CounterIntakeStudio: React.FC = () => {
             {/* Card 1: Demographics & Vitals */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   1. Walk-In Patient Demographics & Vitals
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{patientId}</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-mono font-semibold">{patientId}</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Age (Years)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">Age (Years)</label>
                   <input
                     type="number"
                     min="0"
                     max="120"
                     value={ageYears}
                     onChange={(e) => setAgeYears(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
                     placeholder="e.g. 28"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Age (Months if &lt;5y)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">Age (Months if &lt;5y)</label>
                   <input
                     type="number"
                     min="0"
                     max="59"
                     value={ageMonths}
                     onChange={(e) => setAgeMonths(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
                     placeholder="e.g. 18"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gender</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">Gender</label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value as any)}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
                   >
                     <option value="FEMALE">Female</option>
                     <option value="MALE">Male</option>
@@ -581,13 +581,13 @@ export const CounterIntakeStudio: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Weight (kg)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">Weight (kg)</label>
                   <input
                     type="number"
                     step="0.1"
                     value={weightKg}
                     onChange={(e) => setWeightKg(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
                     placeholder="e.g. 62.5"
                   />
                 </div>
@@ -596,7 +596,7 @@ export const CounterIntakeStudio: React.FC = () => {
               {/* Vitals Row */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pt-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Temp (°C)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">Temp (°C)</label>
                   <input
                     type="number"
                     step="0.1"
@@ -604,56 +604,56 @@ export const CounterIntakeStudio: React.FC = () => {
                     onChange={(e) => setTempC(e.target.value === '' ? '' : Number(e.target.value))}
                     className={`w-full px-3 py-1.5 bg-white dark:bg-slate-800 border rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                       tempC !== '' && Number(tempC) >= 38.0
-                        ? 'border-amber-400 bg-amber-50/50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-300 font-semibold'
-                        : 'border-slate-300 dark:border-slate-700'
+                        ? 'border-amber-500 bg-amber-50 text-amber-950 dark:bg-amber-950/60 dark:text-amber-200 font-bold'
+                        : 'border-slate-300 dark:border-slate-700 font-medium'
                     }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">BP (mmHg)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">BP (mmHg)</label>
                   <div className="flex items-center gap-1">
                     <input
                       type="number"
                       placeholder="SBP"
                       value={sbp}
                       onChange={(e) => setSbp(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
                     />
-                    <span className="text-slate-400">/</span>
+                    <span className="text-slate-700 dark:text-slate-200 font-bold">/</span>
                     <input
                       type="number"
                       placeholder="DBP"
                       value={dbp}
                       onChange={(e) => setDbp(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">HR (bpm)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">HR (bpm)</label>
                   <input
                     type="number"
                     value={hr}
                     onChange={(e) => setHr(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">RR (bpm)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">RR (bpm)</label>
                   <input
                     type="number"
                     value={rr}
                     onChange={(e) => setRr(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">SpO2 (%)</label>
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">SpO2 (%)</label>
                   <input
                     type="number"
                     value={spo2}
                     onChange={(e) => setSpo2(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                   />
                 </div>
               </div>
@@ -662,32 +662,32 @@ export const CounterIntakeStudio: React.FC = () => {
             {/* Card 2: Presenting Complaints & Clinical Picture */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   2. Presenting Complaints & Clinical Picture
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Free-Form Patient Intake</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Free-Form Patient Intake</span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-100 mb-1">
                   Chief Complaint & Encounter Narrative *
                 </label>
                 <textarea
                   rows={3}
                   value={chiefComplaint}
                   onChange={(e) => setChiefComplaint(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs font-medium"
                   placeholder="Record patient complaints, symptom onset, severity, and clinical history (e.g., headache, fever, cough, chest tightness, abdominal pain)..."
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
                     Clinical Warning Signs & System Review (Checklist):
                   </label>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
                     {selectedSymptoms.length} selected
                   </span>
                 </div>
@@ -733,7 +733,7 @@ export const CounterIntakeStudio: React.FC = () => {
                         setMrdtStatus('NOT_DONE');
                         setG6pdStatus('REPORTED_UNKNOWN');
                       }}
-                      className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 underline font-medium"
+                      className="text-xs text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white underline font-semibold"
                     >
                       No Tests Indicated
                     </button>
@@ -741,7 +741,7 @@ export const CounterIntakeStudio: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setHasDiagnosticTests(true)}
-                      className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1"
+                      className="text-xs text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 font-bold flex items-center gap-1"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Record Tests
@@ -751,16 +751,16 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
 
               {!hasDiagnosticTests ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-slate-300 dark:border-slate-700">
                   <div className="flex items-start sm:items-center gap-3">
-                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shrink-0">
+                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shrink-0">
                       <CheckCircle2 className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white">
+                      <div className="text-xs font-bold text-slate-950 dark:text-white">
                         No Point-of-Care Tests Conducted / Indicated
                       </div>
-                      <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      <div className="text-[11px] text-slate-700 dark:text-slate-300 mt-0.5 font-medium">
                         Routine presentation. If rapid malaria mRDT, blood glucose, or G6PD tests were performed at the counter, click to record clinical results.
                       </div>
                     </div>
@@ -770,8 +770,8 @@ export const CounterIntakeStudio: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setHasDiagnosticTests(true)}
-                    icon={<Plus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                    className="shrink-0 font-semibold"
+                    icon={<Plus className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />}
+                    className="shrink-0 font-bold text-slate-800 dark:text-slate-100 border-slate-400 dark:border-slate-600"
                   >
                     Record Rapid Test
                   </Button>
@@ -798,14 +798,14 @@ export const CounterIntakeStudio: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                      <label className="block text-xs font-bold text-slate-900 dark:text-slate-100 mb-1.5 flex items-center gap-1.5">
                         Malaria Rapid Diagnostic Test (mRDT)
-                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                       </label>
                       <select
                         value={mrdtStatus}
                         onChange={(e) => setMrdtStatus(e.target.value as MRDTStatus)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                       >
                         <option value="CONFIRMED_POSITIVE">Confirmed Positive (Pf / Pan-specific)</option>
                         <option value="CONFIRMED_NEGATIVE">Confirmed Negative</option>
@@ -815,14 +815,14 @@ export const CounterIntakeStudio: React.FC = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                      <label className="block text-xs font-bold text-slate-900 dark:text-slate-100 mb-1.5 flex items-center gap-1.5">
                         G6PD Deficiency Status (Clinical Screening)
-                        <Info className="w-3.5 h-3.5 text-slate-400" />
+                        <Info className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                       </label>
                       <select
                         value={g6pdStatus}
                         onChange={(e) => setG6pdStatus(e.target.value as G6PDEpistemicStatus)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                       >
                         <option value="REPORTED_UNKNOWN">REPORTED_UNKNOWN (Patient Unaware)</option>
                         <option value="NOT_COLLECTED">NOT_COLLECTED (Not Inquired)</option>
@@ -833,14 +833,14 @@ export const CounterIntakeStudio: React.FC = () => {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5 flex items-center gap-1.5">
+                      <label className="block text-xs font-bold text-slate-900 dark:text-slate-100 mb-1.5 flex items-center gap-1.5">
                         Rapid Blood Glucose (POC RBS / Glycemia)
-                        <span className="text-[10px] text-slate-400 font-normal">(Optional Screening)</span>
+                        <span className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold">(Optional Screening)</span>
                       </label>
                       <select
                         value={pocBloodSugar}
                         onChange={(e) => setPocBloodSugar(e.target.value as any)}
-                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                        className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                       >
                         <option value="NOT_DONE">Not Measured / Routine Encounter</option>
                         <option value="NORMAL">Normal Glycemia (4.0 - 7.8 mmol/L / 70 - 140 mg/dL)</option>
@@ -856,49 +856,49 @@ export const CounterIntakeStudio: React.FC = () => {
             {/* Card 4: Allergy Profile (5-State Model) */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   4. Patient Allergies & Adverse Drug History
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Epistemic Status</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Evidence Certainty</span>
               </div>
 
               <div className="space-y-2">
                 {allergies.map((all, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-sm">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900 dark:text-white">{all.allergen}</span>
+                      <span className="font-bold text-slate-950 dark:text-white">{all.allergen}</span>
                       {all.state === 'CONFIRMED_OBJECTIVE' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-600/50 font-mono font-medium">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700 font-mono font-bold">
                           CONFIRMED_OBJECTIVE
                         </span>
                       )}
                       {all.state === 'REPORTED_UNVERIFIED' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/80 dark:text-sky-300 dark:border-sky-600/50 font-mono font-medium">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-700 font-mono font-bold">
                           REPORTED_UNVERIFIED
                         </span>
                       )}
                       {all.state === 'PATIENT_UNKNOWN' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200 dark:bg-purple-950/80 dark:text-purple-300 dark:border-purple-600/50 font-mono font-medium">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-200 dark:border-purple-700 font-mono font-bold">
                           PATIENT_UNKNOWN
                         </span>
                       )}
                       {all.state === 'NOT_COLLECTED' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-600/50 font-mono font-medium">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700 font-mono font-bold">
                           NOT_COLLECTED
                         </span>
                       )}
                       {all.state === 'CLINICALLY_IRRELEVANT' && (
-                        <span className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 font-mono font-medium">
+                        <span className="text-[11px] px-2 py-0.5 rounded bg-slate-200 text-slate-900 border border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 font-mono font-bold">
                           CLINICALLY_IRRELEVANT
                         </span>
                       )}
-                      {all.reaction && <span className="text-xs text-slate-500 dark:text-slate-400 italic">({all.reaction})</span>}
+                      {all.reaction && <span className="text-xs text-slate-700 dark:text-slate-300 italic font-medium">({all.reaction})</span>}
                     </div>
                     <button
                       type="button"
                       onClick={() => removeAllergy(idx)}
-                      className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                      className="text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -911,12 +911,12 @@ export const CounterIntakeStudio: React.FC = () => {
                     value={newAllergen}
                     onChange={(e) => setNewAllergen(e.target.value)}
                     placeholder="e.g. Sulfonamides, Penicillin, NSAIDs"
-                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
                   />
                   <select
                     value={newAllergyState}
                     onChange={(e) => setNewAllergyState(e.target.value as AllergyEpistemicState)}
-                    className="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
                   >
                     <option value="CONFIRMED_OBJECTIVE">CONFIRMED_OBJECTIVE</option>
                     <option value="REPORTED_UNVERIFIED">REPORTED_UNVERIFIED</option>
@@ -924,7 +924,7 @@ export const CounterIntakeStudio: React.FC = () => {
                     <option value="NOT_COLLECTED">NOT_COLLECTED</option>
                     <option value="CLINICALLY_IRRELEVANT">CLINICALLY_IRRELEVANT</option>
                   </select>
-                  <Button type="button" size="sm" variant="secondary" onClick={addAllergy}>
+                  <Button type="button" size="sm" variant="secondary" onClick={addAllergy} className="font-bold border border-slate-300 dark:border-slate-600">
                     Add
                   </Button>
                 </div>
@@ -934,24 +934,24 @@ export const CounterIntakeStudio: React.FC = () => {
             {/* Card 5: Proposed Counter Regimen */}
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
               <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                   5. Proposed Counter Regimen & Dispensing Items
                 </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Act 857 Categorization</span>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Dispensing Classification</span>
               </div>
 
               {/* Preset quick buttons */}
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold self-center mr-1">Common Presets:</span>
+                <span className="text-xs text-slate-800 dark:text-slate-200 font-bold self-center mr-1">Common Presets:</span>
                 {PRESET_MEDICATIONS.map((preset, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => addPresetMed(preset)}
-                    className="px-2.5 py-1 rounded bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-400 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 text-xs flex items-center gap-1 font-medium transition-colors"
+                    className="px-2.5 py-1 rounded bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-900 border border-slate-300 hover:border-emerald-400 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 dark:border-slate-600 text-xs flex items-center gap-1 font-bold transition-colors shadow-2xs"
                   >
-                    <Plus className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    <Plus className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
                     {preset.name}
                   </button>
                 ))}
@@ -963,26 +963,26 @@ export const CounterIntakeStudio: React.FC = () => {
                   <div key={idx} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-sm">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white">{it.drug_name}</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">{it.strength} • {it.dosage_form}</span>
+                        <span className="font-bold text-slate-950 dark:text-white">{it.drug_name}</span>
+                        <span className="text-xs text-slate-700 dark:text-slate-300 font-medium">{it.strength} • {it.dosage_form}</span>
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                           it.legal_category === 'POM'
-                            ? 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-700'
+                            ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700'
                             : it.legal_category === 'P'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-700'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-700'
+                            ? 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-700'
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700'
                         }`}>
                           {it.legal_category}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      <div className="text-xs text-slate-800 dark:text-slate-200 mt-1 font-medium">
                         Dose: {it.dose_amount} {it.dose_unit} • {it.frequency} for {it.duration_days} days ({it.route})
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeItem(idx)}
-                      className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                      className="text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -990,7 +990,7 @@ export const CounterIntakeStudio: React.FC = () => {
                 ))}
 
                 {items.length === 0 && (
-                  <div className="p-4 text-center text-xs text-slate-500 dark:text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+                  <div className="p-4 text-center text-xs text-slate-700 dark:text-slate-300 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg font-medium">
                     No medications proposed yet. Use quick-presets above or proceed to red-flag triage only.
                   </div>
                 )}
@@ -1067,12 +1067,12 @@ export const CounterIntakeStudio: React.FC = () => {
 
               {/* Findings List */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
                   Deterministic Verification Findings ({activeConsultation.findings.length})
                 </h3>
 
                 {activeConsultation.findings.length === 0 ? (
-                  <div className="text-xs text-slate-500 dark:text-slate-400 py-3 text-center">
+                  <div className="text-xs text-slate-700 dark:text-slate-300 py-3 text-center font-medium">
                     Zero rule violations. All clinical checks cleared.
                   </div>
                 ) : (
@@ -1080,12 +1080,16 @@ export const CounterIntakeStudio: React.FC = () => {
                     {activeConsultation.findings.map((f) => (
                       <div key={f.id} className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">[{f.rule_identifier}]</span>
+                          <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100">[{f.rule_identifier}]</span>
                           <SeverityBadge severity={f.severity} />
                         </div>
-                        <div className="text-sm font-semibold text-slate-900 dark:text-white">{f.title}</div>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">{f.description}</p>
-                        <div className="text-xs text-amber-800 dark:text-amber-300 pt-1 font-medium">Action: {f.action_required}</div>
+                        <div className="text-sm font-bold text-slate-950 dark:text-white">{f.title}</div>
+                        <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-normal">{f.description}</p>
+                        <div className={`text-xs pt-1 font-semibold ${
+                          f.is_red_flag ? 'text-rose-800 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'
+                        }`}>
+                          Action: {f.action_required}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1095,10 +1099,18 @@ export const CounterIntakeStudio: React.FC = () => {
               {/* Pharmacist Action Bar & Lifecycle Transition */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
                 <div className="border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">
                     Pharmacist Clinical Decision & Sign-Off
                   </h3>
-                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 font-semibold">
+                  <span className={`text-xs font-mono px-2.5 py-0.5 rounded font-bold border ${
+                    activeConsultation.status === 'VERIFICATION_COMPLETED'
+                      ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-700'
+                      : activeConsultation.status === 'APPROVED_FOR_DISPENSING' || activeConsultation.status === 'COMPLETED'
+                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700'
+                      : activeConsultation.status === 'REFERRED'
+                      ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700'
+                      : 'bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600'
+                  }`}>
                     {activeConsultation.status}
                   </span>
                 </div>
@@ -1244,18 +1256,26 @@ export const CounterIntakeStudio: React.FC = () => {
                   }`}
                 >
                   <div>
-                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <div className="font-bold text-slate-950 dark:text-white flex items-center gap-1.5">
                       {c.consultation_number}
                       {c.referral_triggered && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                        <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 font-medium">
                       {c.patient_identifier} • {c.age_years ? `${c.age_years}y` : `${c.age_months}m`}
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold">
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                      c.status === 'VERIFICATION_COMPLETED'
+                        ? 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-700'
+                        : c.status === 'APPROVED_FOR_DISPENSING' || c.status === 'COMPLETED'
+                        ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700'
+                        : c.status === 'REFERRED'
+                        ? 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-700'
+                        : 'bg-slate-200 text-slate-900 border-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600'
+                    }`}>
                       {c.status}
                     </span>
                   </div>
@@ -1268,94 +1288,94 @@ export const CounterIntakeStudio: React.FC = () => {
 
       {/* MODAL 1: Emergency Referral Note Modal */}
       {showReferralModal && activeConsultation && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-extrabold text-sm uppercase tracking-wide">
                 <AlertTriangle className="w-5 h-5" />
                 <span>Clinical Emergency Referral & Transfer Note</span>
               </div>
               <button
                 type="button"
                 onClick={() => setShowReferralModal(false)}
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                className="text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white font-bold p-1"
               >
                 ✕
               </button>
             </div>
 
             {/* Document Body with High Contrast & Print Id */}
-            <div id="printable-referral-note" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-5 space-y-4 text-xs text-slate-900 dark:text-slate-100 max-h-[70vh] overflow-y-auto">
+            <div id="printable-referral-note" className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-5 space-y-4 text-xs text-slate-900 dark:text-slate-100 max-h-[70vh] overflow-y-auto">
               <div className="border-b-2 border-slate-900 dark:border-slate-300 pb-3 flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <h2 className="text-sm font-extrabold tracking-tight uppercase text-slate-950 dark:text-white">
                     Clinical Emergency Referral & Transfer Note
                   </h2>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300 mt-0.5 font-medium">
                     Community Pharmacy Walk-In Encounter & Safety Assessment
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="inline-block px-2.5 py-0.5 rounded bg-rose-100 text-rose-900 dark:bg-rose-950/80 dark:text-rose-200 border border-rose-300 dark:border-rose-700 font-bold text-[10px] uppercase tracking-wider">
+                  <span className="inline-block px-2.5 py-0.5 rounded bg-rose-100 text-rose-950 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-700 font-bold text-[10px] uppercase tracking-wider">
                     Emergency Transfer
                   </span>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  <div className="text-[10px] text-slate-700 dark:text-slate-300 font-mono mt-0.5 font-semibold">
                     Ref: {activeConsultation.consultation_number}
                   </div>
                 </div>
               </div>
 
               {/* Patient Vitals Summary */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-md border border-slate-200 dark:border-slate-700 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 dark:bg-slate-800/80 p-3 rounded-md border border-slate-300 dark:border-slate-700 text-xs">
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Patient Code</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{activeConsultation.patient_identifier}</span>
+                  <span className="text-slate-700 dark:text-slate-300 block text-[10px] font-bold">Patient Code</span>
+                  <span className="font-bold text-slate-950 dark:text-white">{activeConsultation.patient_identifier}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Age / Gender</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">
+                  <span className="text-slate-700 dark:text-slate-300 block text-[10px] font-bold">Age / Gender</span>
+                  <span className="font-bold text-slate-950 dark:text-white">
                     {activeConsultation.age_years ? `${activeConsultation.age_years}y` : `${activeConsultation.age_months}m`} / {activeConsultation.gender || 'N/A'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Weight</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">{activeConsultation.weight_kg ? `${activeConsultation.weight_kg} kg` : 'Unmeasured'}</span>
+                  <span className="text-slate-700 dark:text-slate-300 block text-[10px] font-bold">Weight</span>
+                  <span className="font-bold text-slate-950 dark:text-white">{activeConsultation.weight_kg ? `${activeConsultation.weight_kg} kg` : 'Unmeasured'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 dark:text-slate-400 block text-[10px]">Vitals</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">
+                  <span className="text-slate-700 dark:text-slate-300 block text-[10px] font-bold">Vitals</span>
+                  <span className="font-bold text-slate-950 dark:text-white">
                     {activeConsultation.temperature_c ?? 'N/A'}°C • {activeConsultation.sbp_mmhg ?? 'N/A'}/{activeConsultation.dbp_mmhg ?? 'N/A'} mmHg
                   </span>
                 </div>
               </div>
 
               {/* Primary Clinical Reason */}
-              <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs space-y-1">
-                <div className="font-bold text-rose-900 dark:text-rose-200 flex items-center gap-1.5">
+              <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/70 border border-rose-300 dark:border-rose-800 text-xs space-y-1">
+                <div className="font-bold text-rose-950 dark:text-rose-200 flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
                   Primary Clinical Reason for Hospital Referral:
                 </div>
-                <div className="text-rose-950 dark:text-rose-100 font-semibold pl-5">
+                <div className="text-rose-950 dark:text-rose-100 font-bold pl-5">
                   {activeConsultation.referral_reason}
                 </div>
               </div>
 
               {/* Clinical Summary & Mandated Actions */}
               <div className="space-y-2">
-                <div className="font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-800 pb-1 text-[11px]">
+                <div className="font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-1 text-[11px]">
                   Clinical Findings & Mandatory Transfer Directives:
                 </div>
                 <div className="space-y-2">
                   {activeConsultation.findings.filter((f) => f.requires_referral).map((f) => (
-                    <div key={f.id} className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-1">
-                      <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-100 text-rose-800 font-bold">
+                    <div key={f.id} className="p-2.5 rounded bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 space-y-1">
+                      <div className="font-bold text-slate-950 dark:text-white flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-100 text-rose-900 border border-rose-300 font-bold">
                           {f.rule_identifier}
                         </span>
                         <span>{f.title}</span>
                       </div>
-                      <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">{f.description}</p>
-                      <div className="text-rose-800 dark:text-rose-300 font-semibold text-xs mt-1">
+                      <p className="text-slate-800 dark:text-slate-200 text-xs leading-relaxed font-normal">{f.description}</p>
+                      <div className="text-rose-900 dark:text-rose-200 font-bold text-xs mt-1">
                         Mandated Action: {f.action_required}
                       </div>
                     </div>
@@ -1364,14 +1384,14 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
 
               {/* Disposition & Clinician Signature Line */}
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-3 flex flex-wrap justify-between items-end gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+              <div className="border-t border-slate-300 dark:border-slate-700 pt-3 flex flex-wrap justify-between items-end gap-2 text-[11px] text-slate-700 dark:text-slate-300">
                 <div>
-                  <div><strong>Disposition:</strong> Immediate transfer to nearest emergency center.</div>
-                  <div className="text-slate-500">PharmacyGuard Clinical Decision Support</div>
+                  <div><strong className="text-slate-950 dark:text-white">Disposition:</strong> Immediate transfer to nearest emergency center.</div>
+                  <div className="text-slate-600 dark:text-slate-400 font-medium">PharmacyGuard Clinical Decision Support</div>
                 </div>
                 <div className="text-right">
-                  <div className="font-mono text-slate-700 dark:text-slate-300">{new Date(activeConsultation.created_at).toUTCString()}</div>
-                  <div className="text-slate-500">Electronic Clinician Record</div>
+                  <div className="font-mono text-slate-900 dark:text-slate-100 font-bold">{new Date(activeConsultation.created_at).toUTCString()}</div>
+                  <div className="text-slate-600 dark:text-slate-400 font-medium">Electronic Clinician Record</div>
                 </div>
               </div>
             </div>
@@ -1384,6 +1404,7 @@ export const CounterIntakeStudio: React.FC = () => {
                   navigator.clipboard.writeText(activeConsultation.referral_notes || '');
                   alert('Referral note copied to clipboard!');
                 }}
+                className="font-bold text-slate-900 dark:text-slate-100 border border-slate-400 dark:border-slate-600"
               >
                 Copy Text
               </Button>
@@ -1394,6 +1415,7 @@ export const CounterIntakeStudio: React.FC = () => {
                   window.print();
                 }}
                 icon={<Printer className="w-4 h-4" />}
+                className="font-bold shadow-sm"
               >
                 Print Referral Note
               </Button>
@@ -1404,15 +1426,15 @@ export const CounterIntakeStudio: React.FC = () => {
 
       {/* MODAL 2: Clinical Override Justification Modal */}
       {showOverrideModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <h3 className="text-base font-bold text-slate-950 dark:text-white flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-amber-500" />
               Pharmacist Red-Flag Clinical Override
             </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300">
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
               An emergency red flag was detected for this patient. Dispensing without referral is restricted under
-              Act 857 and clinical safety governance. A formal clinical justification (minimum 10 characters) is legally required.
+              statutory clinical safety guidelines and healthcare protocols. A formal clinical justification (minimum 10 characters) is legally required.
             </p>
 
             <textarea

@@ -148,112 +148,119 @@ def create_consultation(
     consultation_count = db.query(CommunityConsultation).count() + 1
     consultation_num = f"CC-{now.strftime('%Y%m')}-{consultation_count:04d}"
 
-    # Extract proposed drugs for red flag evaluation
-    proposed_med_names = [item.drug_name for item in payload.proposed_items]
+    try:
+        # Extract proposed drugs for red flag evaluation
+        proposed_med_names = [item.drug_name for item in payload.proposed_items]
 
-    # Run deterministic Red-Flag referral triage engine
-    triage_result = RedFlagEngine.evaluate(
-        age_years=payload.age_years,
-        age_months=payload.age_months,
-        gender=payload.gender,
-        weight_kg=payload.weight_kg,
-        temperature_c=payload.temperature_c,
-        sbp_mmhg=payload.sbp_mmhg,
-        dbp_mmhg=payload.dbp_mmhg,
-        heart_rate_bpm=payload.heart_rate_bpm,
-        respiratory_rate_bpm=payload.respiratory_rate_bpm,
-        mrdt_status=payload.mrdt_status,
-        symptoms=payload.symptoms,
-        proposed_medications=proposed_med_names,
-    )
-
-    consultation = CommunityConsultation(
-        id=consultation_id,
-        consultation_number=consultation_num,
-        patient_identifier=payload.patient_identifier,
-        age_years=payload.age_years,
-        age_months=payload.age_months,
-        gender=payload.gender,
-        weight_kg=payload.weight_kg,
-        temperature_c=payload.temperature_c,
-        sbp_mmhg=payload.sbp_mmhg,
-        dbp_mmhg=payload.dbp_mmhg,
-        heart_rate_bpm=payload.heart_rate_bpm,
-        respiratory_rate_bpm=payload.respiratory_rate_bpm,
-        spo2_percent=payload.spo2_percent,
-        mrdt_status=payload.mrdt_status,
-        g6pd_status=payload.g6pd_status,
-        chief_complaint=payload.chief_complaint,
-        symptoms_json=json.dumps(payload.symptoms),
-        allergies_json=json.dumps(payload.allergies),
-        current_medications_json=json.dumps(payload.current_medications),
-        status="VERIFICATION_COMPLETED",  # Immediately verified by deterministic core
-        referral_triggered=triage_result.referral_triggered,
-        referral_urgency=triage_result.referral_urgency,
-        referral_reason=triage_result.referral_reason,
-        referral_notes=triage_result.referral_note,
-        is_synthetic=True,
-        version=1,
-    )
-    db.add(consultation)
-
-    # Add medication items
-    for item in payload.proposed_items:
-        c_item = CommunityConsultationItem(
-            id=str(uuid.uuid4()),
-            consultation_id=consultation_id,
-            drug_name=item.drug_name,
-            strength=item.strength,
-            dosage_form=item.dosage_form,
-            dose_amount=item.dose_amount,
-            dose_unit=item.dose_unit,
-            frequency=item.frequency,
-            duration_days=item.duration_days,
-            route=item.route,
-            instructions=item.instructions,
-            legal_category=item.legal_category,
+        # Run deterministic Red-Flag referral triage engine
+        triage_result = RedFlagEngine.evaluate(
+            age_years=payload.age_years,
+            age_months=payload.age_months,
+            gender=payload.gender,
+            weight_kg=payload.weight_kg,
+            temperature_c=payload.temperature_c,
+            sbp_mmhg=payload.sbp_mmhg,
+            dbp_mmhg=payload.dbp_mmhg,
+            heart_rate_bpm=payload.heart_rate_bpm,
+            respiratory_rate_bpm=payload.respiratory_rate_bpm,
+            mrdt_status=payload.mrdt_status,
+            symptoms=payload.symptoms,
+            proposed_medications=proposed_med_names,
         )
-        db.add(c_item)
 
-    # Add findings
-    for f in triage_result.findings:
-        cf = CommunityFinding(
-            id=str(uuid.uuid4()),
-            consultation_id=consultation_id,
-            rule_identifier=f.rule_identifier,
-            category=f.category,
-            severity=f.severity,
-            epistemic_status=getattr(f, "epistemic_status", "CONFIRMED_OBJECTIVE"),
-            title=f.title,
-            description=f.description,
-            action_required=f.action_required,
-            is_red_flag=f.is_red_flag,
-            requires_referral=f.requires_referral,
+        consultation = CommunityConsultation(
+            id=consultation_id,
+            consultation_number=consultation_num,
+            patient_identifier=payload.patient_identifier,
+            age_years=payload.age_years,
+            age_months=payload.age_months,
+            gender=payload.gender,
+            weight_kg=payload.weight_kg,
+            temperature_c=payload.temperature_c,
+            sbp_mmhg=payload.sbp_mmhg,
+            dbp_mmhg=payload.dbp_mmhg,
+            heart_rate_bpm=payload.heart_rate_bpm,
+            respiratory_rate_bpm=payload.respiratory_rate_bpm,
+            spo2_percent=payload.spo2_percent,
+            mrdt_status=payload.mrdt_status,
+            g6pd_status=payload.g6pd_status,
+            chief_complaint=payload.chief_complaint,
+            symptoms_json=json.dumps(payload.symptoms),
+            allergies_json=json.dumps(payload.allergies),
+            current_medications_json=json.dumps(payload.current_medications),
+            status="VERIFICATION_COMPLETED",  # Immediately verified by deterministic core
+            referral_triggered=triage_result.referral_triggered,
+            referral_urgency=triage_result.referral_urgency,
+            referral_reason=triage_result.referral_reason,
+            referral_notes=triage_result.referral_note,
+            is_synthetic=True,
+            version=1,
         )
-        db.add(cf)
+        db.add(consultation)
 
-    # Audit logging
-    actor_role = ",".join([r.role_id for r in current_user.roles]) if current_user.roles else "pharmacist"
-    audit = AuditEvent(
-        id=str(uuid.uuid4()),
-        actor_username=current_user.username,
-        actor_role=actor_role,
-        action="COMMUNITY_CONSULTATION_CREATED",
-        entity_type="CommunityConsultation",
-        entity_id=consultation_id,
-        details=json.dumps({
-            "consultation_number": consultation_num,
-            "patient_identifier": payload.patient_identifier,
-            "referral_triggered": triage_result.referral_triggered,
-            "referral_urgency": triage_result.referral_urgency,
-            "finding_count": len(triage_result.findings),
-        }),
-    )
-    db.add(audit)
+        # Add medication items
+        for item in payload.proposed_items:
+            c_item = CommunityConsultationItem(
+                id=str(uuid.uuid4()),
+                consultation_id=consultation_id,
+                drug_name=item.drug_name,
+                strength=item.strength,
+                dosage_form=item.dosage_form,
+                dose_amount=item.dose_amount,
+                dose_unit=item.dose_unit,
+                frequency=item.frequency,
+                duration_days=item.duration_days,
+                route=item.route,
+                instructions=item.instructions,
+                legal_category=item.legal_category,
+            )
+            db.add(c_item)
 
-    db.commit()
-    db.refresh(consultation)
-    return _serialize_consultation(consultation)
+        # Add findings
+        for f in triage_result.findings:
+            cf = CommunityFinding(
+                id=str(uuid.uuid4()),
+                consultation_id=consultation_id,
+                rule_identifier=f.rule_identifier,
+                category=f.category,
+                severity=f.severity,
+                epistemic_status=getattr(f, "epistemic_status", "CONFIRMED_OBJECTIVE"),
+                title=f.title,
+                description=f.description,
+                action_required=f.action_required,
+                is_red_flag=f.is_red_flag,
+                requires_referral=f.requires_referral,
+            )
+            db.add(cf)
+
+        # Audit logging
+        actor_role = ",".join([r.role_id for r in current_user.roles]) if current_user.roles else "pharmacist"
+        audit = AuditEvent(
+            id=str(uuid.uuid4()),
+            actor_username=current_user.username,
+            actor_role=actor_role,
+            action="COMMUNITY_CONSULTATION_CREATED",
+            entity_type="CommunityConsultation",
+            entity_id=consultation_id,
+            details=json.dumps({
+                "consultation_number": consultation_num,
+                "patient_identifier": payload.patient_identifier,
+                "referral_triggered": triage_result.referral_triggered,
+                "referral_urgency": triage_result.referral_urgency,
+                "finding_count": len(triage_result.findings),
+            }),
+        )
+        db.add(audit)
+
+        db.commit()
+        db.refresh(consultation)
+        return _serialize_consultation(consultation)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Clinical Consultation Error: {str(exc)}",
+        )
 
 
 @router.get("/consultations", response_model=list[CommunityConsultationResponse])
