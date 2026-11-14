@@ -70,6 +70,18 @@ def seed_database(db: Session) -> dict[str, int]:
                 .replace("Demo Benchmark Scenario 1", "Clinical Practice Guideline: ACC/AHA-2026-HTN")
                 .replace("Demo Guideline", "Clinical Practice Guideline:")
             )
+
+    # Ensure baseline synthetic patients have explicit confirmed NKDA documented if they have no allergy records
+    for pat_mrn in ["SYNTH-MRN-001", "SYNTH-MRN-002", "SYNTH-MRN-004", "SYNTH-MRN-005"]:
+        pat = db.query(SyntheticPatient).filter_by(mrn=pat_mrn).first()
+        if pat and not pat.allergies:
+            db.add(PatientAllergy(
+                patient_id=pat.id,
+                allergen="No Known Drug Allergies",
+                allergy_type="Drug",
+                severity="None",
+                reaction="Confirmed negative upon admission screening.",
+            ))
     db.commit()
 
     # -------------------------------------------------------------
@@ -464,6 +476,7 @@ def seed_database(db: Session) -> dict[str, int]:
         db.add(p1)
         db.flush()
         db.add(PatientDiagnosis(patient_id=p1.id, icd10_code="I10", description="Essential (primary) hypertension", diagnosed_date=date(2024, 2, 10)))
+        db.add(PatientAllergy(patient_id=p1.id, allergen="No Known Drug Allergies", allergy_type="Drug", severity="None", reaction="Confirmed negative upon admission screening."))
         stats["patients"] += 1
 
     rx1 = db.query(Prescription).filter_by(prescription_number="RX-2026-0001").first()
@@ -523,6 +536,7 @@ def seed_database(db: Session) -> dict[str, int]:
         db.flush()
         db.add(PatientDiagnosis(patient_id=p2.id, icd10_code="K21.9", description="Gastroesophageal reflux disease without esophagitis", diagnosed_date=date(2023, 6, 14)))
         db.add(PatientDiagnosis(patient_id=p2.id, icd10_code="M19.9", description="Osteoarthritis, unspecified", diagnosed_date=date(2022, 11, 3)))
+        db.add(PatientAllergy(patient_id=p2.id, allergen="No Known Drug Allergies", allergy_type="Drug", severity="None", reaction="Confirmed negative upon admission screening."))
         stats["patients"] += 1
 
     rx2 = db.query(Prescription).filter_by(prescription_number="RX-2026-0002").first()
@@ -644,6 +658,7 @@ def seed_database(db: Session) -> dict[str, int]:
         db.add(p4)
         db.flush()
         db.add(PatientDiagnosis(patient_id=p4.id, icd10_code="M79.7", description="Fibromyalgia / Acute post-surgical musculoskeletal pain", diagnosed_date=date(2026, 10, 20)))
+        db.add(PatientAllergy(patient_id=p4.id, allergen="No Known Drug Allergies", allergy_type="Drug", severity="None", reaction="Confirmed negative upon admission screening."))
         stats["patients"] += 1
 
     rx4 = db.query(Prescription).filter_by(prescription_number="RX-2026-0004").first()
@@ -713,6 +728,7 @@ def seed_database(db: Session) -> dict[str, int]:
         db.flush()
         db.add(PatientDiagnosis(patient_id=p5.id, icd10_code="J18.9", description="Pneumonia, unspecified organism", diagnosed_date=date(2026, 10, 26)))
         db.add(PatientDiagnosis(patient_id=p5.id, icd10_code="I10", description="Essential (primary) hypertension", diagnosed_date=date(2020, 3, 15)))
+        db.add(PatientAllergy(patient_id=p5.id, allergen="No Known Drug Allergies", allergy_type="Drug", severity="None", reaction="Confirmed negative upon admission screening."))
         stats["patients"] += 1
 
     rx5 = db.query(Prescription).filter_by(prescription_number="RX-2026-0005").first()

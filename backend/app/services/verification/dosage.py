@@ -1,4 +1,5 @@
 """Dosage and frequency deterministic verification service."""
+from datetime import date
 import re
 from sqlalchemy.orm import Session
 from app.models.prescription import Prescription, PrescriptionItem
@@ -205,6 +206,42 @@ def check_dosages(prescription: Prescription, db: Session) -> list[GeneratedFind
                     human_review_required=True,
                 )
             )
+            continue
+
+        # 6. Pediatric & Low-Weight Safety Invariant Check
+        # Adult dosage reference bounds must NEVER issue automated CLEAN status to pediatric (<18y) or low-weight (<40kg) patients.
+        patient = prescription.patient
+        patient_age = None
+        if patient and getattr(patient, "date_of_birth", None):
+            dob = patient.date_of_birth
+            today = date.today()
+            patient_age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        patient_weight = getattr(patient, "weight_kg", None) if patient else None
+
+        is_pediatric_or_low_weight = (
+            (patient_age is not None and patient_age < 18)
+            or (patient_weight is not None and patient_weight < 40.0)
+        )
+
+        if is_pediatric_or_low_weight:
+            findings.append(
+                GeneratedFinding(
+                    rule_identifier=f"RULE-DOSE-PEDIATRIC-MANUAL-{med.id}",
+                    category="DOSAGE",
+                    severity="MODERATE",
+                    status="REVIEW_REQUIRED",
+                    message=f"Pediatric / Low-weight patient ({patient_weight or 'Unknown'}kg): Automated adult dosage bounds unsupported for {med.generic_name}.",
+                    evidence=(
+                        f"Patient demographic ({patient_age or 'Unknown'}y, {patient_weight or 'Unknown'}kg) is below adult baseline thresholds (≥18 years and ≥40 kg). "
+                        f"Adult reference catalog bounds cannot authorize pediatric dispensing. "
+                        f"Mandatory manual weight-based dose calculation (mg/kg or BSA) and independent pharmacist verification required."
+                    ),
+                    rule_source="Clinical Pediatric Dosing Safety Boundary (WHO / GHS STG)",
+                    human_review_required=True,
+                )
+            )
+            continue
+
         elif daily_dose_mg < rule.min_daily_dose_mg:
             findings.append(
                 GeneratedFinding(

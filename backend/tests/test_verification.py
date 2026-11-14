@@ -136,6 +136,101 @@ def test_dosage_service_limits(db_session: Session):
     assert findings[0].severity == "INFO"
 
 
+def test_pediatric_and_low_weight_dosage_safety_invariant(db_session: Session):
+    """Pediatric (<18y) and low-weight (<40kg) patients must NOT receive automated CLEAN dosage clearance."""
+    from app.models.patient import SyntheticPatient
+    from datetime import date
+    import uuid
+
+    # Create synthetic 6-year-old child (19 kg)
+    ped_patient = SyntheticPatient(
+        id=f"ped-test-{uuid.uuid4()}",
+        mrn=f"PED-{uuid.uuid4().hex[:6].upper()}",
+        first_name="Emmanuel",
+        last_name="Boateng",
+        date_of_birth=date(date.today().year - 6, 1, 1),
+        gender="Male",
+        weight_kg=19.0,
+        height_cm=115.0,
+        is_synthetic=True,
+    )
+    db_session.add(ped_patient)
+    db_session.flush()
+
+    ped_rx = Prescription(
+        id=f"rx-ped-{uuid.uuid4()}",
+        prescription_number=f"RX-PED-{uuid.uuid4().hex[:4].upper()}",
+        patient_id=ped_patient.id,
+        prescriber_name="Dr. Child Specialist",
+        prescriber_department="Pediatrics",
+        status="pending",
+    )
+    db_session.add(ped_rx)
+    db_session.flush()
+
+    # Prescribe Amoxicillin 250mg TID (under adult single and daily limits)
+    db_session.add(PrescriptionItem(
+        prescription_id=ped_rx.id,
+        medication_id="MED-AMOX-500",
+        dose_amount=250.0,
+        dose_unit="mg",
+        frequency="Three times daily (TID)",
+        route="Oral",
+        duration_days=5,
+        quantity_prescribed=15,
+        instructions="Take 250mg TID",
+    ))
+    db_session.flush()
+
+    findings = check_dosages(ped_rx, db_session)
+    assert len(findings) == 1
+    assert findings[0].status == "REVIEW_REQUIRED"
+    assert findings[0].severity == "MODERATE"
+    assert findings[0].human_review_required is True
+    assert "PEDIATRIC-MANUAL" in findings[0].rule_identifier
+    assert "Automated adult dosage bounds unsupported" in findings[0].message
+
+
+def test_allergy_epistemic_uncollected_status_requires_confirmation(db_session: Session):
+    """Empty allergy profile must NOT be assumed to be NKDA; requires explicit confirmation."""
+    from app.models.patient import SyntheticPatient
+    from datetime import date
+    import uuid
+
+    # Create patient with no allergy documentation
+    unassessed_patient = SyntheticPatient(
+        id=f"pat-unassessed-{uuid.uuid4()}",
+        mrn=f"UNASSESSED-{uuid.uuid4().hex[:6].upper()}",
+        first_name="Unassessed",
+        last_name="Patient",
+        date_of_birth=date(1990, 1, 1),
+        gender="Female",
+        weight_kg=65.0,
+        height_cm=165.0,
+        is_synthetic=True,
+    )
+    db_session.add(unassessed_patient)
+    db_session.flush()
+
+    rx = Prescription(
+        id=f"rx-unassessed-{uuid.uuid4()}",
+        prescription_number=f"RX-UNASSESSED-{uuid.uuid4().hex[:4].upper()}",
+        patient_id=unassessed_patient.id,
+        prescriber_name="Dr. Attending",
+        prescriber_department="Medicine",
+        status="pending",
+    )
+    db_session.add(rx)
+    db_session.flush()
+
+    findings = check_allergies(rx, db_session)
+    assert len(findings) == 1
+    assert findings[0].rule_identifier == "RULE-ALG-EPISTEMIC-UNVERIFIED"
+    assert findings[0].status == "REVIEW_REQUIRED"
+    assert findings[0].human_review_required is True
+    assert "Allergy status unconfirmed" in findings[0].message
+
+
 def test_inventory_service_shortage_detected(db_session: Session):
     """Scenario 5: Cefdinir 20 units requested, 12 available triggers stock shortage."""
     rx5 = db_session.query(Prescription).filter_by(prescription_number="RX-2026-0005").first()

@@ -9,21 +9,53 @@ def check_allergies(prescription: Prescription, db: Session) -> list[GeneratedFi
     """
     Compare documented synthetic allergies against prescribed medications
     and configured demonstration cross-reactivity rules.
+    Enforces the five-state epistemic certainty model: missing or uncollected allergy status
+    is NOT assumed to be NKDA.
     """
     findings: list[GeneratedFinding] = []
     patient = prescription.patient
-    allergies = patient.allergies
+    allergies = patient.allergies if patient else []
 
     if not allergies:
         findings.append(
             GeneratedFinding(
-                rule_identifier="RULE-ALG-CLEAN-NKDA",
+                rule_identifier="RULE-ALG-EPISTEMIC-UNVERIFIED",
+                category="ALLERGY",
+                severity="LOW",
+                status="REVIEW_REQUIRED",
+                message="Allergy status unconfirmed: No documented allergy assessment in patient profile.",
+                evidence=(
+                    f"Patient {patient.first_name if patient else 'Unknown'} {patient.last_name if patient else ''} "
+                    f"(MRN: {patient.mrn if patient else 'N/A'}) has no documented allergy assessment on record. "
+                    f"Epistemic safety invariant: Absence of documented allergies must NOT be assumed to indicate "
+                    f"No Known Drug Allergies (NKDA). Mandatory pharmacist confirmation required before dispensing."
+                ),
+                rule_source="Clinical Safety & Allergy Epistemic Governance (WHO/GHS)",
+                human_review_required=True,
+            )
+        )
+        return findings
+
+    # Check for explicit affirmative NKDA confirmation
+    has_explicit_nkda = any(
+        a.allergen.strip().upper() in ["NKDA", "NO KNOWN DRUG ALLERGIES", "NO KNOWN ALLERGIES", "NONE"]
+        for a in allergies
+    )
+    active_allergens = [
+        a for a in allergies
+        if a.allergen.strip().upper() not in ["NKDA", "NO KNOWN DRUG ALLERGIES", "NO KNOWN ALLERGIES", "NONE"]
+    ]
+
+    if has_explicit_nkda and not active_allergens:
+        findings.append(
+            GeneratedFinding(
+                rule_identifier="RULE-ALG-DOCUMENTED-NKDA",
                 category="ALLERGY",
                 severity="INFO",
                 status="CLEAN",
-                message="No documented drug allergies on patient profile.",
-                evidence=f"Patient {patient.first_name} {patient.last_name} (MRN: {patient.mrn}) has no documented drug allergies (NKDA).",
-                rule_source="Patient Medical Record (Allergy History)",
+                message="Documented No Known Drug Allergies (NKDA) confirmed on patient profile.",
+                evidence=f"Patient {patient.first_name} {patient.last_name} (MRN: {patient.mrn}) has explicit affirmative assessment of No Known Drug Allergies (NKDA).",
+                rule_source="Patient Medical Record (Confirmed Allergy History)",
                 human_review_required=False,
             )
         )
@@ -34,7 +66,7 @@ def check_allergies(prescription: Prescription, db: Session) -> list[GeneratedFi
 
     for item in prescription.items:
         med = item.medication
-        for allergy in allergies:
+        for allergy in active_allergens:
             allergen_clean = allergy.allergen.strip().lower()
             generic_clean = med.generic_name.strip().lower()
             brand_clean = med.brand_name.strip().lower()
@@ -95,7 +127,7 @@ def check_allergies(prescription: Prescription, db: Session) -> list[GeneratedFi
                 )
 
     if not allergy_conflicts_found:
-        documented_allergens = ", ".join([a.allergen for a in allergies])
+        documented_allergens = ", ".join([a.allergen for a in active_allergens])
         findings.append(
             GeneratedFinding(
                 rule_identifier="RULE-ALG-NO-CONFLICT",
