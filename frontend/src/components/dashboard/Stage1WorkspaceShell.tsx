@@ -51,21 +51,23 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
             {primaryRole === 'pharmacy_student' && <GraduationCap className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           </div>
           <div>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white capitalize">
                 {primaryRole.replace('_', ' ')} Workstation
               </h2>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800">
-                {primaryRole === 'staff_pharmacist'
-                  ? 'Stage 2 Workstation'
-                  : primaryRole === 'chief_pharmacist'
-                  ? 'Stage 3 Oversight Workstation'
-                  : 'Stage 4 Student Simulation Lab'}
-              </span>
-              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Station Online</span>
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0">
+                  {primaryRole === 'staff_pharmacist'
+                    ? 'Stage 2 Workstation'
+                    : primaryRole === 'chief_pharmacist'
+                    ? 'Stage 3 Oversight Workstation'
+                    : 'Stage 4 Student Simulation Lab'}
+                </span>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Station Online</span>
+                </span>
+              </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Clinician: <strong className="text-slate-700 dark:text-slate-200 font-medium">{user?.full_name}</strong> · Role: <span className="font-mono text-[11px] text-sky-700 dark:text-sky-400">{user?.roles?.join(', ')}</span>
@@ -88,8 +90,8 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
 
       {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community Walk-In vs Prescription Scanner) */}
       {primaryRole === 'staff_pharmacist' && (
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-          <div className="flex items-center space-x-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setStaffMode('inpatient')}
@@ -112,7 +114,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               }`}
             >
               <Store className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span>Counter Studio (Workflow A)</span>
+              <span>Counter Studio</span>
             </button>
             <button
               type="button"
@@ -124,7 +126,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
               }`}
             >
               <ScanLine className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-              <span>Prescription Scanner (Workflow B)</span>
+              <span>Prescription Scanner</span>
             </button>
           </div>
           <span className="text-xs text-slate-600 dark:text-slate-300 hidden sm:inline">

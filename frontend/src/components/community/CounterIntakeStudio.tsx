@@ -14,6 +14,7 @@ import {
   Info,
   Sparkles,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
 import {
@@ -575,28 +576,30 @@ export const CounterIntakeStudio: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-transparent text-slate-900 dark:text-slate-100 overflow-y-auto space-y-6" data-testid="counter-intake-studio">
       {/* Top Banner Header */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-4 flex flex-wrap items-center justify-between gap-4 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-5 sm:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0">
             <UserCheck className="w-6 h-6" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Community Counter Consultation Studio</h1>
-              <span className="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
-                Clinical Trial Protocol
-              </span>
-              <span className="px-2 py-0.5 text-xs font-semibold rounded bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                Active Practice Intake
-              </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">Community Counter Consultation Studio</h1>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 shrink-0">
+                  Clinical Trial Protocol
+                </span>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 shrink-0">
+                  Active Practice Intake
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               Structured walk-in intake, rapid vitals assessment, point-of-care triage, and clinical safety verification.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0 self-start md:self-center">
           {activeConsultation && (
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
               <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">{activeConsultation.consultation_number}</span>
@@ -1651,7 +1654,7 @@ export const CounterIntakeStudio: React.FC = () => {
         </div>
 
         {/* Right Column: Verification Results, Emergency Red Flags & Pharmacist Oversight (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto pr-1">
           {activeConsultation ? (
             <div className="space-y-5">
               {/* Emergency Red Flag Alert Banner */}
@@ -1876,15 +1879,138 @@ export const CounterIntakeStudio: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-4 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mx-auto text-slate-500 dark:text-slate-400">
-                <FileText className="w-6 h-6" />
+            <div className="space-y-5">
+              {/* Live Intake & Clinical Safety Monitor */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      <ShieldCheck className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                        Live Triage & Safety Monitor
+                      </h3>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                        Real-time intake tracking • Ready for engine evaluation
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
+                    {patientId}
+                  </span>
+                </div>
+
+                {/* Patient Intake Live Indicators Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                    <div className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Patient Profile</div>
+                    <div className="font-semibold text-slate-900 dark:text-white mt-0.5">
+                      {ageYears !== '' ? `${ageYears} yrs` : (ageMonths !== '' ? `${ageMonths} mos` : 'Age unrecorded')} • {gender}
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      {weightKg !== '' ? `${weightKg} kg` : 'Weight pending'}
+                      {sbp && dbp ? ` • BP ${sbp}/${dbp}` : ''}
+                      {tempC ? ` • ${tempC}°C` : ''}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                    <div className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Documented Symptoms</div>
+                    <div className="font-semibold text-slate-900 dark:text-white mt-0.5">
+                      {selectedSymptoms.length} active flagged
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 truncate">
+                      {selectedSymptoms.length > 0 ? selectedSymptoms.join(', ') : 'None selected'}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                    <div className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">History & Home Meds</div>
+                    <div className="font-semibold text-slate-900 dark:text-white mt-0.5">
+                      {medicalHistory.length} conditions • {currentMedications.length} meds
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      Allergies: {allergies.length > 0 ? `${allergies.length} recorded` : 'None reported'}
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                    <div className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Point-of-Care Tests</div>
+                    <div className="font-semibold text-slate-900 dark:text-white mt-0.5">
+                      RDT: {mrdtStatus}
+                    </div>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                      {pocBloodSugar !== 'NOT_DONE' ? `Glucose: ${pocBloodSugar}` : 'Glucose: Not tested'}
+                      {otherDiagnostics.length > 0 ? ` • +${otherDiagnostics.length} tests` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Proposed Counter Regimen Summary */}
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                    <span>Proposed Dispensing Items ({items.length})</span>
+                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                      {items.length > 0 ? 'Ready for Check' : 'No items added'}
+                    </span>
+                  </div>
+                  {items.length === 0 ? (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                      No medications added yet. Select common presets or custom medications on the left.
+                    </p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                      {items.map((item: ConsultationItem, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between text-xs bg-white dark:bg-slate-900 px-2.5 py-1.5 rounded border border-slate-200 dark:border-slate-700">
+                          <span className="font-semibold text-slate-900 dark:text-white">{item.drug_name} {item.strength || ''}</span>
+                          <span className="text-[11px] text-slate-600 dark:text-slate-400 font-mono">
+                            {item.dose_amount} {item.dose_unit} {item.frequency}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Direct Action Trigger */}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={handleSubmitConsultation}
+                  disabled={isSubmitting}
+                  icon={<ShieldAlert className="w-4 h-4" />}
+                  className="w-full justify-center shadow-xs font-bold text-xs"
+                >
+                  {isSubmitting ? 'Evaluating Safety Engine...' : 'Run Point-of-Care Safety Verification'}
+                </Button>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">No Active Consultation</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  Complete the intake fields on the left or select a 1-click test scenario above, then click "Execute Red-Flag Triage".
-                </p>
+
+              {/* Clinical Protocol & Decision Support Guide */}
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <Info className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  <span>Act 857 Clinical Triage Standards</span>
+                </div>
+                <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                  <div className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                    <span><strong>1. Demographic & Vitals Check:</strong> Age &lt;5y pediatric dosing rules and adult hypertension screening active.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                    <span><strong>2. Red-Flag Safeguard:</strong> Unresponsive, convulsions, stridor, or severe dyspnea trigger immediate Hospital Referral.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 shrink-0"></span>
+                    <span><strong>3. Epistemic Verification:</strong> Medications unlisted in the catalogue produce explicit coverage warnings for pharmacist assessment.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0"></span>
+                    <span><strong>4. Statutory Oversight:</strong> Pharmacist retains final clinical discretion before any dispensing authorization.</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
