@@ -356,6 +356,7 @@ describe('PharmacyGuard Stage 4: Student Simulation Workspace Integration', () =
 
   it('preserves Staff Pharmacist Stage 2 workstation in Stage1WorkspaceShell without regressions', async () => {
     vi.spyOn(api.prescriptions, 'listQueue').mockResolvedValueOnce([]);
+    vi.spyOn(api.community, 'listConsultations').mockResolvedValue([]);
 
     const authModule = await import('../../context/AuthContext');
     vi.spyOn(authModule, 'useAuth').mockReturnValue(createMockAuth(mockStaffUser));

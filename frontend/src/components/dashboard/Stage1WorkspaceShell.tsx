@@ -18,17 +18,30 @@ import { PrescriptionScannerStudio } from '../community/PrescriptionScannerStudi
 export interface Stage1WorkspaceShellProps {
   workspace?: 'staff' | 'chief' | 'student';
   onNavigateWorkspace?: (ws: 'staff' | 'chief' | 'student') => void;
+  showHospitalQueue?: boolean;
 }
 
-export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
+export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
+  workspace,
+  showHospitalQueue = false,
+}) => {
   const { user } = useAuth();
   const [staffMode, setStaffMode] = useState<'inpatient' | 'counter' | 'scanner'>(() => {
     if (typeof window !== 'undefined' && window.location?.search) {
       const mode = new URLSearchParams(window.location.search).get('mode');
-      if (mode === 'counter' || mode === 'scanner') return mode;
+      if (mode === 'counter' || mode === 'scanner' || mode === 'inpatient') return mode;
     }
-    return 'inpatient';
+    return 'counter';
   });
+
+  // Hospital Queue is hidden by default for Community Pharmacy mode, preserved if explicitly requested
+  const isHospitalVisible = Boolean(
+    showHospitalQueue ||
+    (typeof window !== 'undefined' &&
+      window.location?.search &&
+      (new URLSearchParams(window.location.search).get('hospital') === 'true' ||
+       new URLSearchParams(window.location.search).get('mode') === 'inpatient'))
+  );
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',
@@ -88,22 +101,24 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
         </div>
       </div>
 
-      {/* Staff Pharmacist Sub-Workflow Mode Selector (Hospital vs Community Walk-In vs Prescription Scanner) */}
+      {/* Staff Pharmacist Sub-Workflow Mode Selector (Community Counter vs Prescription Scanner) */}
       {primaryRole === 'staff_pharmacist' && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
           <div className="flex flex-wrap items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
-            <button
-              type="button"
-              onClick={() => setStaffMode('inpatient')}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                staffMode === 'inpatient'
-                  ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-sky-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Hospital Queue</span>
-            </button>
+            {isHospitalVisible && (
+              <button
+                type="button"
+                onClick={() => setStaffMode('inpatient')}
+                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  staffMode === 'inpatient'
+                    ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-sky-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
+                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Hospital Queue</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setStaffMode('counter')}
@@ -132,11 +147,11 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
           <span className="text-xs text-slate-600 dark:text-slate-300 hidden sm:inline">
             Active Mode:{' '}
             <strong className="text-slate-900 dark:text-slate-100 font-bold">
-              {staffMode === 'inpatient'
-                ? 'Prescription Queue'
-                : staffMode === 'counter'
+              {staffMode === 'counter'
                 ? 'Counter Consultation Intake'
-                : 'Prescription OCR & 7-Field Human Gate'}
+                : staffMode === 'scanner'
+                ? 'Prescription OCR & 7-Field Human Gate'
+                : 'Prescription Queue'}
             </strong>
           </span>
         </div>
@@ -146,12 +161,12 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ work
       <div className="space-y-6">
         {/* Staff Pharmacist Workspaces */}
         {primaryRole === 'staff_pharmacist' && (
-          staffMode === 'inpatient' ? (
+          staffMode === 'inpatient' && isHospitalVisible ? (
             <StaffPrescriptionWorkspace />
-          ) : staffMode === 'counter' ? (
-            <CounterIntakeStudio />
-          ) : (
+          ) : staffMode === 'scanner' ? (
             <PrescriptionScannerStudio />
+          ) : (
+            <CounterIntakeStudio />
           )
         )}
 
