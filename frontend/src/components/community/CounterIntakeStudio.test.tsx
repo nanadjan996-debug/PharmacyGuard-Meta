@@ -215,4 +215,110 @@ describe('PharmacyGuard Community Edition: CounterIntakeStudio', () => {
       expect(screen.queryByText(/Override Red Flag with Clinical Justification/i)).not.toBeInTheDocument();
     });
   });
+
+  it('supports open-ended custom symptoms, comorbidities, home medications, and diagnostics', async () => {
+    render(<CounterIntakeStudio />);
+
+    // 1. Add custom symptom
+    const customSymptomInput = screen.getByPlaceholderText(/hemoptysis, hematuria/i);
+    fireEvent.change(customSymptomInput, { target: { value: 'dysphagia' } });
+    const addSymptomBtn = screen.getByRole('button', { name: /Add Symptom/i });
+    fireEvent.click(addSymptomBtn);
+
+    expect(screen.getByText('dysphagia')).toBeInTheDocument();
+
+    // 2. Add comorbidity from quick-picks and custom
+    const htnChip = screen.getByText('Hypertension');
+    fireEvent.click(htnChip);
+    const customCondInput = screen.getByPlaceholderText(/Enter any medical condition/i);
+    fireEvent.change(customCondInput, { target: { value: 'Post-appendectomy (2022)' } });
+    const addCondBtn = screen.getByRole('button', { name: /Add Condition/i });
+    fireEvent.click(addCondBtn);
+
+    expect(screen.getByText('Post-appendectomy (2022)')).toBeInTheDocument();
+
+    // 3. Add home medication
+    const homeMedInput = screen.getByPlaceholderText(/Amlodipine 10mg daily/i);
+    fireEvent.change(homeMedInput, { target: { value: 'Metformin 500mg BID' } });
+    const addMedBtn = screen.getByRole('button', { name: /Add Medication/i });
+    fireEvent.click(addMedBtn);
+
+    expect(screen.getByText('Metformin 500mg BID')).toBeInTheDocument();
+
+    // 4. Add custom rapid POC diagnostic
+    const testNameInput = screen.getByPlaceholderText(/Test name \(e\.g\. Urine Dipstick/i);
+    const testResultInput = screen.getByPlaceholderText(/Result \(e\.g\. Leukocytes 2\+/i);
+    fireEvent.change(testNameInput, { target: { value: 'Urine Dipstick' } });
+    fireEvent.change(testResultInput, { target: { value: 'Protein 2+, Leuks Neg' } });
+    const addTestBtn = screen.getAllByRole('button', { name: /^Add$/i })[0];
+    fireEvent.click(addTestBtn);
+
+    expect(screen.getByText(/Urine Dipstick:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Protein 2\+, Leuks Neg/i)).toBeInTheDocument();
+
+    // 5. Submit and verify open-ended payload was transmitted
+    const submitBtn = screen.getByRole('button', { name: /Execute Red-Flag Triage/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(api.community.createConsultation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          symptoms: expect.arrayContaining(['dysphagia']),
+          medical_history: expect.arrayContaining(['Hypertension', 'Post-appendectomy (2022)']),
+          current_medications: expect.arrayContaining(['Metformin 500mg BID']),
+          diagnostic_tests: expect.arrayContaining([
+            expect.objectContaining({
+              test_name: 'Urine Dipstick',
+              result: 'Protein 2+, Leuks Neg',
+            }),
+          ]),
+        })
+      );
+    });
+  }, 15000);
+
+  it('allows pharmacists to propose custom medications with full clinical specifications', async () => {
+    render(<CounterIntakeStudio />);
+
+    // Toggle custom medication form
+    const toggleFormBtn = screen.getByRole('button', { name: /\+ Custom Medication Form/i });
+    fireEvent.click(toggleFormBtn);
+
+    expect(screen.getByText(/Enter Custom Dispensing Regimen/i)).toBeInTheDocument();
+
+    // Fill form
+    const drugInput = screen.getByPlaceholderText(/Ciprofloxacin, Metronidazole/i);
+    const strengthInput = screen.getByPlaceholderText(/500mg, 10mg\/5mL/i);
+    fireEvent.change(drugInput, { target: { value: 'Ciprofloxacin' } });
+    fireEvent.change(strengthInput, { target: { value: '500mg' } });
+
+    const addRegimenBtn = screen.getByRole('button', { name: /Add to Proposed Regimen/i });
+    fireEvent.click(addRegimenBtn);
+
+    // Verify item is added to proposed regimen list
+    expect(screen.getByText('Ciprofloxacin')).toBeInTheDocument();
+    expect(screen.getByText(/500mg • Tablet/i)).toBeInTheDocument();
+  }, 15000);
+
+  it('renders clinical practice boundary notice and evaluated rule transparency upon non-red-flag evaluation', async () => {
+    vi.spyOn(api.community, 'createConsultation').mockResolvedValueOnce({
+      ...mockCleanConsultation,
+      evaluated_rules_count: 5,
+      uncovered_clinical_areas: ['Dysphagia (no configured triage rule)'],
+    });
+
+    render(<CounterIntakeStudio />);
+
+    const submitBtn = screen.getByRole('button', { name: /Execute Red-Flag Triage/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No Critical Red Flags Detected/i)).toBeInTheDocument();
+      expect(screen.getByText(/Clinical Scope & Practice Boundary Notice/i)).toBeInTheDocument();
+      expect(screen.getByText(/Evaluated Protocols \(5\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Recorded Elements Outside Triage Rule Set:/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dysphagia \(no configured triage rule\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/ABSENCE OF AN AUTOMATED ALERT DOES NOT CONSTITUTE A FINDING OF CLINICAL SAFETY/i)).toBeInTheDocument();
+    });
+  }, 15000);
 });

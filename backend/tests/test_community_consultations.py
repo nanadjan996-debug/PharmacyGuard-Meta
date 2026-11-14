@@ -469,3 +469,85 @@ class TestCommunityConsultationAPI:
             assert r["is_active"] is False
             assert "source_reference" in r
             assert len(r["source_reference"]) > 10
+
+    def test_open_ended_clinical_intake_preserves_custom_data(self, client: TestClient, auth_headers: dict):
+        """Open-ended intake accepts arbitrary symptoms, comorbidities, home meds, and custom POC tests."""
+        payload = {
+            "patient_identifier": "SYN-OPEN-INTAKE-01",
+            "age_years": 48,
+            "gender": "MALE",
+            "weight_kg": 76.5,
+            "temperature_c": 36.8,
+            "sbp_mmhg": 135,
+            "dbp_mmhg": 85,
+            "chief_complaint": "Patient presents with persistent localized rash on bilateral forearms and lower back pain.",
+            "symptoms": ["pruritic_maculopapular_rash", "lower_back_pain", "mild_dysuria"],
+            "medical_history": ["Asthma", "Peptic Ulcer Disease", "Hypertension"],
+            "current_medications": ["Amlodipine 10mg OD", "Salbutamol Inhaler PRN"],
+            "diagnostic_tests": [
+                {
+                    "test_name": "Urine Dipstick (POC)",
+                    "result": "Leukocytes 1+, Nitrite Negative, Protein Trace",
+                    "epistemic_status": "CONFIRMED_OBJECTIVE",
+                }
+            ],
+            "allergies": [
+                {"allergen": "Penicillin", "state": "CONFIRMED_OBJECTIVE", "reaction": "Urticaria in 2018"}
+            ],
+            "proposed_items": [
+                {
+                    "drug_name": "Cetirizine",
+                    "strength": "10mg",
+                    "dosage_form": "Tablet",
+                    "dose_amount": 10.0,
+                    "dose_unit": "mg",
+                    "frequency": "OD",
+                    "duration_days": 5,
+                    "route": "Oral",
+                    "instructions": "Take at bedtime",
+                    "legal_category": "OTC",
+                }
+            ],
+        }
+
+        resp = client.post("/api/v1/community/consultations", json=payload, headers=auth_headers)
+        assert resp.status_code == 201
+        data = resp.json()
+
+        # Verify open-ended data persistence
+        assert data["medical_history"] == ["Asthma", "Peptic Ulcer Disease", "Hypertension"]
+        assert data["current_medications"] == ["Amlodipine 10mg OD", "Salbutamol Inhaler PRN"]
+        assert len(data["diagnostic_tests"]) == 1
+        assert data["diagnostic_tests"][0]["test_name"] == "Urine Dipstick (POC)"
+        assert "pruritic_maculopapular_rash" in data["symptoms"]
+        assert "lower_back_pain" in data["symptoms"]
+        assert data["items"][0]["drug_name"] == "Cetirizine"
+
+        # Verify transparent boundary reporting
+        assert data["evaluated_rules_count"] >= 5
+        assert len(data["uncovered_clinical_areas"]) > 0
+        assert any("Open-ended" in area for area in data["uncovered_clinical_areas"])
+
+    def test_afebrile_severe_danger_signs_trigger_emergency_referral(self):
+        """Afebrile patient with convulsions and blackwater must trigger emergency referral."""
+        res = RedFlagEngine.evaluate(
+            age_years=25,
+            temperature_c=36.4,  # Completely afebrile
+            mrdt_status="NOT_DONE",  # Unperformed test
+            symptoms=["convulsions", "dark_urine", "prostration"],
+        )
+        assert res.referral_triggered is True
+        assert res.referral_urgency == "EMERGENCY"
+        assert any(f.rule_identifier == "RF-EMG-CRIT-01" for f in res.findings)
+
+    def test_asymptomatic_severe_hypertension_triggers_urgency_advisory(self):
+        """Severe BP (190/115) without acute end-organ symptoms triggers urgent re-measurement protocol."""
+        res = RedFlagEngine.evaluate(
+            age_years=55,
+            sbp_mmhg=190,
+            dbp_mmhg=115,
+            symptoms=["mild_fatigue"],  # No acute CVD symptoms
+        )
+        assert res.referral_urgency == "URGENT"
+        assert any(f.rule_identifier == "RF-CVD-URG-01" for f in res.findings)
+        assert not any(f.rule_identifier == "RF-CVD-HYP-01" for f in res.findings)

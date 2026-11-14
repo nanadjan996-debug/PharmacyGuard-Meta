@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Info,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { api, ApiError } from '../../services/api';
 import {
@@ -20,6 +21,8 @@ import {
   ConsultationCreatePayload,
   ConsultationItem,
   AllergyEntry,
+  DiagnosticTestEntry,
+  EpistemicStatus,
   MRDTStatus,
   G6PDEpistemicStatus,
   AllergyEpistemicState,
@@ -55,6 +58,26 @@ const PRESET_MEDICATIONS: { name: string; strength: string; form: string; dose: 
   { name: 'Ibuprofen', strength: '400mg', form: 'Tablet', dose: 400, unit: 'mg', freq: 'TID', dur: 3, cat: 'OTC' },
 ];
 
+const COMMON_COMORBIDITIES = [
+  'Hypertension',
+  'Type 2 Diabetes',
+  'Asthma / COPD',
+  'Peptic Ulcer Disease (PUD)',
+  'Chronic Kidney Disease (CKD)',
+  'Sickle Cell Disease',
+  'Heart Failure',
+  'HIV Infection',
+];
+
+const COMMON_RAPID_TESTS = [
+  { test_name: 'Urine Dipstick', result: 'Protein 2+, Leuks Neg' },
+  { test_name: 'Urine hCG (Pregnancy)', result: 'Negative' },
+  { test_name: 'Strep A Rapid Swab', result: 'Negative' },
+  { test_name: 'COVID-19 Ag Rapid', result: 'Negative' },
+  { test_name: 'Rapid Hemoglobin', result: '11.8 g/dL' },
+  { test_name: 'Typhoid IgM/IgG', result: 'Negative' },
+];
+
 export const CounterIntakeStudio: React.FC = () => {
   // Form State
   const [patientId, setPatientId] = useState(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
@@ -80,6 +103,34 @@ export const CounterIntakeStudio: React.FC = () => {
   // Symptoms & Chief Complaint
   const [chiefComplaint, setChiefComplaint] = useState('Patient presents with fever, chills, and headache for 2 days.');
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>(['fever', 'chills']);
+  const [customSymptomInput, setCustomSymptomInput] = useState('');
+
+  // Medical History & Chronic Comorbidities
+  const [medicalHistory, setMedicalHistory] = useState<string[]>([]);
+  const [customHistoryInput, setCustomHistoryInput] = useState('');
+
+  // Concomitant Home Medications
+  const [currentMedications, setCurrentMedications] = useState<string[]>([]);
+  const [customHomeMedInput, setCustomHomeMedInput] = useState('');
+
+  // Extensible Point-of-Care Diagnostics
+  const [otherDiagnostics, setOtherDiagnostics] = useState<DiagnosticTestEntry[]>([]);
+  const [customTestName, setCustomTestName] = useState('');
+  const [customTestResult, setCustomTestResult] = useState('');
+  const [customTestEpistemic, setCustomTestEpistemic] = useState<EpistemicStatus>('CONFIRMED_OBJECTIVE');
+
+  // Proposed Items & Custom Regimen Entry
+  const [showCustomMedForm, setShowCustomMedForm] = useState(false);
+  const [customDrugName, setCustomDrugName] = useState('');
+  const [customStrength, setCustomStrength] = useState('');
+  const [customDosageForm, setCustomDosageForm] = useState('Tablet');
+  const [customDoseAmount, setCustomDoseAmount] = useState<number | ''>(1);
+  const [customDoseUnit, setCustomDoseUnit] = useState('tabs');
+  const [customFrequency, setCustomFrequency] = useState('TID');
+  const [customDurationDays, setCustomDurationDays] = useState<number | ''>(3);
+  const [customRoute, setCustomRoute] = useState('Oral');
+  const [customLegalCategory, setCustomLegalCategory] = useState<'OTC' | 'P' | 'POM'>('OTC');
+  const [customInstructions, setCustomInstructions] = useState('');
 
   // Allergies
   const [allergies, setAllergies] = useState<AllergyEntry[]>([
@@ -134,17 +185,104 @@ export const CounterIntakeStudio: React.FC = () => {
     loadConsultations();
   }, []);
 
-  // Toggle symptom chip
+  // Symptom management (Open-ended + Presets)
   const toggleSymptom = (symptomId: string) => {
     setSelectedSymptoms((prev) =>
       prev.includes(symptomId) ? prev.filter((s) => s !== symptomId) : [...prev, symptomId]
     );
   };
 
+  const addCustomSymptom = () => {
+    const trimmed = customSymptomInput.trim().toLowerCase().replace(/\s+/g, '_');
+    if (trimmed && !selectedSymptoms.includes(trimmed)) {
+      setSelectedSymptoms((prev) => [...prev, trimmed]);
+      setCustomSymptomInput('');
+    }
+  };
+
+  const removeSymptom = (symptom: string) => {
+    setSelectedSymptoms((prev) => prev.filter((s) => s !== symptom));
+  };
+
+  // Comorbidities management
+  const toggleComorbidity = (condition: string) => {
+    setMedicalHistory((prev) =>
+      prev.includes(condition) ? prev.filter((c) => c !== condition) : [...prev, condition]
+    );
+  };
+
+  const addCustomComorbidity = () => {
+    const trimmed = customHistoryInput.trim();
+    if (trimmed && !medicalHistory.includes(trimmed)) {
+      setMedicalHistory((prev) => [...prev, trimmed]);
+      setCustomHistoryInput('');
+    }
+  };
+
+  const removeComorbidity = (condition: string) => {
+    setMedicalHistory((prev) => prev.filter((c) => c !== condition));
+  };
+
+  // Home medications management
+  const addHomeMedication = () => {
+    const trimmed = customHomeMedInput.trim();
+    if (trimmed && !currentMedications.includes(trimmed)) {
+      setCurrentMedications((prev) => [...prev, trimmed]);
+      setCustomHomeMedInput('');
+    }
+  };
+
+  const removeHomeMedication = (idx: number) => {
+    setCurrentMedications((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Extensible Point-of-Care Diagnostics management
+  const addCustomTest = () => {
+    if (customTestName.trim() && customTestResult.trim()) {
+      setOtherDiagnostics((prev) => [
+        ...prev,
+        {
+          test_name: customTestName.trim(),
+          result: customTestResult.trim(),
+          epistemic_status: customTestEpistemic,
+        },
+      ]);
+      setCustomTestName('');
+      setCustomTestResult('');
+    }
+  };
+
+  const removeCustomTest = (idx: number) => {
+    setOtherDiagnostics((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Custom Proposed Medication
+  const addCustomMedication = () => {
+    if (!customDrugName.trim()) return;
+    const newItem: ConsultationItem = {
+      drug_name: customDrugName.trim(),
+      strength: customStrength.trim() || 'Standard',
+      dosage_form: customDosageForm,
+      dose_amount: Number(customDoseAmount) || 1,
+      dose_unit: customDoseUnit,
+      frequency: customFrequency,
+      duration_days: Number(customDurationDays) || 3,
+      route: customRoute,
+      instructions: customInstructions.trim() || undefined,
+      legal_category: customLegalCategory,
+    };
+    setItems((prev) => [...prev, newItem]);
+    setCustomDrugName('');
+    setCustomStrength('');
+    setCustomInstructions('');
+    setShowCustomMedForm(false);
+  };
+
   // Quick-Test Demo Scenarios (Enables 1-click evaluation without supervision across multiple specialties)
   const applyScenario = (type: 'routine' | 'emergency' | 'allergy' | 'hypertension') => {
     setActiveConsultation(null);
     setErrorMessage(null);
+    setOtherDiagnostics([]);
     if (type === 'routine') {
       setPatientId(`SYN-WI-${Math.floor(1000 + Math.random() * 9000)}`);
       setAgeYears(32);
@@ -163,6 +301,8 @@ export const CounterIntakeStudio: React.FC = () => {
       setPocBloodSugar('NOT_DONE');
       setChiefComplaint('Mild frontal tension headache and general fatigue after long work hours. No nausea or visual disturbances.');
       setSelectedSymptoms([]);
+      setMedicalHistory([]);
+      setCurrentMedications([]);
       setAllergies([]);
       setItems([
         {
@@ -195,6 +335,8 @@ export const CounterIntakeStudio: React.FC = () => {
       setPocBloodSugar('NOT_DONE');
       setChiefComplaint('High fever, repeated vomiting, severe prostration, and dark urine for 2 days.');
       setSelectedSymptoms(['fever', 'chills', 'prostration', 'repeated_vomiting', 'dark_urine', 'neck_stiffness']);
+      setMedicalHistory([]);
+      setCurrentMedications([]);
       setAllergies([]);
       setItems([
         {
@@ -227,6 +369,8 @@ export const CounterIntakeStudio: React.FC = () => {
       setPocBloodSugar('NOT_DONE');
       setChiefComplaint('Sore throat, moderate fever, and productive cough for 3 days.');
       setSelectedSymptoms(['fever', 'cough']);
+      setMedicalHistory([]);
+      setCurrentMedications([]);
       setAllergies([
         { allergen: 'Penicillin', state: 'CONFIRMED_OBJECTIVE', reaction: 'Urticaria / Hives' },
       ]);
@@ -261,6 +405,8 @@ export const CounterIntakeStudio: React.FC = () => {
       setPocBloodSugar('NOT_DONE');
       setChiefComplaint('Severe throbbing occipital headache, acute blurred vision, and dizziness for several hours.');
       setSelectedSymptoms(['severe_headache', 'blurred_vision']);
+      setMedicalHistory(['Hypertension']);
+      setCurrentMedications(['Amlodipine 10mg daily']);
       setAllergies([]);
       setItems([
         {
@@ -297,6 +443,9 @@ export const CounterIntakeStudio: React.FC = () => {
     setPocBloodSugar('NOT_DONE');
     setChiefComplaint('Patient presents with fever, chills, and headache for 2 days.');
     setSelectedSymptoms(['fever', 'chills']);
+    setMedicalHistory([]);
+    setCurrentMedications([]);
+    setOtherDiagnostics([]);
     setAllergies([{ allergen: 'Penicillin', state: 'CONFIRMED_OBJECTIVE', reaction: 'Urticaria / Hives' }]);
     setItems([
       {
@@ -375,7 +524,9 @@ export const CounterIntakeStudio: React.FC = () => {
       chief_complaint: chiefComplaint,
       symptoms: selectedSymptoms,
       allergies,
-      current_medications: [],
+      current_medications: currentMedications,
+      medical_history: medicalHistory,
+      diagnostic_tests: otherDiagnostics,
       proposed_items: items,
     };
 
@@ -682,6 +833,69 @@ export const CounterIntakeStudio: React.FC = () => {
                 />
               </div>
 
+              {/* Active Selected Symptoms Badges (Dismissible) */}
+              {selectedSymptoms.length > 0 && (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Active Documented Symptoms ({selectedSymptoms.length}):
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                    {selectedSymptoms.map((sym) => {
+                      const match = COMMON_SYMPTOMS.find((s) => s.id === sym);
+                      const label = match ? match.label : sym.replace(/_/g, ' ');
+                      return (
+                        <span
+                          key={sym}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-950/80 dark:text-emerald-200 dark:border-emerald-700"
+                        >
+                          {label}
+                          <button
+                            type="button"
+                            onClick={() => removeSymptom(sym)}
+                            className="hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded-full"
+                            title="Remove symptom"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Open-Ended Custom Symptom Entry */}
+              <div>
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1">
+                  Add Any Custom / Rare Symptom:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customSymptomInput}
+                    onChange={(e) => setCustomSymptomInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomSymptom();
+                      }
+                    }}
+                    placeholder="e.g. hemoptysis, hematuria, skin rash, dysphagia..."
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={addCustomSymptom}
+                    disabled={!customSymptomInput.trim()}
+                    className="font-bold border border-slate-300 dark:border-slate-600"
+                  >
+                    Add Symptom
+                  </Button>
+                </div>
+              </div>
+
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
@@ -713,6 +927,145 @@ export const CounterIntakeStudio: React.FC = () => {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2B: Medical History, Chronic Comorbidities & Home Regimen */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  2B. Patient History & Concomitant Home Regimen
+                </h2>
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">Comorbidities & Meds</span>
+              </div>
+
+              {/* Medical History Section */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Documented Medical History & Chronic Conditions:
+                </label>
+                {/* Active history chips */}
+                {medicalHistory.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                    {medicalHistory.map((cond) => (
+                      <span
+                        key={cond}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-950 border border-sky-300 dark:bg-sky-950/80 dark:text-sky-200 dark:border-sky-700"
+                      >
+                        {cond}
+                        <button
+                          type="button"
+                          onClick={() => removeComorbidity(cond)}
+                          className="hover:text-rose-600 dark:hover:text-rose-400 p-0.5 rounded-full"
+                          title="Remove condition"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Custom Condition Entry */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customHistoryInput}
+                    onChange={(e) => setCustomHistoryInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomComorbidity();
+                      }
+                    }}
+                    placeholder="Enter any medical condition, prior surgery, or chronic diagnosis..."
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={addCustomComorbidity}
+                    disabled={!customHistoryInput.trim()}
+                    className="font-bold border border-slate-300 dark:border-slate-600"
+                  >
+                    Add Condition
+                  </Button>
+                </div>
+
+                {/* Common Comorbidities Quick-picks */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {COMMON_COMORBIDITIES.map((cond) => {
+                    const isSelected = medicalHistory.includes(cond);
+                    return (
+                      <button
+                        key={cond}
+                        type="button"
+                        onClick={() => toggleComorbidity(cond)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors border ${
+                          isSelected
+                            ? 'bg-sky-600 text-white border-sky-700 ring-2 ring-sky-400 shadow-xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        {cond}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Concomitant Home Medications Section */}
+              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Current Home Medications (Concomitant Regimen):
+                </label>
+                {currentMedications.length > 0 && (
+                  <div className="space-y-1.5">
+                    {currentMedications.map((med, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs"
+                      >
+                        <span className="font-medium text-slate-900 dark:text-slate-100">{med}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeHomeMedication(idx)}
+                          className="text-slate-400 hover:text-rose-600 p-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customHomeMedInput}
+                    onChange={(e) => setCustomHomeMedInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addHomeMedication();
+                      }
+                    }}
+                    placeholder="e.g. Amlodipine 10mg daily, Metformin 500mg BD, Inhaled Salbutamol PRN..."
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={addHomeMedication}
+                    disabled={!customHomeMedInput.trim()}
+                    className="font-bold border border-slate-300 dark:border-slate-600"
+                  >
+                    Add Medication
+                  </Button>
                 </div>
               </div>
             </div>
@@ -848,6 +1201,109 @@ export const CounterIntakeStudio: React.FC = () => {
                         <option value="HYPOGLYCEMIC">Acute Hypoglycemia (&lt;3.9 mmol/L / &lt;70 mg/dL)</option>
                       </select>
                     </div>
+
+                    {/* Additional Extensible Rapid Diagnostics */}
+                    <div className="sm:col-span-2 space-y-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                          Additional Rapid Tests & Point-of-Care Diagnostics:
+                        </label>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold">
+                          {otherDiagnostics.length} recorded
+                        </span>
+                      </div>
+
+                      {/* Display recorded additional tests */}
+                      {otherDiagnostics.length > 0 && (
+                        <div className="space-y-1.5">
+                          {otherDiagnostics.map((t, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs"
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-slate-950 dark:text-white">{t.test_name}:</span>
+                                <span className="text-slate-800 dark:text-slate-200 font-medium">{t.result}</span>
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300 dark:bg-sky-950 dark:text-sky-200 dark:border-sky-700 font-mono font-bold">
+                                  {t.epistemic_status}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeCustomTest(idx)}
+                                className="text-slate-400 hover:text-rose-600 p-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick-Add Common Tests */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="text-[11px] text-slate-700 dark:text-slate-300 font-bold self-center">Quick-Add:</span>
+                        {COMMON_RAPID_TESTS.map((t, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setOtherDiagnostics((prev) => [
+                                ...prev,
+                                { test_name: t.test_name, result: t.result, epistemic_status: 'CONFIRMED_OBJECTIVE' },
+                              ]);
+                            }}
+                            className="px-2 py-0.5 rounded bg-slate-100 hover:bg-sky-50 text-slate-800 hover:text-sky-900 border border-slate-300 hover:border-sky-400 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-600 text-xs flex items-center gap-1 font-semibold transition-colors"
+                          >
+                            <Plus className="w-3 h-3 text-sky-600 dark:text-sky-400" />
+                            {t.test_name}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Custom Test Entry Inputs */}
+                      <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                        <div className="text-[11px] font-bold text-slate-900 dark:text-slate-100">Add Any Point-of-Care or Laboratory Test:</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={customTestName}
+                            onChange={(e) => setCustomTestName(e.target.value)}
+                            placeholder="Test name (e.g. Urine Dipstick, Hb)"
+                            className="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                          />
+                          <input
+                            type="text"
+                            value={customTestResult}
+                            onChange={(e) => setCustomTestResult(e.target.value)}
+                            placeholder="Result (e.g. Leukocytes 2+, Neg)"
+                            className="px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 font-medium"
+                          />
+                          <div className="flex gap-1.5">
+                            <select
+                              value={customTestEpistemic}
+                              onChange={(e) => setCustomTestEpistemic(e.target.value as EpistemicStatus)}
+                              className="flex-1 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-semibold"
+                            >
+                              <option value="CONFIRMED_OBJECTIVE">CONFIRMED_OBJECTIVE</option>
+                              <option value="REPORTED_UNVERIFIED">REPORTED_UNVERIFIED</option>
+                              <option value="PATIENT_UNKNOWN">PATIENT_UNKNOWN</option>
+                              <option value="NOT_COLLECTED">NOT_COLLECTED</option>
+                            </select>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              onClick={addCustomTest}
+                              disabled={!customTestName.trim() || !customTestResult.trim()}
+                              className="font-bold border border-slate-300 dark:border-slate-600 text-xs shrink-0"
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -957,6 +1413,187 @@ export const CounterIntakeStudio: React.FC = () => {
                 ))}
               </div>
 
+              {/* Custom Medication Toggle & Entry */}
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                  Or enter any custom / unlisted formulation:
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCustomMedForm(!showCustomMedForm)}
+                  icon={<Plus className="w-3.5 h-3.5 text-emerald-600" />}
+                  className="font-bold text-xs"
+                >
+                  {showCustomMedForm ? 'Hide Custom Entry' : '+ Custom Medication Form'}
+                </Button>
+              </div>
+
+              {showCustomMedForm && (
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 space-y-3">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center justify-between">
+                    <span>Enter Custom Dispensing Regimen</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomMedForm(false)}
+                      className="text-slate-500 hover:text-slate-700 dark:hover:text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Drug Name *</label>
+                      <input
+                        type="text"
+                        value={customDrugName}
+                        onChange={(e) => setCustomDrugName(e.target.value)}
+                        placeholder="e.g. Ciprofloxacin, Metronidazole, Cetirizine"
+                        className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Strength</label>
+                      <input
+                        type="text"
+                        value={customStrength}
+                        onChange={(e) => setCustomStrength(e.target.value)}
+                        placeholder="e.g. 500mg, 10mg/5mL"
+                        className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Form</label>
+                      <select
+                        value={customDosageForm}
+                        onChange={(e) => setCustomDosageForm(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      >
+                        <option value="Tablet">Tablet</option>
+                        <option value="Capsule">Capsule</option>
+                        <option value="Syrup">Syrup</option>
+                        <option value="Suspension">Suspension</option>
+                        <option value="Oral Powder">Oral Powder</option>
+                        <option value="Ointment">Ointment</option>
+                        <option value="Cream">Cream</option>
+                        <option value="Eye Drops">Eye Drops</option>
+                        <option value="Ear Drops">Ear Drops</option>
+                        <option value="Inhaler">Inhaler</option>
+                        <option value="Suppository">Suppository</option>
+                        <option value="Injection">Injection</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Dose & Unit</label>
+                      <div className="flex gap-1">
+                        <input
+                          type="number"
+                          value={customDoseAmount}
+                          onChange={(e) => setCustomDoseAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                          placeholder="1"
+                        />
+                        <input
+                          type="text"
+                          value={customDoseUnit}
+                          onChange={(e) => setCustomDoseUnit(e.target.value)}
+                          className="w-1/2 px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                          placeholder="tabs"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Frequency</label>
+                      <select
+                        value={customFrequency}
+                        onChange={(e) => setCustomFrequency(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      >
+                        <option value="OD">OD (Once daily)</option>
+                        <option value="BID">BID (Twice daily)</option>
+                        <option value="TID">TID (Three times daily)</option>
+                        <option value="QID">QID (Four times daily)</option>
+                        <option value="Q4H">Q4H (Every 4 hours)</option>
+                        <option value="Q6H">Q6H (Every 6 hours)</option>
+                        <option value="Q8H">Q8H (Every 8 hours)</option>
+                        <option value="PRN">PRN (As needed)</option>
+                        <option value="STAT">STAT (Immediately)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Duration (days)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={customDurationDays}
+                        onChange={(e) => setCustomDurationDays(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                        placeholder="3"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Route</label>
+                      <select
+                        value={customRoute}
+                        onChange={(e) => setCustomRoute(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      >
+                        <option value="Oral">Oral</option>
+                        <option value="Topical">Topical</option>
+                        <option value="Inhalation">Inhalation</option>
+                        <option value="Ophthalmic">Ophthalmic</option>
+                        <option value="Otic">Otic</option>
+                        <option value="Rectal">Rectal</option>
+                        <option value="Sublingual">Sublingual</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Legal Category</label>
+                      <select
+                        value={customLegalCategory}
+                        onChange={(e) => setCustomLegalCategory(e.target.value as any)}
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-semibold"
+                      >
+                        <option value="OTC">OTC (Over the Counter)</option>
+                        <option value="P">P (Pharmacy Only)</option>
+                        <option value="POM">POM (Prescription Only)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">Instructions / Note</label>
+                      <input
+                        type="text"
+                        value={customInstructions}
+                        onChange={(e) => setCustomInstructions(e.target.value)}
+                        placeholder="e.g. Take with food"
+                        className="w-full px-2 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-xs text-slate-900 dark:text-white font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      onClick={addCustomMedication}
+                      disabled={!customDrugName.trim()}
+                      icon={<Plus className="w-3.5 h-3.5" />}
+                    >
+                      Add to Proposed Regimen
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Items List */}
               <div className="space-y-2">
                 {items.map((it, idx) => (
@@ -1054,12 +1691,36 @@ export const CounterIntakeStudio: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 flex items-center gap-3">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <div>
-                    <h3 className="text-sm font-bold text-emerald-950 dark:text-white">No Critical Red Flags Detected</h3>
-                    <p className="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
-                      Presentation is suitable for community pharmacist care under standard clinical guidelines.
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shrink-0">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-950 dark:text-white">No Critical Red Flags Detected</h3>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        No mandatory emergency hospital referral triggered among evaluated screening rules.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Clinical Scope & Verification Boundary Transparency Notice */}
+                  <div className="p-3 rounded-lg bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 text-xs space-y-2">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>Clinical Scope & Practice Boundary Notice</span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/90 dark:text-amber-200/90 leading-relaxed">
+                      <strong>Evaluated Protocols ({activeConsultation.evaluated_rules_count ?? 5}):</strong> Severe Malaria Danger Signs, Hypertensive Urgency / Red Flags, Pediatric Respiratory Distress, Acute Abdomen / Peritoneal Signs, Acute Meningitis.
+                    </p>
+                    {activeConsultation.uncovered_clinical_areas && activeConsultation.uncovered_clinical_areas.length > 0 && (
+                      <div className="text-[11px] text-amber-900/90 dark:text-amber-200/90">
+                        <span className="font-bold">Recorded Elements Outside Triage Rule Set:</span>{' '}
+                        {activeConsultation.uncovered_clinical_areas.join(', ')}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-amber-950 dark:text-amber-300 font-bold border-t border-amber-200/70 dark:border-amber-800/70 pt-1.5 leading-snug">
+                      ⚠️ ABSENCE OF AN AUTOMATED ALERT DOES NOT CONSTITUTE A FINDING OF CLINICAL SAFETY. Independent pharmacist clinical evaluation, drug interaction check, and patient counseling are mandatory for every dispensing decision.
                     </p>
                   </div>
                 </div>
@@ -1073,7 +1734,7 @@ export const CounterIntakeStudio: React.FC = () => {
 
                 {activeConsultation.findings.length === 0 ? (
                   <div className="text-xs text-slate-700 dark:text-slate-300 py-3 text-center font-medium">
-                    Zero rule violations. All clinical checks cleared.
+                    No active deterministic findings triggered by the recorded clinical inputs.
                   </div>
                 ) : (
                   <div className="space-y-2">

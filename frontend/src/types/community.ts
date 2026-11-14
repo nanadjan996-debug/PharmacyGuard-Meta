@@ -36,6 +36,12 @@ export interface AllergyEntry {
   reaction?: string;
 }
 
+export interface DiagnosticTestEntry {
+  test_name: string;
+  result: string;
+  epistemic_status: EpistemicStatus;
+}
+
 export interface ConsultationItem {
   id?: string;
   drug_name: string;
@@ -84,6 +90,10 @@ export interface CommunityConsultation {
   symptoms: string[];
   allergies: AllergyEntry[];
   current_medications: string[];
+  medical_history?: string[];
+  diagnostic_tests?: DiagnosticTestEntry[];
+  uncovered_clinical_areas?: string[];
+  evaluated_rules_count?: number;
   referral_triggered: boolean;
   referral_urgency?: 'EMERGENCY' | 'URGENT' | 'ROUTINE' | null;
   referral_reason?: string | null;
@@ -115,6 +125,8 @@ export interface ConsultationCreatePayload {
   symptoms: string[];
   allergies: AllergyEntry[];
   current_medications: string[];
+  medical_history?: string[];
+  diagnostic_tests?: DiagnosticTestEntry[];
   proposed_items: ConsultationItem[];
 }
 

@@ -10,6 +10,14 @@ def _ensure_schema_columns():
     """Ensure newly introduced columns exist in SQLite database idempotently."""
     from sqlalchemy import inspect, text
     insp = inspect(engine)
+    if insp.has_table("community_consultations"):
+        cons_cols = [c["name"] for c in insp.get_columns("community_consultations")]
+        with engine.begin() as conn:
+            if "medical_history_json" not in cons_cols:
+                conn.execute(text("ALTER TABLE community_consultations ADD COLUMN medical_history_json TEXT DEFAULT '[]'"))
+            if "diagnostic_tests_json" not in cons_cols:
+                conn.execute(text("ALTER TABLE community_consultations ADD COLUMN diagnostic_tests_json TEXT DEFAULT '[]'"))
+
     if insp.has_table("community_findings"):
         existing_cols = [c["name"] for c in insp.get_columns("community_findings")]
         if "epistemic_status" not in existing_cols:

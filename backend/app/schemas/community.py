@@ -80,6 +80,8 @@ class ConsultationCreateRequest(BaseModel):
     symptoms: list[str] = Field(default_factory=list)
     allergies: list[dict[str, Any]] = Field(default_factory=list)
     current_medications: list[str] = Field(default_factory=list)
+    medical_history: list[str] = Field(default_factory=list, description="Patient medical history and chronic conditions")
+    diagnostic_tests: list[dict[str, Any]] = Field(default_factory=list, description="Point-of-care rapid diagnostic test entries")
     proposed_items: list[ConsultationItemCreate] = Field(default_factory=list)
 
 
@@ -114,6 +116,10 @@ class CommunityConsultationResponse(BaseModel):
     symptoms: list[str]
     allergies: list[dict[str, Any]]
     current_medications: list[str]
+    medical_history: list[str] = Field(default_factory=list)
+    diagnostic_tests: list[dict[str, Any]] = Field(default_factory=list)
+    evaluated_rules_count: int = 5
+    uncovered_clinical_areas: list[str] = Field(default_factory=list)
     referral_triggered: bool
     referral_urgency: str | None
     referral_reason: str | None

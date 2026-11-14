@@ -45,6 +45,8 @@ class CommunityConsultation(Base):
     symptoms_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     allergies_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     current_medications_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    medical_history_json: Mapped[str] = mapped_column(Text, default="[]", nullable=True)
+    diagnostic_tests_json: Mapped[str] = mapped_column(Text, default="[]", nullable=True)
 
     # 8-state Consultation Lifecycle:
     # DRAFT, VERIFICATION_COMPLETED, FINDINGS_REVIEWED, PRESCRIBER_CLARIFICATION_PENDING,

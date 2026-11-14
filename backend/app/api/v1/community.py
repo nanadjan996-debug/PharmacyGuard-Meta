@@ -51,7 +51,9 @@ VALID_LIFECYCLE_TRANSITIONS = {
 }
 
 
-def _serialize_consultation(c: CommunityConsultation) -> CommunityConsultationResponse:
+def _serialize_consultation(
+    c: CommunityConsultation, uncovered_areas: list[str] | None = None
+) -> CommunityConsultationResponse:
     symptoms = []
     try:
         symptoms = json.loads(c.symptoms_json) if c.symptoms_json else []
@@ -69,6 +71,18 @@ def _serialize_consultation(c: CommunityConsultation) -> CommunityConsultationRe
         meds = json.loads(c.current_medications_json) if c.current_medications_json else []
     except Exception:
         meds = []
+
+    med_history = []
+    try:
+        med_history = json.loads(getattr(c, "medical_history_json", "[]") or "[]")
+    except Exception:
+        med_history = []
+
+    diag_tests = []
+    try:
+        diag_tests = json.loads(getattr(c, "diagnostic_tests_json", "[]") or "[]")
+    except Exception:
+        diag_tests = []
 
     items = [
         ConsultationItemResponse(
@@ -103,6 +117,30 @@ def _serialize_consultation(c: CommunityConsultation) -> CommunityConsultationRe
         for f in c.findings
     ]
 
+    resolved_uncovered = uncovered_areas
+    if resolved_uncovered is None:
+        resolved_uncovered = []
+        screened_keywords = {
+            "fever", "chills", "prostration", "lethargy", "unconscious", "impaired_consciousness", "coma",
+            "repeated_vomiting", "unable_to_drink", "unable_to_retain_fluids", "convulsions", "dark_urine",
+            "blackwater", "respiratory_distress", "jaundice", "severe_headache", "blurred_vision", "chest_pain",
+            "dyspnea", "shortness_of_breath", "neurological_deficit", "confusion", "acute_abdominal_pain",
+            "severe_abdominal_pain", "abdominal_pain", "abdominal_rigidity", "rigidity", "guarding",
+            "rebound_tenderness", "bilious_vomiting", "feculent_vomiting", "distension", "subcostal_chest_indrawing",
+            "chest_indrawing", "stridor", "grunting", "cyanosis", "fast_breathing", "neck_stiffness",
+            "nuchal_rigidity", "photophobia", "kernig_sign", "brudzinski_sign", "bulging_fontanelle",
+            "petechial_rash", "purpuric_rash"
+        }
+        unscreened = [s for s in symptoms if s.lower().replace(" ", "_") not in screened_keywords]
+        if unscreened:
+            resolved_uncovered.append(
+                f"Open-ended symptoms without automated screening rules: {', '.join(unscreened)}. Professional clinical assessment required."
+            )
+        if items:
+            resolved_uncovered.append(
+                f"Proposed medications ({', '.join([it.drug_name for it in items])}): Automated community contraindication coverage is limited. Independent clinical verification mandatory."
+            )
+
     return CommunityConsultationResponse(
         id=c.id,
         consultation_number=c.consultation_number,
@@ -124,6 +162,10 @@ def _serialize_consultation(c: CommunityConsultation) -> CommunityConsultationRe
         symptoms=symptoms,
         allergies=allergies,
         current_medications=meds,
+        medical_history=med_history,
+        diagnostic_tests=diag_tests,
+        evaluated_rules_count=5,
+        uncovered_clinical_areas=resolved_uncovered,
         referral_triggered=c.referral_triggered,
         referral_urgency=c.referral_urgency,
         referral_reason=c.referral_reason,
@@ -190,6 +232,8 @@ def create_consultation(
             symptoms_json=json.dumps(payload.symptoms),
             allergies_json=json.dumps(payload.allergies),
             current_medications_json=json.dumps(payload.current_medications),
+            medical_history_json=json.dumps(payload.medical_history),
+            diagnostic_tests_json=json.dumps(payload.diagnostic_tests),
             status="VERIFICATION_COMPLETED",  # Immediately verified by deterministic core
             referral_triggered=triage_result.referral_triggered,
             referral_urgency=triage_result.referral_urgency,
@@ -256,7 +300,7 @@ def create_consultation(
 
         db.commit()
         db.refresh(consultation)
-        return _serialize_consultation(consultation)
+        return _serialize_consultation(consultation, uncovered_areas=triage_result.uncovered_areas)
     except Exception as exc:
         db.rollback()
         logger.error("Failed to create and evaluate clinical consultation: %s", str(exc), exc_info=True)

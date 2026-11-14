@@ -39,6 +39,8 @@ class TriageEvaluationResult:
     referral_urgency: str | None = None
     referral_reason: str | None = None
     referral_note: str | None = None
+    evaluated_rules: list[str] = field(default_factory=list)
+    uncovered_areas: list[str] = field(default_factory=list)
 
 
 class RedFlagEngine:
@@ -103,45 +105,66 @@ class RedFlagEngine:
         ]
         active_sev_mal_symptoms = [s for s in severe_malaria_symptoms if s in norm_symptoms]
 
-        if malaria_suspected_or_confirmed and active_sev_mal_symptoms:
+        if active_sev_mal_symptoms:
             # Check for oral ACT contraindication
             has_oral_act = any(
                 any(act_key in med for act_key in cls.ORAL_ACT_KEYWORDS)
                 for med in norm_meds
             )
 
-            desc = (
-                f"Patient presents with fever/suspected malaria and clinical signs of severe/complicated malaria: "
-                f"{', '.join(active_sev_mal_symptoms).replace('_', ' ')}. "
-                "Per national malaria control guidelines, complicated malaria requires immediate transfer to a referral hospital."
-            )
-            act_req = (
-                "EMERGENCY REFERRAL: Withhold routine counter treatment. Dispatch patient immediately to hospital. "
-                "Note: Pre-referral rectal artesunate dosing (10 mg/kg) remains BLOCKED_PENDING_CLINICAL_APPROVAL "
-                "pending formal faculty review of authorized clinical administration protocols."
-            )
-            if has_oral_act:
-                act_req += " CRITICAL: Routine oral ACT is strictly contraindicated in severe/complicated malaria."
-
-            findings.append(
-                RedFlagFinding(
-                    rule_identifier="RF-MAL-SEV-01",
-                    category="RED_FLAG",
-                    severity="HIGH",
-                    title="Severe / Complicated Malaria Red Flag",
-                    description=desc,
-                    action_required=act_req,
-                    is_red_flag=True,
-                    requires_referral=True,
-                    referral_urgency="EMERGENCY",
+            if malaria_suspected_or_confirmed:
+                desc = (
+                    f"Patient presents with fever/suspected malaria and clinical signs of severe/complicated malaria: "
+                    f"{', '.join(active_sev_mal_symptoms).replace('_', ' ')}. "
+                    "Per national malaria control guidelines, complicated malaria requires immediate transfer to a referral hospital."
                 )
-            )
+                act_req = (
+                    "EMERGENCY REFERRAL: Withhold routine counter treatment. Dispatch patient immediately to hospital. "
+                    "Note: Pre-referral rectal artesunate dosing (10 mg/kg) remains BLOCKED_PENDING_CLINICAL_APPROVAL "
+                    "pending formal faculty review of authorized clinical administration protocols."
+                )
+                if has_oral_act:
+                    act_req += " CRITICAL: Routine oral ACT is strictly contraindicated in severe/complicated malaria."
+
+                findings.append(
+                    RedFlagFinding(
+                        rule_identifier="RF-MAL-SEV-01",
+                        category="RED_FLAG",
+                        severity="HIGH",
+                        title="Severe / Complicated Malaria Red Flag",
+                        description=desc,
+                        action_required=act_req,
+                        is_red_flag=True,
+                        requires_referral=True,
+                        referral_urgency="EMERGENCY",
+                    )
+                )
+            else:
+                # Afebrile or unconfirmed malaria test, but severe emergency danger signs are present
+                findings.append(
+                    RedFlagFinding(
+                        rule_identifier="RF-EMG-CRIT-01",
+                        category="RED_FLAG",
+                        severity="HIGH",
+                        title="Critical Emergency Danger Signs",
+                        description=(
+                            f"Patient exhibits severe physiological danger signs: {', '.join(active_sev_mal_symptoms).replace('_', ' ')}. "
+                            "Severe systemic illness mandates immediate emergency hospital transfer regardless of temperature or rapid test status."
+                        ),
+                        action_required=(
+                            "EMERGENCY REFERRAL: Withhold routine counter treatment. Dispatch patient immediately to hospital emergency unit."
+                        ),
+                        is_red_flag=True,
+                        requires_referral=True,
+                        referral_urgency="EMERGENCY",
+                    )
+                )
 
         # -------------------------------------------------------------
         # 2. RF-CVD-HYP-01: Hypertensive Crisis / Emergency
         # -------------------------------------------------------------
         is_severe_bp = (sbp_mmhg is not None and sbp_mmhg >= 180) or (
-            dbp_mmhg is not None and dbp_mmhg >= 120
+            dbp_mmhg is not None and dbp_mmhg >= 110
         )
         acute_cvd_symptoms = [
             "severe_headache",
@@ -172,6 +195,26 @@ class RedFlagEngine:
                     is_red_flag=True,
                     requires_referral=True,
                     referral_urgency="EMERGENCY",
+                )
+            )
+        elif is_severe_bp and not active_cvd_symptoms:
+            findings.append(
+                RedFlagFinding(
+                    rule_identifier="RF-CVD-URG-01",
+                    category="RED_FLAG",
+                    severity="MODERATE",
+                    title="Severe Blood Pressure Elevation (Candidate Hypertensive Urgency)",
+                    description=(
+                        f"Markedly elevated blood pressure ({sbp_mmhg or '?'}/{dbp_mmhg or '?'} mmHg) without acute end-organ symptoms. "
+                        "High cardiovascular risk requiring verified re-measurement and urgent outpatient medical evaluation."
+                    ),
+                    action_required=(
+                        "CLINICAL PROTOCOL: Rest patient quietly for 15–30 minutes and re-measure BP. "
+                        "Strictly do not administer counter oral antihypertensives. If BP remains persistently elevated, issue urgent outpatient medical referral (within 24–48 hours)."
+                    ),
+                    is_red_flag=False,
+                    requires_referral=False,
+                    referral_urgency="URGENT",
                 )
             )
 
@@ -205,8 +248,9 @@ class RedFlagEngine:
                         f"{', '.join(active_surgical_signs).replace('_', ' ')}. Suspected peritonitis, appendicitis, or bowel obstruction."
                     ),
                     action_required=(
-                        "EMERGENCY REFERRAL: Withhold all oral analgesics, NSAIDs, opioids, and antispasmodics (masks surgical signs). "
-                        "Maintain nil-per-os (NPO); immediate referral to surgical emergency team."
+                        "EMERGENCY REFERRAL: Maintain strict nil-by-mouth (NPO: no oral food, liquids, or oral medications in anticipation of surgical review and anesthesia). "
+                        "Withhold counter oral analgesics and antispasmodics. Parenteral analgesia may be administered by hospital emergency medical personnel upon evaluation. "
+                        "Immediate transfer to surgical emergency team."
                     ),
                     is_red_flag=True,
                     requires_referral=True,
@@ -283,17 +327,18 @@ class RedFlagEngine:
         ]
         active_meningism = [s for s in meningism_signs if s in norm_symptoms]
 
-        if is_febrile and active_meningism:
+        if active_meningism:
+            desc = (
+                f"Meningeal irritation signs present: {', '.join(active_meningism).replace('_', ' ')}."
+                + (" Associated with documented fever." if is_febrile else " Documented afebrile or unmeasured temperature. High clinical suspicion of acute central nervous system infection/meningitis.")
+            )
             findings.append(
                 RedFlagFinding(
                     rule_identifier="RF-NEU-MEN-01",
                     category="RED_FLAG",
                     severity="HIGH",
                     title="Acute Neurological / Suspected Meningitis Red Flag",
-                    description=(
-                        f"Fever associated with meningeal signs: {', '.join(active_meningism).replace('_', ' ')}. "
-                        "High suspicion of acute bacterial meningitis, an epidemic-prone medical emergency."
-                    ),
+                    description=desc,
                     action_required=(
                         "EMERGENCY REFERRAL: Zero counter treatment. Do not delay transport with oral medications. "
                         "Immediate transfer to hospital emergency unit for urgent lumbar puncture and IV antimicrobial therapy."
@@ -306,7 +351,12 @@ class RedFlagEngine:
 
         # Check aggregate referral status
         referral_triggered = any(f.requires_referral for f in findings)
-        referral_urgency = "EMERGENCY" if any(f.referral_urgency == "EMERGENCY" for f in findings) else None
+        if any(f.referral_urgency == "EMERGENCY" for f in findings):
+            referral_urgency = "EMERGENCY"
+        elif any(f.referral_urgency == "URGENT" for f in findings):
+            referral_urgency = "URGENT"
+        else:
+            referral_urgency = None
         referral_reasons = [f.title for f in findings if f.requires_referral]
         referral_reason = "; ".join(referral_reasons) if referral_reasons else None
 
@@ -335,11 +385,44 @@ class RedFlagEngine:
                 f"==========================================================="
             )
 
+        evaluated_rules = [
+            "RF-MAL-SEV-01 (Severe / Complicated Malaria Screening)",
+            "RF-CVD-HYP-01 (Cardiovascular Crisis & Severe BP Screening)",
+            "RF-ABD-ACU-01 (Acute Abdomen Surgical Triage)",
+            "RF-PED-RES-01 (Pediatric IMCI Respiratory Distress Triage)",
+            "RF-NEU-MEN-01 (Acute Meningism & Neurological Screening)",
+        ]
+
+        # Calculate uncovered clinical areas dynamically
+        all_screened_symptoms = set(
+            severe_malaria_symptoms
+            + acute_cvd_symptoms
+            + surgical_signs
+            + ["acute_abdominal_pain", "severe_abdominal_pain", "abdominal_pain"]
+            + ped_res_signs
+            + ["cough", "difficulty_breathing", "dyspnea"]
+            + meningism_signs
+            + ["fever", "chills"]
+        )
+        uncovered_symptoms = [s for s in norm_symptoms if s not in all_screened_symptoms]
+
+        uncovered_areas: list[str] = []
+        if uncovered_symptoms:
+            uncovered_areas.append(
+                f"Open-ended symptoms entered without specific automated screening rules: {', '.join(uncovered_symptoms).replace('_', ' ')}. Professional clinical assessment required."
+            )
+        if norm_meds:
+            uncovered_areas.append(
+                f"Proposed counter medications ({', '.join(proposed_medications)}): Automated community contraindication/DDI coverage is limited. Independent pharmacist verification mandatory."
+            )
+
         return TriageEvaluationResult(
             findings=findings,
             referral_triggered=referral_triggered,
             referral_urgency=referral_urgency,
             referral_reason=referral_reason,
             referral_note=referral_note,
+            evaluated_rules=evaluated_rules,
+            uncovered_areas=uncovered_areas,
         )
 
