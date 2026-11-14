@@ -16,12 +16,12 @@ export const AdvisoryBanner: React.FC = () => {
           DEMONSTRATION PROTOTYPE ONLY:
         </span>
         <span className="truncate text-slate-600 dark:text-slate-400 font-sans">
-          Advisory deterministic rule engine with synthetic clinical data. Not for clinical or diagnostic medication dispensing.
+          Advisory deterministic rule engine with synthetic clinical data for community pharmacy field trials. Supervising pharmacist retains full clinical discretion.
         </span>
       </div>
       <div className="hidden sm:flex items-center space-x-2 shrink-0 ml-4 font-mono">
         <span className="text-[10px] uppercase tracking-wider font-semibold border border-sky-200 dark:border-sky-800 bg-sky-100/60 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 px-2 py-0.5 rounded-full shadow-2xs">
-          Deterministic Engine · v0.1
+          Clinical Trial Edition · v3.1
         </span>
       </div>
     </div>

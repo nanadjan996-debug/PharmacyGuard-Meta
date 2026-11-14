@@ -72,6 +72,11 @@ export const PrescriptionScannerStudio: React.FC = () => {
   const [confirmedItems, setConfirmedItems] = useState<Record<string, ItemConfirmPayload>>({});
   const [pharmacistNotes, setPharmacistNotes] = useState<string>('');
 
+  // Manual Slip Text Intake Modal State for Clinical Trials
+  const [showTextInputModal, setShowTextInputModal] = useState<boolean>(false);
+  const [manualPrescriptionText, setManualPrescriptionText] = useState<string>('');
+  const [manualPatientId, setManualPatientId] = useState<string>('');
+
   const loadScans = async () => {
     setIsLoading(true);
     try {
@@ -209,6 +214,35 @@ export const PrescriptionScannerStudio: React.FC = () => {
       setSuccessMessage(`Sample "${sample.name}" parsed successfully.`);
     } catch (err: any) {
       setErrorMessage(err.message || 'Sample processing failed.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleManualTextSubmit = async () => {
+    if (!manualPrescriptionText.trim()) {
+      setErrorMessage('Please enter prescription slip text.');
+      return;
+    }
+    setIsProcessing(true);
+    setErrorMessage(null);
+    try {
+      const scan = await api.community.uploadPrescription({
+        filename: 'counter_transcription.txt',
+        content_type: 'text/plain',
+        image_base64:
+          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200"><rect width="600" height="200" fill="#f8fafc"/><text x="20" y="40" fill="#0f172a" font-size="14" font-family="sans-serif" font-weight="bold">TRANSCRIBED COUNTER PRESCRIPTION SLIP</text></svg>',
+        patient_identifier: manualPatientId.trim() || ('PT-COMM-' + Math.floor(1000 + Math.random() * 9000)),
+        raw_text_override: manualPrescriptionText.trim(),
+      });
+      setScans((prev) => [scan, ...prev.filter((s) => s.id !== scan.id)]);
+      selectScan(scan);
+      setShowTextInputModal(false);
+      setManualPrescriptionText('');
+      setManualPatientId('');
+      setSuccessMessage('Prescription slip text parsed successfully into 7-field confirmation gate.');
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Prescription parsing failed.');
     } finally {
       setIsProcessing(false);
     }
@@ -425,6 +459,15 @@ export const PrescriptionScannerStudio: React.FC = () => {
               accept="image/*,.pdf"
               className="hidden"
             />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowTextInputModal(true)}
+              icon={<FileText className="w-4 h-4" />}
+              disabled={isProcessing}
+            >
+              Type / Paste Slip Text
+            </Button>
             <Button
               variant="primary"
               size="sm"
@@ -969,6 +1012,78 @@ export const PrescriptionScannerStudio: React.FC = () => {
             Upload a prescription image or select a sample preset above to activate the OCR extraction
             and 7-Field Human Confirmation Gate.
           </p>
+        </div>
+      )}
+
+      {/* Real-World Prescription Slip Text Intake Modal */}
+      {showTextInputModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-sky-700 dark:text-sky-400 font-bold text-sm">
+                <FileText className="w-5 h-5" />
+                <span>Transcribe / Paste Paper Prescription Slip</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTextInputModal(false)}
+                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              For field trials with physical clinic slips or telephone orders: type or paste the text written on the prescription slip. The deterministic parser will extract the 7 core fields for pharmacist verification.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Patient Identifier / Slip Ref (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={manualPatientId}
+                  onChange={(e) => setManualPatientId(e.target.value)}
+                  placeholder="e.g. PT-2026-089 or RX-OPD-4412"
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Prescription Slip Content *
+                </label>
+                <textarea
+                  rows={5}
+                  value={manualPrescriptionText}
+                  onChange={(e) => setManualPrescriptionText(e.target.value)}
+                  placeholder="e.g.&#10;Rx: Ciprofloxacin 500mg tablets 1 tab BID for 5 days&#10;Rx: Metronidazole 400mg tablets 1 tab TID for 5 days"
+                  className="w-full text-xs font-mono p-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowTextInputModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleManualTextSubmit}
+                disabled={isProcessing || !manualPrescriptionText.trim()}
+                icon={<ShieldCheck className="w-4 h-4" />}
+              >
+                Parse &amp; Verify Prescription
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

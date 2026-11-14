@@ -22,7 +22,13 @@ export interface Stage1WorkspaceShellProps {
 
 export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({ workspace }) => {
   const { user } = useAuth();
-  const [staffMode, setStaffMode] = useState<'inpatient' | 'counter' | 'scanner'>('inpatient');
+  const [staffMode, setStaffMode] = useState<'inpatient' | 'counter' | 'scanner'>(() => {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const mode = new URLSearchParams(window.location.search).get('mode');
+      if (mode === 'counter' || mode === 'scanner') return mode;
+    }
+    return 'inpatient';
+  });
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',

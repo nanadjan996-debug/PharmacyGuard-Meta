@@ -18,10 +18,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 12  # 12 hours
     
-    # Disclaimer and advisory notice
+    # Clinical Trial Protocol and advisory notice
     SYSTEM_DISCLAIMER: str = (
-        "PharmacyGuard is a synthetic non-clinical demonstration prototype with an advisory rule-based engine. "
-        "Not clinically validated. Not for medication dispensing."
+        "PharmacyGuard Community Pharmacy Clinical Trial Edition: Advisory clinical decision support system "
+        "operating under supervising pharmacist authority. Pharmacist retains full independent clinical "
+        "dispensing discretion."
     )
 
     # AI Provider Selection ("bedrock" or "baseten")
