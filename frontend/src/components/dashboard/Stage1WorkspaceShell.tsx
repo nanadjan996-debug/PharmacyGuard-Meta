@@ -70,13 +70,6 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
                 {primaryRole.replace('_', ' ')} Workstation
               </h2>
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 shrink-0">
-                  {primaryRole === 'staff_pharmacist'
-                    ? 'Stage 2 Workstation'
-                    : primaryRole === 'chief_pharmacist'
-                    ? 'Stage 3 Oversight Workstation'
-                    : 'Stage 4 Student Simulation Lab'}
-                </span>
                 <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/80 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>Station Online</span>

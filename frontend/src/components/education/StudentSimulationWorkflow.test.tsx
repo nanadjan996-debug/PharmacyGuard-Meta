@@ -346,9 +346,9 @@ describe('PharmacyGuard Stage 4: Student Simulation Workspace Integration', () =
 
     render(<Stage1WorkspaceShell workspace="student" />);
 
-    // Check workstation header and Stage 4 badge
+    // Check workstation header and station online badge
     expect(screen.getByRole('heading', { level: 2, name: /Pharmacy Student Workstation/i })).toBeInTheDocument();
-    expect(screen.getByText('Stage 4 Student Simulation Lab')).toBeInTheDocument();
+    expect(screen.getByText('Station Online')).toBeInTheDocument();
 
     // Check student simulation workspace is rendered
     expect(screen.getByTestId('student-simulation-workspace')).toBeInTheDocument();
@@ -364,7 +364,7 @@ describe('PharmacyGuard Stage 4: Student Simulation Workspace Integration', () =
     render(<Stage1WorkspaceShell workspace="staff" />);
 
     expect(screen.getByRole('heading', { level: 2, name: /Staff Pharmacist Workstation/i })).toBeInTheDocument();
-    expect(screen.getByText('Stage 2 Workstation')).toBeInTheDocument();
+    expect(screen.getByText('Station Online')).toBeInTheDocument();
     // Does not render student workspace
     expect(screen.queryByTestId('student-simulation-workspace')).not.toBeInTheDocument();
   });
@@ -378,7 +378,7 @@ describe('PharmacyGuard Stage 4: Student Simulation Workspace Integration', () =
     render(<Stage1WorkspaceShell workspace="chief" />);
 
     expect(screen.getByRole('heading', { level: 2, name: /Chief Pharmacist Workstation/i })).toBeInTheDocument();
-    expect(screen.getByText('Stage 3 Oversight Workstation')).toBeInTheDocument();
+    expect(screen.getByText('Station Online')).toBeInTheDocument();
     expect(screen.getByTestId('chief-oversight-workspace')).toBeInTheDocument();
     // Does not render student workspace
     expect(screen.queryByTestId('student-simulation-workspace')).not.toBeInTheDocument();
