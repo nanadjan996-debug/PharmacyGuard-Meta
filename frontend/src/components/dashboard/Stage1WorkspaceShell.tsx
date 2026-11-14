@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Award,
   GraduationCap,
   Store,
-  Layers,
   ScanLine,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -26,22 +25,24 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
   showHospitalQueue = false,
 }) => {
   const { user } = useAuth();
-  const [staffMode, setStaffMode] = useState<'inpatient' | 'counter' | 'scanner'>(() => {
+  const [staffMode, setStaffMode] = useState<'counter' | 'scanner'>(() => {
     if (typeof window !== 'undefined' && window.location?.search) {
       const mode = new URLSearchParams(window.location.search).get('mode');
-      if (mode === 'counter' || mode === 'scanner' || mode === 'inpatient') return mode;
+      if (mode === 'scanner') return 'scanner';
     }
     return 'counter';
   });
 
-  // Hospital Queue is hidden by default for Community Pharmacy mode, preserved if explicitly requested
-  const isHospitalVisible = Boolean(
-    showHospitalQueue ||
-    (typeof window !== 'undefined' &&
-      window.location?.search &&
-      (new URLSearchParams(window.location.search).get('hospital') === 'true' ||
-       new URLSearchParams(window.location.search).get('mode') === 'inpatient'))
-  );
+  // Sanitize any legacy mode=inpatient query parameters from URL
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('mode') === 'inpatient') {
+        url.searchParams.delete('mode');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, []);
 
   const workspaceToRole: Record<'staff' | 'chief' | 'student', UserRole> = {
     staff: 'staff_pharmacist',
@@ -105,20 +106,6 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
       {primaryRole === 'staff_pharmacist' && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-2">
           <div className="flex flex-wrap items-center gap-1 bg-slate-200/80 dark:bg-slate-800 p-1 rounded-xl border border-slate-300 dark:border-slate-700">
-            {isHospitalVisible && (
-              <button
-                type="button"
-                onClick={() => setStaffMode('inpatient')}
-                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  staffMode === 'inpatient'
-                    ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-sky-400 shadow-xs border border-slate-300 dark:border-slate-700 font-bold'
-                    : 'text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Hospital Queue</span>
-              </button>
-            )}
             <button
               type="button"
               onClick={() => setStaffMode('counter')}
@@ -149,9 +136,7 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
             <strong className="text-slate-900 dark:text-slate-100 font-bold">
               {staffMode === 'counter'
                 ? 'Counter Consultation Intake'
-                : staffMode === 'scanner'
-                ? 'Prescription OCR & 7-Field Human Gate'
-                : 'Prescription Queue'}
+                : 'Prescription OCR & 7-Field Human Gate'}
             </strong>
           </span>
         </div>
@@ -161,7 +146,8 @@ export const Stage1WorkspaceShell: React.FC<Stage1WorkspaceShellProps> = ({
       <div className="space-y-6">
         {/* Staff Pharmacist Workspaces */}
         {primaryRole === 'staff_pharmacist' && (
-          staffMode === 'inpatient' && isHospitalVisible ? (
+          showHospitalQueue ? (
+            /* Hospital Inpatient Queue (Preserved for institutional approval phase) */
             <StaffPrescriptionWorkspace />
           ) : staffMode === 'scanner' ? (
             <PrescriptionScannerStudio />
